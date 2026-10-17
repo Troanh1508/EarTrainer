@@ -149,6 +149,7 @@ private fun exerciseName(exercise: ExerciseKind) = stringResource(
         ExerciseKind.CHORDS -> R.string.progress_exercise_chords
         ExerciseKind.SCALE_DEGREES -> R.string.progress_exercise_degrees
         ExerciseKind.PROGRESSIONS -> R.string.progress_exercise_progressions
+        ExerciseKind.DICTATION -> R.string.progress_exercise_dictation
     },
 )
 
@@ -158,6 +159,7 @@ private fun filterLabel(filter: ProgressFilter): String = when (filter) {
     is ProgressFilter.ChordTargetFilter -> filter.target.displayName
     is ProgressFilter.ModeFilter -> filter.mode?.displayName ?: stringResource(R.string.progress_filter_all_modes)
     is ProgressFilter.ProgressionModeFilter -> filter.mode.displayName
+    is ProgressFilter.DictationModeFilter -> filter.mode.displayName
 }
 
 @Composable
@@ -170,6 +172,7 @@ private fun accuracyTitle(filter: ProgressFilter): String = stringResource(
         }
         is ProgressFilter.ModeFilter -> R.string.progress_by_degree
         is ProgressFilter.ProgressionModeFilter -> R.string.progress_by_chord
+        is ProgressFilter.DictationModeFilter -> R.string.progress_by_note
     },
 )
 
@@ -205,8 +208,12 @@ private fun OverallCard(state: ProgressUiState, modifier: Modifier = Modifier) {
                 if (state.totalAttempts == 0) {
                     stringResource(R.string.progress_no_answers_for_filter)
                 } else {
-                    // Progressions are scored chord by chord, so count chords rather than answers.
-                    val counted = if (state.exercise == ExerciseKind.PROGRESSIONS) R.plurals.progress_overall_chords else R.plurals.progress_overall
+                    // Progressions and dictations are scored chord by chord or note by note.
+                    val counted = when (state.exercise) {
+                        ExerciseKind.PROGRESSIONS -> R.plurals.progress_overall_chords
+                        ExerciseKind.DICTATION -> R.plurals.progress_overall_notes
+                        else -> R.plurals.progress_overall
+                    }
                     pluralStringResource(counted, state.totalAttempts, state.totalCorrect, state.totalAttempts)
                 },
                 style = MaterialTheme.typography.bodyLarge,

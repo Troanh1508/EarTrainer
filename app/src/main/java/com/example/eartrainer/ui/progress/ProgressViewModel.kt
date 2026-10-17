@@ -48,12 +48,18 @@ sealed interface ProgressFilter {
         override val exercise get() = ExerciseKind.PROGRESSIONS
     }
 
+    /** Per-note accuracy in dictations in one mode; each mode has its own seven notes. */
+    data class DictationModeFilter(val mode: Mode) : ProgressFilter {
+        override val exercise get() = ExerciseKind.DICTATION
+    }
+
     companion object {
         fun optionsFor(exercise: ExerciseKind): List<ProgressFilter> = when (exercise) {
             ExerciseKind.INTERVALS -> listOf(IntervalStyleFilter(null)) + IntervalStyle.entries.map(::IntervalStyleFilter)
             ExerciseKind.CHORDS -> ChordTarget.entries.map(::ChordTargetFilter)
             ExerciseKind.SCALE_DEGREES -> listOf(ModeFilter(null)) + Mode.entries.map(::ModeFilter)
             ExerciseKind.PROGRESSIONS -> Mode.entries.map(::ProgressionModeFilter)
+            ExerciseKind.DICTATION -> Mode.entries.map(::DictationModeFilter)
         }
     }
 }
@@ -108,6 +114,8 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
             history.scaleDegreeAccuracy(selected.mode).map { list -> list.map { it.toItem("${it.item.label} · ${it.item.solfege}") } }
         is ProgressFilter.ProgressionModeFilter ->
             history.progressionAccuracy(selected.mode).map { list -> list.map { it.toItem(it.item.numeral) } }
+        is ProgressFilter.DictationModeFilter ->
+            history.dictationAccuracy(selected.mode).map { list -> list.map { it.toItem("${it.item.label} · ${it.item.solfege}") } }
     }
 
     private fun AnswerAccuracy<*>.toItem(label: String) = AccuracyItem(label, attempts, correct)

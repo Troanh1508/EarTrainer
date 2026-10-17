@@ -9,6 +9,7 @@ package com.example.eartrainer.music
  * - Arpeggiated chord: `[[C4], [E4], [G4]]` with [Articulation.ARPEGGIATED]
  * - Scale degree: a cadence as [context], then `[[E4]]`
  * - Chord progression: one multi-pitch moment per chord with [Articulation.FLOWING]
+ * - Melody: one single-pitch moment per note with [Articulation.MELODIC], usually after a [context]
  *
  * Exact timing (durations, gaps) is decided by the audio layer.
  */
@@ -31,6 +32,9 @@ data class ListeningPrompt(
 
         /** Moments follow each other without gaps at a moderate pace, as in a chord progression. */
         FLOWING,
+
+        /** Single notes of a tune, back to back at a walking pace. */
+        MELODIC,
     }
 
     init {

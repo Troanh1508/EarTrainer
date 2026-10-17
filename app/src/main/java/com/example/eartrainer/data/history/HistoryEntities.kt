@@ -87,6 +87,27 @@ data class ProgressionAttemptEntity(
 /** A stored progression question and the progression chosen, as scale-step lists. */
 data class ProgressionAnswerRow(val progression: String, val answer: String)
 
+/** Added in schema version 5. Melodies are stored as comma-separated degree names. */
+@Entity(
+    tableName = "dictation_attempts",
+    indices = [Index("session_id"), Index("mode")],
+)
+data class DictationAttemptEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "session_id") val sessionId: String,
+    @ColumnInfo(name = "answered_at") val answeredAtMillis: Long,
+    @ColumnInfo(name = "tonic_midi") val tonicMidi: Int,
+    @ColumnInfo(name = "mode") val mode: String,
+    @ColumnInfo(name = "melody") val melody: String,
+    @ColumnInfo(name = "answer") val answer: String,
+    @ColumnInfo(name = "is_correct") val isCorrect: Boolean,
+    @ColumnInfo(name = "play_count") val playCount: Int,
+    @ColumnInfo(name = "response_ms") val responseMillis: Long,
+)
+
+/** A stored melody and the one written down, as degree-name lists. */
+data class MelodyAnswerRow(val melody: String, val answer: String)
+
 /** One recent answer, for weighting practice towards weak spots. */
 data class ItemResultRow(val item: String, val isCorrect: Boolean)
 
@@ -195,6 +216,19 @@ interface ProgressionAttemptDao {
 }
 
 @Dao
+interface DictationAttemptDao {
+    @Insert
+    suspend fun insert(attempt: DictationAttemptEntity)
+
+    /** Every dictation in [mode]; per-degree totals are worked out from these. */
+    @Query("SELECT melody, answer FROM dictation_attempts WHERE mode = :mode")
+    fun answersInMode(mode: String): Flow<List<MelodyAnswerRow>>
+
+    @Query("SELECT melody, answer FROM dictation_attempts ORDER BY answered_at DESC, id DESC LIMIT :limit")
+    fun recentAnswers(limit: Int): Flow<List<MelodyAnswerRow>>
+}
+
+@Dao
 interface SessionDao {
     /** Sessions from every exercise type, newest first. A session belongs to one exercise only. */
     @Query(
@@ -209,6 +243,8 @@ interface SessionDao {
             SELECT session_id, answered_at, is_correct, 'SCALE_DEGREES' AS exercise FROM scale_degree_attempts
             UNION ALL
             SELECT session_id, answered_at, is_correct, 'PROGRESSIONS' AS exercise FROM progression_attempts
+            UNION ALL
+            SELECT session_id, answered_at, is_correct, 'DICTATION' AS exercise FROM dictation_attempts
         )
         GROUP BY session_id
         ORDER BY startedAtMillis DESC

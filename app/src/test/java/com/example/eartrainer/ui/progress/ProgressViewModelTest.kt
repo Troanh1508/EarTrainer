@@ -4,6 +4,7 @@ import com.example.eartrainer.exercise.ChordAnswer
 import com.example.eartrainer.exercise.ChordAttempt
 import com.example.eartrainer.exercise.ChordStyle
 import com.example.eartrainer.exercise.ChordTarget
+import com.example.eartrainer.exercise.DictationAttempt
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
@@ -16,6 +17,7 @@ import com.example.eartrainer.music.ChordQuality
 import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Key
+import com.example.eartrainer.music.Melody
 import com.example.eartrainer.music.Mode
 import com.example.eartrainer.music.Pitch
 import com.example.eartrainer.music.ScaleDegree
@@ -161,6 +163,30 @@ class ProgressViewModelTest {
 
         viewModel.onFilterSelected(ProgressFilter.ProgressionModeFilter(Mode.MINOR))
         assertEquals(0, viewModel.state.totalAttempts)
+    }
+
+    @Test
+    fun dictationTabScoresEachNoteAfterTheTonic() = runTest {
+        fun melody(vararg degrees: ScaleDegree) = Melody(degrees.toList())
+        val key = Key(Pitch(60), Mode.MAJOR)
+        // Played 1-2-3-5, written 1-2-4-5: 2 and 5 right, 3 wrong.
+        history.record(
+            DictationAttempt(
+                "d", 1_000, key,
+                melody(ScaleDegree.TONIC, ScaleDegree.SECOND, ScaleDegree.THIRD, ScaleDegree.FIFTH),
+                melody(ScaleDegree.TONIC, ScaleDegree.SECOND, ScaleDegree.FOURTH, ScaleDegree.FIFTH),
+                false, 2, 9_000,
+            ),
+        )
+        val viewModel = ProgressViewModel(history).also { collected(it) }
+
+        viewModel.onExerciseSelected(ExerciseKind.DICTATION)
+        val state = viewModel.state
+        assertEquals(ProgressFilter.DictationModeFilter(Mode.MAJOR), state.filter)
+        assertEquals(Mode.MAJOR.diatonicDegrees.map { "${it.label} · ${it.solfege}" }, state.accuracy.map { it.label })
+        assertEquals(AccuracyItem("3 · Mi", attempts = 1, correct = 0), state.accuracy.single { it.label == "3 · Mi" })
+        assertEquals(3, state.totalAttempts)
+        assertEquals(2, state.totalCorrect)
     }
 
     @Test

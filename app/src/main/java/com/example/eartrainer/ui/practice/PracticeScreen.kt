@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.eartrainer.R
 import com.example.eartrainer.exercise.ExerciseQuestion
+import com.example.eartrainer.music.Pitch
 
 /** Exercise-specific wording for the shared practice screen. */
 data class PracticeTexts<A, Q : ExerciseQuestion<A>>(
@@ -45,12 +46,11 @@ data class PracticeTexts<A, Q : ExerciseQuestion<A>>(
     val correctSummary: @Composable (Q) -> String,
     /** Whether feedback lists the sounded notes; long prompts like progressions summarise them instead. */
     val showNotesAsPlayed: Boolean = true,
+    /** How a sounded note is written, e.g. "E♭4" rather than "D♯4" when the question is in a flat key. */
+    val noteName: (Q, Pitch) -> String = { _, pitch -> pitch.name },
 )
 
-/**
- * Connects a [PracticeViewModel] to [PracticeScreen] and stops audio when the screen leaves the
- * foreground.
- */
+/** Connects a multiple-choice exercise's [PracticeViewModel] to [PracticeScreen]. */
 @Composable
 fun <A, Q : ExerciseQuestion<A>> PracticeRoute(
     viewModel: PracticeViewModel<A, Q, *>,
@@ -58,15 +58,7 @@ fun <A, Q : ExerciseQuestion<A>> PracticeRoute(
     onOpenSettings: () -> Unit,
     onNavigateUp: () -> Unit,
     choiceColumns: Int = 2,
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onScreenHidden() }
-
-    // Settings load from disk almost instantly; show a plain surface rather than a spinner flash.
-    val loaded = state ?: run {
-        Surface(Modifier.fillMaxSize()) {}
-        return
-    }
+) = PracticeHost(viewModel) { loaded ->
     PracticeScreen(
         state = loaded,
         texts = texts,
@@ -80,7 +72,25 @@ fun <A, Q : ExerciseQuestion<A>> PracticeRoute(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Collects [viewModel]'s state for [content], and stops audio when the screen leaves the
+ * foreground. Shows a plain surface until settings have loaded, which is almost instant, rather
+ * than flashing a spinner.
+ */
+@Composable
+fun <A, Q : ExerciseQuestion<A>> PracticeHost(
+    viewModel: PracticeViewModel<A, Q, *>,
+    content: @Composable (PracticeUiState<A, Q>) -> Unit,
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onScreenHidden() }
+    val loaded = state ?: run {
+        Surface(Modifier.fillMaxSize()) {}
+        return
+    }
+    content(loaded)
+}
+
 @Composable
 fun <A, Q : ExerciseQuestion<A>> PracticeScreen(
     state: PracticeUiState<A, Q>,
@@ -92,6 +102,33 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScreen(
     onOpenSettings: () -> Unit,
     onNavigateUp: () -> Unit,
     choiceColumns: Int = 2,
+) {
+    PracticeScaffold(state, texts, onPlay, onStop, onNext, onOpenSettings, onNavigateUp) {
+        AnswerGrid(
+            choices = state.question.choices,
+            labelOf = texts.choiceLabel,
+            appearanceOf = state::appearanceOf,
+            onChoiceSelected = onAnswerSelected,
+            columns = choiceColumns,
+        )
+    }
+}
+
+/**
+ * Everything a listening exercise screen shares: title bar, instruction and score, the play
+ * button, and the feedback panel with "Next". [answerArea] is where the listener responds.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun <A, Q : ExerciseQuestion<A>> PracticeScaffold(
+    state: PracticeUiState<A, Q>,
+    texts: PracticeTexts<A, Q>,
+    onPlay: () -> Unit,
+    onStop: () -> Unit,
+    onNext: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onNavigateUp: () -> Unit,
+    answerArea: @Composable () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -117,7 +154,7 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScreen(
                         isCorrect = answer.isCorrect,
                         selectedLabel = texts.choiceLabel(answer.selectedAnswer).title,
                         correctSummary = texts.correctSummary(state.question),
-                        notesAsPlayed = state.notesAsPlayed.takeIf { texts.showNotesAsPlayed },
+                        notesAsPlayed = if (texts.showNotesAsPlayed) state.notesAsPlayed { texts.noteName(state.question, it) } else null,
                         onNext = onNext,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -157,13 +194,7 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScreen(
                     )
                     PlaybackHint(state)
                 }
-                AnswerGrid(
-                    choices = state.question.choices,
-                    labelOf = texts.choiceLabel,
-                    appearanceOf = state::appearanceOf,
-                    onChoiceSelected = onAnswerSelected,
-                    columns = choiceColumns,
-                )
+                answerArea()
             }
         }
     }

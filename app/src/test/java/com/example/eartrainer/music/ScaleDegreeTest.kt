@@ -32,6 +32,15 @@ class ScaleDegreeTest {
     }
 
     @Test
+    fun notesAreSpelledForTheKey() {
+        assertEquals("E♭", Key(Pitch(63), Mode.MAJOR).noteName(Pitch(63)))
+        assertEquals("A♭", Key(Pitch(63), Mode.MAJOR).noteName(Pitch(68)))
+        assertEquals("D♯", Key(Pitch(64), Mode.MAJOR).noteName(Pitch(63)))
+        assertEquals("B♭", Key(Pitch(62), Mode.MINOR).noteName(Pitch(58)))
+        assertEquals("F♯", Key(Pitch(57), Mode.MINOR).noteName(Pitch(66)))
+    }
+
+    @Test
     fun degreesArePlacedAboveTheTonic() {
         val key = Key(Pitch(62), Mode.MAJOR)
         assertEquals(Pitch(62), key.pitchOf(ScaleDegree.TONIC))

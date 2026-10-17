@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ElevatedCard
@@ -30,12 +32,17 @@ fun HomeScreen(
     onOpenChordTraining: () -> Unit,
     onOpenScaleDegreeTraining: () -> Unit,
     onOpenProgressionTraining: () -> Unit,
+    onOpenDictationTraining: () -> Unit,
     onOpenProgress: () -> Unit,
 ) {
     Surface(Modifier.fillMaxSize()) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.safeDrawingPadding(),
+            // Scrolls so every exercise card stays reachable on small screens and with large text.
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .safeDrawingPadding(),
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -71,6 +78,11 @@ fun HomeScreen(
                     title = stringResource(R.string.home_progressions_title),
                     description = stringResource(R.string.home_progressions_description),
                     onClick = onOpenProgressionTraining,
+                )
+                HomeEntryCard(
+                    title = stringResource(R.string.home_dictation_title),
+                    description = stringResource(R.string.home_dictation_description),
+                    onClick = onOpenDictationTraining,
                 )
                 HomeEntryCard(
                     title = stringResource(R.string.home_progress_title),
@@ -115,5 +127,5 @@ private fun HomeEntryCard(title: String, description: String, onClick: () -> Uni
 @Preview
 @Composable
 private fun HomeScreenPreview() {
-    EarTrainerTheme { HomeScreen(onOpenIntervalTraining = {}, onOpenChordTraining = {}, onOpenScaleDegreeTraining = {}, onOpenProgressionTraining = {}, onOpenProgress = {}) }
+    EarTrainerTheme { HomeScreen(onOpenIntervalTraining = {}, onOpenChordTraining = {}, onOpenScaleDegreeTraining = {}, onOpenProgressionTraining = {}, onOpenDictationTraining = {}, onOpenProgress = {}) }
 }

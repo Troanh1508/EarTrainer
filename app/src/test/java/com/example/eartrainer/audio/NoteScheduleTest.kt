@@ -80,6 +80,22 @@ class NoteScheduleTest {
     }
 
     @Test
+    fun melodyFollowsTheContextNoteByNote() {
+        val melodic = timing.copy(melodyNoteSeconds = 0.65, contextChordSeconds = 0.7, contextPauseSeconds = 0.5)
+        val prompt = ListeningPrompt(
+            moments = listOf(listOf(Pitch(60)), listOf(Pitch(62)), listOf(Pitch(64))),
+            articulation = ListeningPrompt.Articulation.MELODIC,
+            context = listOf(listOf(Pitch(48), Pitch(60), Pitch(64))),
+        )
+        val schedule = NoteSchedule.from(prompt, sampleRate, melodic)
+        val melody = schedule.notes.drop(3)
+        // Context chord 30..730, pause to 1230, then notes back to back.
+        assertEquals(listOf(1_230, 1_880, 2_530), melody.map { it.startFrame })
+        assertTrue(melody.all { it.frameCount == 650 })
+        assertEquals(1, NoteSchedule.from(prompt.copy(context = emptyList()), sampleRate, melodic).maxPolyphony)
+    }
+
+    @Test
     fun polyphonyCountsOnlyNotesThatActuallyOverlap() {
         val melodic = NoteSchedule.from(ListeningPrompt.sequential(listOf(Pitch(60), Pitch(64), Pitch(67))), sampleRate, timing)
         assertEquals(1, melodic.maxPolyphony)

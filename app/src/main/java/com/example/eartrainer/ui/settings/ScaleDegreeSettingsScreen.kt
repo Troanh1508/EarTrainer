@@ -133,8 +133,8 @@ fun ScaleDegreeSettingsScreen(
                 HorizontalDivider()
 
                 SettingsSection(
-                    title = stringResource(R.string.degree_settings_context_title),
-                    description = stringResource(R.string.degree_settings_context_description),
+                    title = stringResource(R.string.settings_context_title),
+                    description = stringResource(R.string.settings_context_description),
                 ) {
                     KeyContext.entries.forEach { context ->
                         SettingsChip(context.displayName, selected = settings.context == context, onClick = { onContextSelected(context) })

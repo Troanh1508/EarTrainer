@@ -46,7 +46,7 @@ data class ExerciseState<A, Q : ExerciseQuestion<A>>(
     )
 
     fun submitAnswer(answer: A, atMillis: Long): ExerciseState<A, Q> {
-        if (phase != ExercisePhase.AwaitingAnswer || answer !in question.choices) return this
+        if (phase != ExercisePhase.AwaitingAnswer || !question.accepts(answer)) return this
         val isCorrect = question.isCorrect(answer)
         return copy(
             phase = ExercisePhase.Answered(answer, isCorrect, atMillis),

@@ -15,6 +15,13 @@ interface ExerciseQuestion<A> {
     val correctAnswer: A
 
     fun isCorrect(answer: A): Boolean = answer == correctAnswer
+
+    /**
+     * Whether [answer] is a well-formed answer to this question; anything else is ignored rather
+     * than scored. Multiple-choice questions accept their choices; exercises where the answer is
+     * built up (like dictation) define their own rule.
+     */
+    fun accepts(answer: A): Boolean = answer in choices
 }
 
 /** Validates the invariants every generated question must satisfy. */

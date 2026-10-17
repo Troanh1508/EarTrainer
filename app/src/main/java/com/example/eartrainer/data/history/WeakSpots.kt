@@ -25,6 +25,7 @@ class WeakSpots(history: PracticeHistory, private val scope: CoroutineScope) {
     val chords: StateFlow<Map<ChordAnswer, Double>> = weightsFrom(history.recentChordResults(RECENT_ANSWERS))
     val scaleDegrees: StateFlow<Map<ScaleDegree, Double>> = weightsFrom(history.recentScaleDegreeResults(RECENT_ANSWERS))
     val progressionChords: StateFlow<Map<DiatonicChord, Double>> = weightsFrom(history.recentProgressionResults(RECENT_ANSWERS))
+    val dictationDegrees: StateFlow<Map<ScaleDegree, Double>> = weightsFrom(history.recentDictationResults(RECENT_ANSWERS))
 
     private fun <T> weightsFrom(results: Flow<List<ItemResult<T>>>): StateFlow<Map<T, Double>> =
         results.map { WeakSpotWeighting.weights(it) }.stateIn(scope, SharingStarted.Eagerly, emptyMap())

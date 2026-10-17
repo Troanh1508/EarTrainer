@@ -7,6 +7,7 @@ import com.example.eartrainer.exercise.ChordAnswer
 import com.example.eartrainer.exercise.ChordAttempt
 import com.example.eartrainer.exercise.ChordStyle
 import com.example.eartrainer.exercise.ChordTarget
+import com.example.eartrainer.exercise.DictationAttempt
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
@@ -20,6 +21,7 @@ import com.example.eartrainer.music.ChordQuality
 import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Key
+import com.example.eartrainer.music.Melody
 import com.example.eartrainer.music.Mode
 import com.example.eartrainer.music.Pitch
 import com.example.eartrainer.music.ScaleDegree
@@ -217,6 +219,33 @@ class RoomPracticeHistoryTest {
             ),
             history.recentProgressionResults(limit = 10).first(),
         )
+    }
+
+    @Test
+    fun dictationIsScoredPerNoteInTheRequestedMode() = runBlocking {
+        fun melody(vararg degrees: ScaleDegree) = Melody(degrees.toList())
+        runBlocking {
+            database.dictationAttemptDao().insert(
+                DictationAttempt(
+                    "d", 1_000, Key(Pitch(60), Mode.MAJOR),
+                    melody(ScaleDegree.TONIC, ScaleDegree.SECOND, ScaleDegree.THIRD),
+                    melody(ScaleDegree.TONIC, ScaleDegree.SECOND, ScaleDegree.FOURTH),
+                    false, 1, 6_000,
+                ).toEntity(),
+            )
+        }
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        val major = history.dictationAccuracy(Mode.MAJOR).first()
+        assertEquals(Mode.MAJOR.diatonicDegrees, major.map { it.item })
+        assertEquals(AnswerAccuracy(ScaleDegree.SECOND, attempts = 1, correct = 1), major.single { it.item == ScaleDegree.SECOND })
+        assertEquals(AnswerAccuracy(ScaleDegree.THIRD, attempts = 1, correct = 0), major.single { it.item == ScaleDegree.THIRD })
+        assertEquals(0, history.dictationAccuracy(Mode.MINOR).first().sumOf { it.attempts })
+        assertEquals(
+            listOf(ItemResult(ScaleDegree.SECOND, true), ItemResult(ScaleDegree.THIRD, false)),
+            history.recentDictationResults(10).first(),
+        )
+        assertEquals(ExerciseKind.DICTATION, history.recentSessions(10).first().single().exercise)
     }
 
     @Test

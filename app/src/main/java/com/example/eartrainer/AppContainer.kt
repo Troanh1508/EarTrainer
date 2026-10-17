@@ -15,6 +15,7 @@ import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.RoomPracticeHistory
 import com.example.eartrainer.data.history.WeakSpots
 import com.example.eartrainer.data.settings.ChordSettingsStore
+import com.example.eartrainer.data.settings.DictationSettingsStore
 import com.example.eartrainer.data.settings.IntervalSettingsStore
 import com.example.eartrainer.data.settings.ProgressionSettingsStore
 import com.example.eartrainer.data.settings.ScaleDegreeSettingsStore
@@ -48,6 +49,8 @@ class AppContainer(private val context: Context) {
     val scaleDegreeSettings by lazy { ScaleDegreeSettingsStore(context.settingsDataStore) }
 
     val progressionSettings by lazy { ProgressionSettingsStore(context.settingsDataStore) }
+
+    val dictationSettings by lazy { DictationSettingsStore(context.settingsDataStore) }
 
     /**
      * The piano is decoded once per process, in the background, and shared by every player.

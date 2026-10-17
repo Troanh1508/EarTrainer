@@ -61,6 +61,7 @@ private fun scaleDegreeTexts() = PracticeTexts<ScaleDegree, ScaleDegreeQuestion>
     correctSummary = { question ->
         stringResource(R.string.degrees_summary, question.degree.label, question.degree.solfege, question.key.name)
     },
+    noteName = { question, pitch -> question.key.noteName(pitch) + pitch.octave },
 )
 
 @Composable

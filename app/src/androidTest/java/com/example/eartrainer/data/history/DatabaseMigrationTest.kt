@@ -50,12 +50,30 @@ class DatabaseMigrationTest {
         helper.runMigrationsAndValidate(databaseName, 2, true).close()
         helper.runMigrationsAndValidate(databaseName, 3, true).close()
         helper.runMigrationsAndValidate(databaseName, 4, true).close()
+        helper.runMigrationsAndValidate(databaseName, 5, true).close()
 
         assertEquals(listOf(SessionSummaryRow("from-v1", ExerciseKind.INTERVALS.name, 1_000, 1, 1)), sessionsAfterUpgrade())
     }
 
     @Test
-    fun version3To4KeepsScaleDegreeHistory() {
+    fun version4To5KeepsProgressionHistory() {
+        helper.createDatabase(databaseName, 4).apply {
+            execSQL(
+                """
+                INSERT INTO progression_attempts
+                    (session_id, answered_at, tonic_midi, mode, progression, answer, is_correct, play_count, response_ms)
+                VALUES ('from-v4', 4000, 60, 'MAJOR', '1,6,4,5', '1,6,4,5', 1, 1, 3000)
+                """,
+            )
+            close()
+        }
+        helper.runMigrationsAndValidate(databaseName, 5, true).close()
+
+        assertEquals(listOf(SessionSummaryRow("from-v4", ExerciseKind.PROGRESSIONS.name, 4_000, 1, 1)), sessionsAfterUpgrade())
+    }
+
+    @Test
+    fun version3UpgradesToLatestAndKeepsScaleDegreeHistory() {
         helper.createDatabase(databaseName, 3).apply {
             execSQL(
                 """
@@ -67,6 +85,7 @@ class DatabaseMigrationTest {
             close()
         }
         helper.runMigrationsAndValidate(databaseName, 4, true).close()
+        helper.runMigrationsAndValidate(databaseName, 5, true).close()
 
         assertEquals(listOf(SessionSummaryRow("from-v3", ExerciseKind.SCALE_DEGREES.name, 3_000, 1, 1)), sessionsAfterUpgrade())
     }
@@ -85,6 +104,7 @@ class DatabaseMigrationTest {
         }
         helper.runMigrationsAndValidate(databaseName, 3, true).close()
         helper.runMigrationsAndValidate(databaseName, 4, true).close()
+        helper.runMigrationsAndValidate(databaseName, 5, true).close()
 
         assertEquals(listOf(SessionSummaryRow("from-v2", ExerciseKind.CHORDS.name, 2_000, 1, 0)), sessionsAfterUpgrade())
     }

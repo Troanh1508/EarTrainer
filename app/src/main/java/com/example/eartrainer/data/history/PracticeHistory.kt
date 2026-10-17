@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.eartrainer.exercise.ChordAnswer
 import com.example.eartrainer.exercise.ChordAttempt
 import com.example.eartrainer.exercise.ChordTarget
+import com.example.eartrainer.exercise.DictationAttempt
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
@@ -15,6 +16,7 @@ import com.example.eartrainer.music.ChordProgression
 import com.example.eartrainer.music.ChordQuality
 import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
+import com.example.eartrainer.music.Melody
 import com.example.eartrainer.music.Mode
 import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.CancellationException
@@ -53,6 +55,9 @@ interface PracticeHistory {
     /** Saves [attempt] in the background. The write completes even if the calling screen closes. */
     fun record(attempt: ProgressionAttempt)
 
+    /** Saves [attempt] in the background. The write completes even if the calling screen closes. */
+    fun record(attempt: DictationAttempt)
+
     /** Accuracy for every interval, including unpractised ones; [style] null means all styles. */
     fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>>
 
@@ -71,6 +76,12 @@ interface PracticeHistory {
      */
     fun progressionAccuracy(mode: Mode): Flow<List<AnswerAccuracy<DiatonicChord>>>
 
+    /**
+     * How often each degree of [mode] was written down correctly in dictations, counted per note.
+     * The opening tonic is given rather than tested, so it is not counted.
+     */
+    fun dictationAccuracy(mode: Mode): Flow<List<AnswerAccuracy<ScaleDegree>>>
+
     /** Most recent sessions of any exercise first. Sessions without answers are not recorded. */
     fun recentSessions(limit: Int): Flow<List<SessionSummary>>
 
@@ -84,6 +95,9 @@ interface PracticeHistory {
 
     /** One result per chord after the opening tonic, from the latest [limit] progression answers. */
     fun recentProgressionResults(limit: Int): Flow<List<ItemResult<DiatonicChord>>>
+
+    /** One result per note after the opening tonic, from the latest [limit] dictations. */
+    fun recentDictationResults(limit: Int): Flow<List<ItemResult<ScaleDegree>>>
 }
 
 class RoomPracticeHistory(
@@ -99,6 +113,8 @@ class RoomPracticeHistory(
     override fun record(attempt: ScaleDegreeAttempt) = write { database.scaleDegreeAttemptDao().insert(attempt.toEntity()) }
 
     override fun record(attempt: ProgressionAttempt) = write { database.progressionAttemptDao().insert(attempt.toEntity()) }
+
+    override fun record(attempt: DictationAttempt) = write { database.dictationAttemptDao().insert(attempt.toEntity()) }
 
     override fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>> =
         database.intervalAttemptDao().accuracyByInterval(style?.name).map { rows -> rows.completeOver(Interval.entries) }
@@ -118,6 +134,17 @@ class RoomPracticeHistory(
     override fun progressionAccuracy(mode: Mode): Flow<List<AnswerAccuracy<DiatonicChord>>> =
         database.progressionAttemptDao().answersInMode(mode.name)
             .map { rows -> progressionChordAccuracy(mode, rows.map { it.progression.toSteps() to it.answer.toSteps() }) }
+            .flowOn(Dispatchers.Default)
+
+    override fun dictationAccuracy(mode: Mode): Flow<List<AnswerAccuracy<ScaleDegree>>> =
+        database.dictationAttemptDao().answersInMode(mode.name)
+            .map { rows ->
+                val results = rows.flatMap { dictationNoteResults(it.melody.toDegrees(), it.answer.toDegrees()) }
+                mode.diatonicDegrees.map { degree ->
+                    val forDegree = results.filter { it.item == degree }
+                    AnswerAccuracy(degree, attempts = forDegree.size, correct = forDegree.count { it.isCorrect })
+                }
+            }
             .flowOn(Dispatchers.Default)
 
     override fun recentSessions(limit: Int): Flow<List<SessionSummary>> =
@@ -152,6 +179,11 @@ class RoomPracticeHistory(
                 val mode = Mode.entries.find { it.name == row.mode } ?: return@flatMap emptyList()
                 progressionChordResults(mode, row.progression.toSteps(), row.answer.toSteps())
             }
+        }
+
+    override fun recentDictationResults(limit: Int): Flow<List<ItemResult<ScaleDegree>>> =
+        database.dictationAttemptDao().recentAnswers(limit).map { rows ->
+            rows.flatMap { dictationNoteResults(it.melody.toDegrees(), it.answer.toDegrees()) }
         }
 
     private fun write(insert: suspend () -> Unit) {
@@ -246,6 +278,32 @@ internal fun progressionChordAccuracy(mode: Mode, answers: List<Pair<List<Int>, 
         AnswerAccuracy(chord, attempts = forChord.size, correct = forChord.count { it.isCorrect })
     }
 }
+
+internal fun DictationAttempt.toEntity() = DictationAttemptEntity(
+    sessionId = sessionId,
+    answeredAtMillis = answeredAtMillis,
+    tonicMidi = key.tonic.midi,
+    mode = key.mode.name,
+    melody = melody.toNames(),
+    answer = answer.toNames(),
+    isCorrect = isCorrect,
+    playCount = playCount,
+    responseMillis = responseMillis,
+)
+
+private fun Melody.toNames(): String = degrees.joinToString(",") { it.name }
+
+private fun String.toDegrees(): List<ScaleDegree?> = split(",").map { name -> ScaleDegree.entries.find { it.name == name.trim() } }
+
+/**
+ * Scores a dictation note by note: every note after the given opening tonic is one result for
+ * the degree played there, correct when the written melody has the same degree in that place.
+ */
+internal fun dictationNoteResults(melody: List<ScaleDegree?>, answer: List<ScaleDegree?>): List<ItemResult<ScaleDegree>> =
+    (1 until melody.size).mapNotNull { position ->
+        val played = melody[position] ?: return@mapNotNull null
+        ItemResult(played, answer.getOrNull(position) == played)
+    }
 
 internal fun ChordAttempt.toEntity() = ChordAttemptEntity(
     sessionId = sessionId,

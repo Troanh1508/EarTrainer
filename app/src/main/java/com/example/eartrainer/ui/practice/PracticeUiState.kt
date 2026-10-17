@@ -3,6 +3,7 @@ package com.example.eartrainer.ui.practice
 import com.example.eartrainer.exercise.ExercisePhase
 import com.example.eartrainer.exercise.ExerciseQuestion
 import com.example.eartrainer.exercise.ExerciseState
+import com.example.eartrainer.music.Pitch
 
 enum class PlaybackStatus { Idle, Playing, Failed }
 
@@ -32,7 +33,7 @@ data class PracticeUiState<A, Q : ExerciseQuestion<A>>(
         }
     }
 
-    /** The notes in the order they sounded, e.g. "C4 → E4" or "C4 + E4 + G4". */
-    val notesAsPlayed: String
-        get() = question.prompt.moments.joinToString(" → ") { moment -> moment.joinToString(" + ") { it.name } }
+    /** The notes in the order they sounded, e.g. "C4 → E4" or "C4 + E4 + G4", named by [nameOf]. */
+    fun notesAsPlayed(nameOf: (Pitch) -> String = { it.name }): String =
+        question.prompt.moments.joinToString(" → ") { moment -> moment.joinToString(" + ", transform = nameOf) }
 }

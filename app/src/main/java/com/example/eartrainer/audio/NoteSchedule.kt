@@ -16,6 +16,8 @@ data class PlaybackTiming(
     val arpeggioStepSeconds: Double = 0.3,
     /** Length of each chord in a flowing progression, played back to back. */
     val progressionChordSeconds: Double = 1.1,
+    /** Length of each note of a melody, played back to back; the release keeps notes distinct. */
+    val melodyNoteSeconds: Double = 0.65,
     /** Length of each context chord (e.g. in a key-setting cadence), played back to back. */
     val contextChordSeconds: Double = 0.7,
     /** Silence between the context and the question, so the question stands apart. */
@@ -31,7 +33,7 @@ data class PlaybackTiming(
     init {
         require(noteSeconds > 0 && chordSeconds > 0) { "Note durations must be positive" }
         require(gapSeconds >= 0 && leadInSeconds >= 0 && tailSeconds >= 0) { "Silences must not be negative" }
-        require(arpeggioStepSeconds > 0 && contextChordSeconds > 0 && progressionChordSeconds > 0) { "Durations must be positive" }
+        require(arpeggioStepSeconds > 0 && contextChordSeconds > 0 && progressionChordSeconds > 0 && melodyNoteSeconds > 0) { "Durations must be positive" }
         require(contextPauseSeconds >= 0) { "Silences must not be negative" }
     }
 }
@@ -82,8 +84,13 @@ data class NoteSchedule(
                     }
                     cursor
                 }
-                ListeningPrompt.Articulation.FLOWING -> {
-                    val length = frames(timing.progressionChordSeconds)
+                ListeningPrompt.Articulation.FLOWING, ListeningPrompt.Articulation.MELODIC -> {
+                    val seconds = if (prompt.articulation == ListeningPrompt.Articulation.FLOWING) {
+                        timing.progressionChordSeconds
+                    } else {
+                        timing.melodyNoteSeconds
+                    }
+                    val length = frames(seconds)
                     prompt.moments.forEachIndexed { index, pitches ->
                         pitches.forEach { notes += ScheduledNote(it, leadIn + index * length, length) }
                     }
