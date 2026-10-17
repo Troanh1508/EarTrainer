@@ -9,9 +9,12 @@ import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordQuality
 import com.example.eartrainer.music.Interval
+import com.example.eartrainer.music.Mode
+import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -22,13 +25,15 @@ import kotlinx.coroutines.flow.update
 class FakePracticeHistory : PracticeHistory {
     private val intervals = MutableStateFlow<List<IntervalAttempt>>(emptyList())
     private val chords = MutableStateFlow<List<ChordAttempt>>(emptyList())
+    private val degrees = MutableStateFlow<List<ScaleDegreeAttempt>>(emptyList())
 
     val recorded: List<IntervalAttempt> get() = intervals.value
-    val recordedChords: List<ChordAttempt> get() = chords.value
 
     override fun record(attempt: IntervalAttempt) = intervals.update { it + attempt }
 
     override fun record(attempt: ChordAttempt) = chords.update { it + attempt }
+
+    override fun record(attempt: ScaleDegreeAttempt) = degrees.update { it + attempt }
 
     override fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>> = intervals.map { all ->
         Interval.entries.map { interval ->
@@ -51,9 +56,17 @@ class FakePracticeHistory : PracticeHistory {
         }
     }
 
-    override fun recentSessions(limit: Int): Flow<List<SessionSummary>> = combine(intervals, chords) { intervalList, chordList ->
+    override fun scaleDegreeAccuracy(mode: Mode?): Flow<List<AnswerAccuracy<ScaleDegree>>> = degrees.map { all ->
+        ScaleDegree.entries.map { degree ->
+            val matching = all.filter { it.degree == degree && (mode == null || it.key.mode == mode) }
+            AnswerAccuracy(degree, attempts = matching.size, correct = matching.count { it.isCorrect })
+        }
+    }
+
+    override fun recentSessions(limit: Int): Flow<List<SessionSummary>> = combine(intervals, chords, degrees) { intervalList, chordList, degreeList ->
         val rows = intervalList.map { Triple(it.sessionId, ExerciseKind.INTERVALS, it.answeredAtMillis to it.isCorrect) } +
-            chordList.map { Triple(it.sessionId, ExerciseKind.CHORDS, it.answeredAtMillis to it.isCorrect) }
+            chordList.map { Triple(it.sessionId, ExerciseKind.CHORDS, it.answeredAtMillis to it.isCorrect) } +
+            degreeList.map { Triple(it.sessionId, ExerciseKind.SCALE_DEGREES, it.answeredAtMillis to it.isCorrect) }
         rows.groupBy { it.first }
             .map { (id, session) ->
                 SessionSummary(

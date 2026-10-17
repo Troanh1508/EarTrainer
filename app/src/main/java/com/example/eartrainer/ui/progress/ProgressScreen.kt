@@ -146,6 +146,7 @@ private fun exerciseName(exercise: ExerciseKind) = stringResource(
     when (exercise) {
         ExerciseKind.INTERVALS -> R.string.progress_exercise_intervals
         ExerciseKind.CHORDS -> R.string.progress_exercise_chords
+        ExerciseKind.SCALE_DEGREES -> R.string.progress_exercise_degrees
     },
 )
 
@@ -153,6 +154,7 @@ private fun exerciseName(exercise: ExerciseKind) = stringResource(
 private fun filterLabel(filter: ProgressFilter): String = when (filter) {
     is ProgressFilter.IntervalStyleFilter -> filter.style?.displayName ?: stringResource(R.string.progress_filter_all)
     is ProgressFilter.ChordTargetFilter -> filter.target.displayName
+    is ProgressFilter.ModeFilter -> filter.mode?.displayName ?: stringResource(R.string.progress_filter_all_modes)
 }
 
 @Composable
@@ -163,6 +165,7 @@ private fun accuracyTitle(filter: ProgressFilter): String = stringResource(
             ChordTarget.QUALITY -> R.string.progress_by_quality
             ChordTarget.INVERSION -> R.string.progress_by_inversion
         }
+        is ProgressFilter.ModeFilter -> R.string.progress_by_degree
     },
 )
 

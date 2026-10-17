@@ -4,4 +4,5 @@ package com.example.eartrainer.exercise
 enum class ExerciseKind {
     INTERVALS,
     CHORDS,
+    SCALE_DEGREES,
 }

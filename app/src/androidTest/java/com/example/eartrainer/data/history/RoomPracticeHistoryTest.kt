@@ -10,10 +10,15 @@ import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.KeyContext
+import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordQuality
 import com.example.eartrainer.music.Interval
+import com.example.eartrainer.music.Key
+import com.example.eartrainer.music.Mode
 import com.example.eartrainer.music.Pitch
+import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -104,6 +109,25 @@ class RoomPracticeHistoryTest {
         assertEquals(ChordInversion.entries.map { ChordAnswer.Inversion(it) }, inversions.map { it.item })
         assertEquals(1, inversions.single { it.item == ChordAnswer.Inversion(ChordInversion.THIRD) }.correct)
         assertEquals(0, inversions.single { it.item == ChordAnswer.Inversion(ChordInversion.FIRST) }.attempts)
+    }
+
+    @Test
+    fun scaleDegreeAccuracyCoversEveryDegreeAndFiltersByMode() = runBlocking {
+        val major = Key(Pitch(60), Mode.MAJOR)
+        val minor = Key(Pitch(57), Mode.MINOR)
+        runBlocking {
+            listOf(
+                ScaleDegreeAttempt("d", 1_000, major, ScaleDegree.FIFTH, KeyContext.CADENCE, ScaleDegree.FIFTH, true, 1, 800),
+                ScaleDegreeAttempt("d", 2_000, minor, ScaleDegree.FIFTH, KeyContext.CADENCE, ScaleDegree.FOURTH, false, 2, 1_800),
+            ).forEach { database.scaleDegreeAttemptDao().insert(it.toEntity()) }
+        }
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        val all = history.scaleDegreeAccuracy(mode = null).first()
+        assertEquals(ScaleDegree.entries, all.map { it.item })
+        assertEquals(AnswerAccuracy(ScaleDegree.FIFTH, attempts = 2, correct = 1), all.single { it.item == ScaleDegree.FIFTH })
+        assertEquals(AnswerAccuracy(ScaleDegree.FIFTH, attempts = 1, correct = 0), history.scaleDegreeAccuracy(Mode.MINOR).first().single { it.item == ScaleDegree.FIFTH })
+        assertEquals(listOf(SessionSummary("d", ExerciseKind.SCALE_DEGREES, 1_000, 2, 1)), history.recentSessions(10).first())
     }
 
     @Test

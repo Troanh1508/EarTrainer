@@ -13,6 +13,7 @@ import com.example.eartrainer.data.history.SessionSummary
 import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.music.Mode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,10 +38,16 @@ sealed interface ProgressFilter {
         override val exercise get() = ExerciseKind.CHORDS
     }
 
+    /** Scale-degree accuracy in one mode, or every mode when [mode] is null. */
+    data class ModeFilter(val mode: Mode?) : ProgressFilter {
+        override val exercise get() = ExerciseKind.SCALE_DEGREES
+    }
+
     companion object {
         fun optionsFor(exercise: ExerciseKind): List<ProgressFilter> = when (exercise) {
             ExerciseKind.INTERVALS -> listOf(IntervalStyleFilter(null)) + IntervalStyle.entries.map(::IntervalStyleFilter)
             ExerciseKind.CHORDS -> ChordTarget.entries.map(::ChordTargetFilter)
+            ExerciseKind.SCALE_DEGREES -> listOf(ModeFilter(null)) + Mode.entries.map(::ModeFilter)
         }
     }
 }
@@ -91,6 +98,8 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
             history.intervalAccuracy(selected.style).map { list -> list.map { it.toItem(it.item.displayName) } }
         is ProgressFilter.ChordTargetFilter ->
             history.chordAccuracy(selected.target).map { list -> list.map { it.toItem(it.item.displayName) } }
+        is ProgressFilter.ModeFilter ->
+            history.scaleDegreeAccuracy(selected.mode).map { list -> list.map { it.toItem("${it.item.label} · ${it.item.solfege}") } }
     }
 
     private fun AnswerAccuracy<*>.toItem(label: String) = AccuracyItem(label, attempts, correct)

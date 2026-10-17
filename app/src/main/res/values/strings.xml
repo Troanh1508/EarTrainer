@@ -7,8 +7,10 @@
     <string name="home_intervals_description">Hear two notes and name the distance between them.</string>
     <string name="home_chords_title">Chord Training</string>
     <string name="home_chords_description">Hear a chord and name its quality or inversion.</string>
+    <string name="home_degrees_title">Scale Degrees</string>
+    <string name="home_degrees_description">Hear a key, then name a note by its role in it.</string>
     <string name="home_progress_title">Your Progress</string>
-    <string name="home_progress_description">See how accurately you recognise intervals and chords.</string>
+    <string name="home_progress_description">See how accurately you recognise intervals, chords and scale degrees.</string>
     <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
     <string name="home_sound_credit">Piano sound: Upright Piano KW from FreePats (CC0).</string>
 
@@ -46,6 +48,12 @@
     <string name="chords_bass_fifth">5th in the bass</string>
     <string name="chords_bass_seventh">7th in the bass</string>
 
+    <!-- Scale degrees -->
+    <string name="degrees_title">Scale Degrees</string>
+    <string name="degrees_instruction">Listen to the key being set, then identify the scale degree of the final note.</string>
+    <!-- e.g. "♭3 (Me) in C minor" -->
+    <string name="degrees_summary">%1$s (%2$s) in %3$s</string>
+
     <!-- Interval settings -->
     <string name="settings_title">Practice Settings</string>
     <string name="settings_new_session_note">Changes are saved automatically and start a new practice session.</string>
@@ -68,12 +76,24 @@
     <string name="chord_settings_inversions_description">Also play chords with the 3rd, 5th or 7th in the bass.</string>
     <string name="chord_settings_inversions_always">Always on when identifying inversions.</string>
 
+    <!-- Scale degree settings -->
+    <string name="degree_settings_modes_title">Modes</string>
+    <string name="degree_settings_modes_description">Questions randomly use any of the selected modes. Keep at least one.</string>
+    <string name="degree_settings_degrees_title">Notes to identify</string>
+    <string name="degree_settings_degrees_description">Only the seven notes of the key, or every note including chromatic ones.</string>
+    <string name="degree_settings_key_title">Key</string>
+    <string name="degree_settings_key_description">Practise in one familiar key, or a new key each question.</string>
+    <string name="degree_settings_context_title">How the key is set</string>
+    <string name="degree_settings_context_description">Played before each note so you can hear where home is.</string>
+
     <!-- Progress -->
     <string name="progress_title">Your Progress</string>
     <string name="progress_empty">Answer a few questions and your progress will appear here.</string>
     <string name="progress_exercise_intervals">Intervals</string>
     <string name="progress_exercise_chords">Chords</string>
+    <string name="progress_exercise_degrees">Scale degrees</string>
     <string name="progress_filter_all">All styles</string>
+    <string name="progress_filter_all_modes">All modes</string>
     <plurals name="progress_overall">
         <item quantity="one">%1$d of %2$d answer correct</item>
         <item quantity="other">%1$d of %2$d answers correct</item>
@@ -82,6 +102,7 @@
     <string name="progress_by_interval">By interval</string>
     <string name="progress_by_quality">By chord quality</string>
     <string name="progress_by_inversion">By inversion</string>
+    <string name="progress_by_degree">By scale degree</string>
     <string name="progress_not_practised">Not practised yet</string>
     <string name="progress_answer_score">%1$d of %2$d · %3$s</string>
     <string name="progress_recent_sessions">Recent sessions</string>

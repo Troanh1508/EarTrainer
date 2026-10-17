@@ -7,9 +7,12 @@ import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordQuality
 import com.example.eartrainer.music.Interval
+import com.example.eartrainer.music.Mode
+import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -38,6 +41,9 @@ interface PracticeHistory {
     /** Saves [attempt] in the background. The write completes even if the calling screen closes. */
     fun record(attempt: ChordAttempt)
 
+    /** Saves [attempt] in the background. The write completes even if the calling screen closes. */
+    fun record(attempt: ScaleDegreeAttempt)
+
     /** Accuracy for every interval, including unpractised ones; [style] null means all styles. */
     fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>>
 
@@ -46,6 +52,9 @@ interface PracticeHistory {
      * each inversion. Unpractised answers are included with zero attempts.
      */
     fun chordAccuracy(target: ChordTarget): Flow<List<AnswerAccuracy<ChordAnswer>>>
+
+    /** Accuracy for every scale degree, including unpractised ones; [mode] null means all modes. */
+    fun scaleDegreeAccuracy(mode: Mode?): Flow<List<AnswerAccuracy<ScaleDegree>>>
 
     /** Most recent sessions of any exercise first. Sessions without answers are not recorded. */
     fun recentSessions(limit: Int): Flow<List<SessionSummary>>
@@ -61,6 +70,8 @@ class RoomPracticeHistory(
 
     override fun record(attempt: ChordAttempt) = write { database.chordAttemptDao().insert(attempt.toEntity()) }
 
+    override fun record(attempt: ScaleDegreeAttempt) = write { database.scaleDegreeAttemptDao().insert(attempt.toEntity()) }
+
     override fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>> =
         database.intervalAttemptDao().accuracyByInterval(style?.name).map { rows -> rows.completeOver(Interval.entries) }
 
@@ -72,6 +83,9 @@ class RoomPracticeHistory(
             rows.completeOver(ChordInversion.entries).map { AnswerAccuracy(ChordAnswer.Inversion(it.item), it.attempts, it.correct) }
         }
     }
+
+    override fun scaleDegreeAccuracy(mode: Mode?): Flow<List<AnswerAccuracy<ScaleDegree>>> =
+        database.scaleDegreeAttemptDao().accuracyByDegree(mode?.name).map { rows -> rows.completeOver(ScaleDegree.entries) }
 
     override fun recentSessions(limit: Int): Flow<List<SessionSummary>> =
         database.sessionDao().recentSessions(limit).map { rows ->
@@ -114,6 +128,19 @@ internal fun IntervalAttempt.toEntity() = IntervalAttemptEntity(
     interval = interval.name,
     style = style.name,
     lowerMidi = lowerPitch.midi,
+    answer = answer.name,
+    isCorrect = isCorrect,
+    playCount = playCount,
+    responseMillis = responseMillis,
+)
+
+internal fun ScaleDegreeAttempt.toEntity() = ScaleDegreeAttemptEntity(
+    sessionId = sessionId,
+    answeredAtMillis = answeredAtMillis,
+    tonicMidi = key.tonic.midi,
+    mode = key.mode.name,
+    degree = degree.name,
+    context = context.name,
     answer = answer.name,
     isCorrect = isCorrect,
     playCount = playCount,

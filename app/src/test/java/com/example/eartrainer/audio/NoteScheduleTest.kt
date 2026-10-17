@@ -3,6 +3,7 @@ package com.example.eartrainer.audio
 import com.example.eartrainer.music.ListeningPrompt
 import com.example.eartrainer.music.Pitch
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NoteScheduleTest {
@@ -47,6 +48,22 @@ class NoteScheduleTest {
         assertEquals(List(4) { 930 + 1_600 }, schedule.notes.map { it.endFrame })
         assertEquals(2_530, schedule.contentEndFrame)
         assertEquals(4, schedule.maxPolyphony)
+    }
+
+    @Test
+    fun contextPlaysBackToBackThenPausesBeforeTheQuestion() {
+        val withContext = timing.copy(contextChordSeconds = 0.7, contextPauseSeconds = 0.5)
+        val chordA = listOf(Pitch(48), Pitch(60), Pitch(64))
+        val chordB = listOf(Pitch(53), Pitch(60), Pitch(65))
+        val prompt = ListeningPrompt(moments = listOf(listOf(Pitch(64))), context = listOf(chordA, chordB))
+        val schedule = NoteSchedule.from(prompt, sampleRate, withContext)
+
+        assertEquals(List(3) { 30 } + List(3) { 730 }, schedule.notes.take(6).map { it.startFrame })
+        assertTrue(schedule.notes.take(6).all { it.frameCount == 700 })
+        // Two chords end at 1430, then the 500 ms pause.
+        assertEquals(ScheduledNote(Pitch(64), startFrame = 1_930, frameCount = 900), schedule.notes.last())
+        assertEquals(2_830, schedule.contentEndFrame)
+        assertEquals(3, schedule.maxPolyphony)
     }
 
     @Test

@@ -21,31 +21,52 @@ class DatabaseMigrationTest {
     @get:Rule
     val helper = MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), EarTrainerDatabase::class.java)
 
-    @Test
-    fun version1To2KeepsIntervalHistoryAndAddsChords() {
-        helper.createDatabase(databaseName, 1).apply {
-            execSQL(
-                """
-                INSERT INTO interval_attempts
-                    (session_id, answered_at, interval, style, lower_midi, answer, is_correct, play_count, response_ms)
-                VALUES ('before-upgrade', 1000, 'PERFECT_FIFTH', 'HARMONIC', 55, 'PERFECT_FIFTH', 1, 2, 1800)
-                """,
-            )
-            close()
-        }
+    private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-        // Applies the auto-migration and checks the result matches the version 2 schema exactly.
-        helper.runMigrationsAndValidate(databaseName, 2, true).close()
+    private fun insertIntervalRow(sessionId: String) = """
+        INSERT INTO interval_attempts
+            (session_id, answered_at, interval, style, lower_midi, answer, is_correct, play_count, response_ms)
+        VALUES ('$sessionId', 1000, 'PERFECT_FIFTH', 'HARMONIC', 55, 'PERFECT_FIFTH', 1, 2, 1800)
+    """
 
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+    /** Opens the migrated file with the real database class and returns every session in it. */
+    private fun sessionsAfterUpgrade(): List<SessionSummaryRow> {
         val database = Room.databaseBuilder(context, EarTrainerDatabase::class.java, databaseName).build()
         try {
-            val sessions = runBlocking { database.sessionDao().recentSessions(10).first() }
-            assertEquals(listOf(SessionSummaryRow("before-upgrade", ExerciseKind.INTERVALS.name, 1_000, 1, 1)), sessions)
-            assertEquals(emptyList<AccuracyRow>(), runBlocking { database.chordAttemptDao().accuracyByQuality().first() })
+            return runBlocking { database.sessionDao().recentSessions(10).first() }
         } finally {
             database.close()
             context.deleteDatabase(databaseName)
         }
+    }
+
+    @Test
+    fun version1UpgradesThroughEveryVersionAndKeepsIntervalHistory() {
+        helper.createDatabase(databaseName, 1).apply {
+            execSQL(insertIntervalRow("from-v1"))
+            close()
+        }
+        // Applies each auto-migration in turn and checks the result matches each exported schema.
+        helper.runMigrationsAndValidate(databaseName, 2, true).close()
+        helper.runMigrationsAndValidate(databaseName, 3, true).close()
+
+        assertEquals(listOf(SessionSummaryRow("from-v1", ExerciseKind.INTERVALS.name, 1_000, 1, 1)), sessionsAfterUpgrade())
+    }
+
+    @Test
+    fun version2To3KeepsChordHistory() {
+        helper.createDatabase(databaseName, 2).apply {
+            execSQL(
+                """
+                INSERT INTO chord_attempts
+                    (session_id, answered_at, quality, inversion, style, target, bass_midi, answer, is_correct, play_count, response_ms)
+                VALUES ('from-v2', 2000, 'MINOR', 'FIRST', 'BLOCK', 'QUALITY', 52, 'MAJOR', 0, 1, 2500)
+                """,
+            )
+            close()
+        }
+        helper.runMigrationsAndValidate(databaseName, 3, true).close()
+
+        assertEquals(listOf(SessionSummaryRow("from-v2", ExerciseKind.CHORDS.name, 2_000, 1, 0)), sessionsAfterUpgrade())
     }
 }

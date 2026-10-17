@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.eartrainer.ui.chords.ChordTrainingRoute
+import com.example.eartrainer.ui.degrees.ScaleDegreeTrainingRoute
 import com.example.eartrainer.ui.home.HomeScreen
 import com.example.eartrainer.ui.intervals.IntervalTrainingRoute
 import com.example.eartrainer.ui.progress.ProgressRoute
@@ -14,6 +15,8 @@ import com.example.eartrainer.ui.settings.ChordSettingsRoute
 import com.example.eartrainer.ui.settings.ChordSettingsViewModel
 import com.example.eartrainer.ui.settings.IntervalSettingsRoute
 import com.example.eartrainer.ui.settings.IntervalSettingsViewModel
+import com.example.eartrainer.ui.settings.ScaleDegreeSettingsRoute
+import com.example.eartrainer.ui.settings.ScaleDegreeSettingsViewModel
 
 private object Routes {
     const val HOME = "home"
@@ -21,6 +24,8 @@ private object Routes {
     const val INTERVAL_SETTINGS = "interval-settings"
     const val CHORD_TRAINING = "chord-training"
     const val CHORD_SETTINGS = "chord-settings"
+    const val SCALE_DEGREE_TRAINING = "scale-degree-training"
+    const val SCALE_DEGREE_SETTINGS = "scale-degree-settings"
     const val PROGRESS = "progress"
 }
 
@@ -32,6 +37,7 @@ fun EarTrainerNavHost() {
             HomeScreen(
                 onOpenIntervalTraining = { navController.navigate(Routes.INTERVAL_TRAINING) },
                 onOpenChordTraining = { navController.navigate(Routes.CHORD_TRAINING) },
+                onOpenScaleDegreeTraining = { navController.navigate(Routes.SCALE_DEGREE_TRAINING) },
                 onOpenProgress = { navController.navigate(Routes.PROGRESS) },
             )
         }
@@ -54,6 +60,16 @@ fun EarTrainerNavHost() {
         composable(Routes.CHORD_SETTINGS) {
             val viewModel: ChordSettingsViewModel = viewModel(factory = ChordSettingsViewModel.Factory)
             ChordSettingsRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
+        }
+        composable(Routes.SCALE_DEGREE_TRAINING) {
+            ScaleDegreeTrainingRoute(
+                onOpenSettings = { navController.navigate(Routes.SCALE_DEGREE_SETTINGS) },
+                onNavigateUp = { navController.navigateUp() },
+            )
+        }
+        composable(Routes.SCALE_DEGREE_SETTINGS) {
+            val viewModel: ScaleDegreeSettingsViewModel = viewModel(factory = ScaleDegreeSettingsViewModel.Factory)
+            ScaleDegreeSettingsRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
         }
         composable(Routes.PROGRESS) {
             val viewModel: ProgressViewModel = viewModel(factory = ProgressViewModel.Factory)

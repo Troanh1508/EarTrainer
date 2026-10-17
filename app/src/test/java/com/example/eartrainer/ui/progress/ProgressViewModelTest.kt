@@ -7,10 +7,15 @@ import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.KeyContext
+import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordQuality
 import com.example.eartrainer.music.Interval
+import com.example.eartrainer.music.Key
+import com.example.eartrainer.music.Mode
 import com.example.eartrainer.music.Pitch
+import com.example.eartrainer.music.ScaleDegree
 import com.example.eartrainer.testing.FakePracticeHistory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -108,6 +113,27 @@ class ProgressViewModelTest {
             inversions.recentSessions.map { it.sessionId to it.exercise },
         )
         assertTrue(inversions.hasHistory)
+    }
+
+    @Test
+    fun scaleDegreesTabShowsEveryDegreeAndFiltersByMode() = runTest {
+        val cMajor = Key(Pitch(60), Mode.MAJOR)
+        val aMinor = Key(Pitch(57), Mode.MINOR)
+        history.record(ScaleDegreeAttempt("m", 1_000, cMajor, ScaleDegree.THIRD, KeyContext.CADENCE, ScaleDegree.THIRD, true, 1, 900))
+        history.record(ScaleDegreeAttempt("n", 2_000, aMinor, ScaleDegree.FLAT_THIRD, KeyContext.CADENCE, ScaleDegree.THIRD, false, 1, 900))
+        val viewModel = ProgressViewModel(history).also { collected(it) }
+
+        viewModel.onExerciseSelected(ExerciseKind.SCALE_DEGREES)
+        val all = viewModel.state
+        assertEquals(ProgressFilter.ModeFilter(null), all.filter)
+        assertEquals(ScaleDegree.entries.map { "${it.label} · ${it.solfege}" }, all.accuracy.map { it.label })
+        assertEquals(AccuracyItem("3 · Mi", attempts = 1, correct = 1), all.accuracy.single { it.label == "3 · Mi" })
+        assertEquals(2, all.totalAttempts)
+
+        viewModel.onFilterSelected(ProgressFilter.ModeFilter(Mode.MINOR))
+        assertEquals(1, viewModel.state.totalAttempts)
+        assertEquals(0, viewModel.state.totalCorrect)
+        assertEquals(ExerciseKind.SCALE_DEGREES, viewModel.state.recentSessions.first().exercise)
     }
 
     @Test

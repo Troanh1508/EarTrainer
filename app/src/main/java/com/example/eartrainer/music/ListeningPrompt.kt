@@ -7,12 +7,18 @@ package com.example.eartrainer.music
  * - Ascending melodic interval: `[[C4], [E4]]`
  * - Harmonic interval or block chord: `[[C4, E4, G4]]`
  * - Arpeggiated chord: `[[C4], [E4], [G4]]` with [Articulation.ARPEGGIATED]
+ * - Scale degree: a cadence as [context], then `[[E4]]`
  *
  * Exact timing (durations, gaps) is decided by the audio layer.
  */
 data class ListeningPrompt(
     val moments: List<List<Pitch>>,
     val articulation: Articulation = Articulation.SEPARATE,
+    /**
+     * Moments that set the scene before the question itself, such as a cadence establishing a
+     * key. Played briskly, then a pause separates them from [moments].
+     */
+    val context: List<List<Pitch>> = emptyList(),
 ) {
 
     enum class Articulation {
@@ -25,7 +31,7 @@ data class ListeningPrompt(
 
     init {
         require(moments.isNotEmpty()) { "A prompt needs at least one moment" }
-        require(moments.all { it.isNotEmpty() }) { "Every moment must sound at least one pitch" }
+        require(moments.all { it.isNotEmpty() } && context.all { it.isNotEmpty() }) { "Every moment must sound at least one pitch" }
     }
 
     companion object {
