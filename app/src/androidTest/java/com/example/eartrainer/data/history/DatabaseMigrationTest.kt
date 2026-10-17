@@ -49,12 +49,30 @@ class DatabaseMigrationTest {
         // Applies each auto-migration in turn and checks the result matches each exported schema.
         helper.runMigrationsAndValidate(databaseName, 2, true).close()
         helper.runMigrationsAndValidate(databaseName, 3, true).close()
+        helper.runMigrationsAndValidate(databaseName, 4, true).close()
 
         assertEquals(listOf(SessionSummaryRow("from-v1", ExerciseKind.INTERVALS.name, 1_000, 1, 1)), sessionsAfterUpgrade())
     }
 
     @Test
-    fun version2To3KeepsChordHistory() {
+    fun version3To4KeepsScaleDegreeHistory() {
+        helper.createDatabase(databaseName, 3).apply {
+            execSQL(
+                """
+                INSERT INTO scale_degree_attempts
+                    (session_id, answered_at, tonic_midi, mode, degree, context, answer, is_correct, play_count, response_ms)
+                VALUES ('from-v3', 3000, 60, 'MAJOR', 'THIRD', 'CADENCE', 'THIRD', 1, 1, 1200)
+                """,
+            )
+            close()
+        }
+        helper.runMigrationsAndValidate(databaseName, 4, true).close()
+
+        assertEquals(listOf(SessionSummaryRow("from-v3", ExerciseKind.SCALE_DEGREES.name, 3_000, 1, 1)), sessionsAfterUpgrade())
+    }
+
+    @Test
+    fun version2UpgradesToLatestAndKeepsChordHistory() {
         helper.createDatabase(databaseName, 2).apply {
             execSQL(
                 """
@@ -66,6 +84,7 @@ class DatabaseMigrationTest {
             close()
         }
         helper.runMigrationsAndValidate(databaseName, 3, true).close()
+        helper.runMigrationsAndValidate(databaseName, 4, true).close()
 
         assertEquals(listOf(SessionSummaryRow("from-v2", ExerciseKind.CHORDS.name, 2_000, 1, 0)), sessionsAfterUpgrade())
     }

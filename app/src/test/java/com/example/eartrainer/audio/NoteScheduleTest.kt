@@ -67,6 +67,19 @@ class NoteScheduleTest {
     }
 
     @Test
+    fun flowingProgressionPlaysChordsBackToBack() {
+        val flowing = timing.copy(progressionChordSeconds = 1.1)
+        val chords = listOf(listOf(Pitch(48), Pitch(60), Pitch(64)), listOf(Pitch(53), Pitch(60), Pitch(65)), listOf(Pitch(55), Pitch(59), Pitch(62)))
+        val schedule = NoteSchedule.from(ListeningPrompt(chords, ListeningPrompt.Articulation.FLOWING), sampleRate, flowing)
+
+        assertEquals(listOf(30, 1_130, 2_230), schedule.notes.map { it.startFrame }.distinct())
+        assertTrue(schedule.notes.all { it.frameCount == 1_100 })
+        assertEquals(3_330, schedule.contentEndFrame)
+        // Chords touch but never overlap.
+        assertEquals(3, schedule.maxPolyphony)
+    }
+
+    @Test
     fun polyphonyCountsOnlyNotesThatActuallyOverlap() {
         val melodic = NoteSchedule.from(ListeningPrompt.sequential(listOf(Pitch(60), Pitch(64), Pitch(67))), sampleRate, timing)
         assertEquals(1, melodic.maxPolyphony)

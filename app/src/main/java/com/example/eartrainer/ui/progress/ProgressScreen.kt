@@ -23,7 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -130,7 +130,8 @@ private fun ProgressContent(
 
 @Composable
 private fun ExerciseTabs(selected: ExerciseKind, onSelected: (ExerciseKind) -> Unit) {
-    PrimaryTabRow(selectedTabIndex = selected.ordinal) {
+    // Scrollable: four exercise names do not fit side by side on a phone.
+    PrimaryScrollableTabRow(selectedTabIndex = selected.ordinal, edgePadding = 16.dp) {
         ExerciseKind.entries.forEach { exercise ->
             Tab(
                 selected = exercise == selected,
@@ -147,6 +148,7 @@ private fun exerciseName(exercise: ExerciseKind) = stringResource(
         ExerciseKind.INTERVALS -> R.string.progress_exercise_intervals
         ExerciseKind.CHORDS -> R.string.progress_exercise_chords
         ExerciseKind.SCALE_DEGREES -> R.string.progress_exercise_degrees
+        ExerciseKind.PROGRESSIONS -> R.string.progress_exercise_progressions
     },
 )
 
@@ -155,6 +157,7 @@ private fun filterLabel(filter: ProgressFilter): String = when (filter) {
     is ProgressFilter.IntervalStyleFilter -> filter.style?.displayName ?: stringResource(R.string.progress_filter_all)
     is ProgressFilter.ChordTargetFilter -> filter.target.displayName
     is ProgressFilter.ModeFilter -> filter.mode?.displayName ?: stringResource(R.string.progress_filter_all_modes)
+    is ProgressFilter.ProgressionModeFilter -> filter.mode.displayName
 }
 
 @Composable
@@ -166,6 +169,7 @@ private fun accuracyTitle(filter: ProgressFilter): String = stringResource(
             ChordTarget.INVERSION -> R.string.progress_by_inversion
         }
         is ProgressFilter.ModeFilter -> R.string.progress_by_degree
+        is ProgressFilter.ProgressionModeFilter -> R.string.progress_by_chord
     },
 )
 
@@ -201,7 +205,9 @@ private fun OverallCard(state: ProgressUiState, modifier: Modifier = Modifier) {
                 if (state.totalAttempts == 0) {
                     stringResource(R.string.progress_no_answers_for_filter)
                 } else {
-                    pluralStringResource(R.plurals.progress_overall, state.totalAttempts, state.totalCorrect, state.totalAttempts)
+                    // Progressions are scored chord by chord, so count chords rather than answers.
+                    val counted = if (state.exercise == ExerciseKind.PROGRESSIONS) R.plurals.progress_overall_chords else R.plurals.progress_overall
+                    pluralStringResource(counted, state.totalAttempts, state.totalCorrect, state.totalAttempts)
                 },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,

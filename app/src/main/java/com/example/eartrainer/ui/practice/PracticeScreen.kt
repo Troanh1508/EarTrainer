@@ -43,6 +43,8 @@ data class PracticeTexts<A, Q : ExerciseQuestion<A>>(
     val choiceLabel: @Composable (A) -> ChoiceLabel,
     /** What the right answer was, shown after answering. */
     val correctSummary: @Composable (Q) -> String,
+    /** Whether feedback lists the sounded notes; long prompts like progressions summarise them instead. */
+    val showNotesAsPlayed: Boolean = true,
 )
 
 /**
@@ -115,7 +117,7 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScreen(
                         isCorrect = answer.isCorrect,
                         selectedLabel = texts.choiceLabel(answer.selectedAnswer).title,
                         correctSummary = texts.correctSummary(state.question),
-                        notesAsPlayed = state.notesAsPlayed,
+                        notesAsPlayed = state.notesAsPlayed.takeIf { texts.showNotesAsPlayed },
                         onNext = onNext,
                         modifier = Modifier
                             .fillMaxWidth()

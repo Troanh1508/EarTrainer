@@ -11,10 +11,13 @@ import com.example.eartrainer.ui.home.HomeScreen
 import com.example.eartrainer.ui.intervals.IntervalTrainingRoute
 import com.example.eartrainer.ui.progress.ProgressRoute
 import com.example.eartrainer.ui.progress.ProgressViewModel
+import com.example.eartrainer.ui.progressions.ProgressionTrainingRoute
 import com.example.eartrainer.ui.settings.ChordSettingsRoute
 import com.example.eartrainer.ui.settings.ChordSettingsViewModel
 import com.example.eartrainer.ui.settings.IntervalSettingsRoute
 import com.example.eartrainer.ui.settings.IntervalSettingsViewModel
+import com.example.eartrainer.ui.settings.ProgressionSettingsRoute
+import com.example.eartrainer.ui.settings.ProgressionSettingsViewModel
 import com.example.eartrainer.ui.settings.ScaleDegreeSettingsRoute
 import com.example.eartrainer.ui.settings.ScaleDegreeSettingsViewModel
 
@@ -26,6 +29,8 @@ private object Routes {
     const val CHORD_SETTINGS = "chord-settings"
     const val SCALE_DEGREE_TRAINING = "scale-degree-training"
     const val SCALE_DEGREE_SETTINGS = "scale-degree-settings"
+    const val PROGRESSION_TRAINING = "progression-training"
+    const val PROGRESSION_SETTINGS = "progression-settings"
     const val PROGRESS = "progress"
 }
 
@@ -38,6 +43,7 @@ fun EarTrainerNavHost() {
                 onOpenIntervalTraining = { navController.navigate(Routes.INTERVAL_TRAINING) },
                 onOpenChordTraining = { navController.navigate(Routes.CHORD_TRAINING) },
                 onOpenScaleDegreeTraining = { navController.navigate(Routes.SCALE_DEGREE_TRAINING) },
+                onOpenProgressionTraining = { navController.navigate(Routes.PROGRESSION_TRAINING) },
                 onOpenProgress = { navController.navigate(Routes.PROGRESS) },
             )
         }
@@ -70,6 +76,16 @@ fun EarTrainerNavHost() {
         composable(Routes.SCALE_DEGREE_SETTINGS) {
             val viewModel: ScaleDegreeSettingsViewModel = viewModel(factory = ScaleDegreeSettingsViewModel.Factory)
             ScaleDegreeSettingsRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
+        }
+        composable(Routes.PROGRESSION_TRAINING) {
+            ProgressionTrainingRoute(
+                onOpenSettings = { navController.navigate(Routes.PROGRESSION_SETTINGS) },
+                onNavigateUp = { navController.navigateUp() },
+            )
+        }
+        composable(Routes.PROGRESSION_SETTINGS) {
+            val viewModel: ProgressionSettingsViewModel = viewModel(factory = ProgressionSettingsViewModel.Factory)
+            ProgressionSettingsRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
         }
         composable(Routes.PROGRESS) {
             val viewModel: ProgressViewModel = viewModel(factory = ProgressViewModel.Factory)

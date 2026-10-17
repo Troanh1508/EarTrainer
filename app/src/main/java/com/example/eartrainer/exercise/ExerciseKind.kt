@@ -5,4 +5,5 @@ enum class ExerciseKind {
     INTERVALS,
     CHORDS,
     SCALE_DEGREES,
+    PROGRESSIONS,
 }

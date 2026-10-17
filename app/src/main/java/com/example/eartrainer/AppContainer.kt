@@ -15,6 +15,7 @@ import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.RoomPracticeHistory
 import com.example.eartrainer.data.settings.ChordSettingsStore
 import com.example.eartrainer.data.settings.IntervalSettingsStore
+import com.example.eartrainer.data.settings.ProgressionSettingsStore
 import com.example.eartrainer.data.settings.ScaleDegreeSettingsStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +42,8 @@ class AppContainer(private val context: Context) {
     val chordSettings by lazy { ChordSettingsStore(context.settingsDataStore) }
 
     val scaleDegreeSettings by lazy { ScaleDegreeSettingsStore(context.settingsDataStore) }
+
+    val progressionSettings by lazy { ProgressionSettingsStore(context.settingsDataStore) }
 
     /**
      * The piano is decoded once per process, in the background, and shared by every player.

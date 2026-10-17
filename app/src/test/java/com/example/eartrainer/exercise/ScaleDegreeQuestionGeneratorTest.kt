@@ -37,8 +37,8 @@ class ScaleDegreeQuestionGeneratorTest {
     @Test
     fun keysAreRandomWithinTheTonicRangeOrAlwaysC() {
         val random = generate(ScaleDegreeSettings()).map { it.key.tonic.midi }
-        assertTrue(random.all { it in ScaleDegreeSettings.TONIC_RANGE })
-        assertEquals(ScaleDegreeSettings.TONIC_RANGE.toSet(), random.toSet())
+        assertTrue(random.all { it in KeyChoice.TONIC_RANGE })
+        assertEquals(KeyChoice.TONIC_RANGE.toSet(), random.toSet())
         assertTrue(generate(ScaleDegreeSettings(keyChoice = KeyChoice.C_ONLY), count = 200).all { it.key.tonic == Pitch(60) })
     }
 

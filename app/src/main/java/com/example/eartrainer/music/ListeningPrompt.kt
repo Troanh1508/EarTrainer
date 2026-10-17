@@ -8,6 +8,7 @@ package com.example.eartrainer.music
  * - Harmonic interval or block chord: `[[C4, E4, G4]]`
  * - Arpeggiated chord: `[[C4], [E4], [G4]]` with [Articulation.ARPEGGIATED]
  * - Scale degree: a cadence as [context], then `[[E4]]`
+ * - Chord progression: one multi-pitch moment per chord with [Articulation.FLOWING]
  *
  * Exact timing (durations, gaps) is decided by the audio layer.
  */
@@ -27,6 +28,9 @@ data class ListeningPrompt(
 
         /** Moments start in quick succession and keep ringing until the last one has sounded. */
         ARPEGGIATED,
+
+        /** Moments follow each other without gaps at a moderate pace, as in a chord progression. */
+        FLOWING,
     }
 
     init {

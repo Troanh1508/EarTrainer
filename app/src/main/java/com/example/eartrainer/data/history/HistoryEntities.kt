@@ -66,6 +66,27 @@ data class ScaleDegreeAttemptEntity(
     @ColumnInfo(name = "response_ms") val responseMillis: Long,
 )
 
+/** Added in schema version 4. Progressions are stored as comma-separated scale steps, e.g. "1,6,4,5". */
+@Entity(
+    tableName = "progression_attempts",
+    indices = [Index("session_id"), Index("mode")],
+)
+data class ProgressionAttemptEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "session_id") val sessionId: String,
+    @ColumnInfo(name = "answered_at") val answeredAtMillis: Long,
+    @ColumnInfo(name = "tonic_midi") val tonicMidi: Int,
+    @ColumnInfo(name = "mode") val mode: String,
+    @ColumnInfo(name = "progression") val progression: String,
+    @ColumnInfo(name = "answer") val answer: String,
+    @ColumnInfo(name = "is_correct") val isCorrect: Boolean,
+    @ColumnInfo(name = "play_count") val playCount: Int,
+    @ColumnInfo(name = "response_ms") val responseMillis: Long,
+)
+
+/** A stored progression question and the progression chosen, as scale-step lists. */
+data class ProgressionAnswerRow(val progression: String, val answer: String)
+
 /** Totals for one answer value, e.g. an interval or a chord quality, stored by name. */
 data class AccuracyRow(val item: String, val attempts: Int, val correct: Int)
 
@@ -140,6 +161,16 @@ interface ScaleDegreeAttemptDao {
 }
 
 @Dao
+interface ProgressionAttemptDao {
+    @Insert
+    suspend fun insert(attempt: ProgressionAttemptEntity)
+
+    /** Every answered progression in [mode]; per-chord totals are worked out from these. */
+    @Query("SELECT progression, answer FROM progression_attempts WHERE mode = :mode")
+    fun answersInMode(mode: String): Flow<List<ProgressionAnswerRow>>
+}
+
+@Dao
 interface SessionDao {
     /** Sessions from every exercise type, newest first. A session belongs to one exercise only. */
     @Query(
@@ -152,6 +183,8 @@ interface SessionDao {
             SELECT session_id, answered_at, is_correct, 'CHORDS' AS exercise FROM chord_attempts
             UNION ALL
             SELECT session_id, answered_at, is_correct, 'SCALE_DEGREES' AS exercise FROM scale_degree_attempts
+            UNION ALL
+            SELECT session_id, answered_at, is_correct, 'PROGRESSIONS' AS exercise FROM progression_attempts
         )
         GROUP BY session_id
         ORDER BY startedAtMillis DESC

@@ -63,6 +63,19 @@ data class Key(val tonic: Pitch, val mode: Mode) {
         voiced(listOf(-12, 0, mode.third, 7)),
     )
 
+    /** Note name spelled for this key: flats in flat keys (A♭ in E♭ major), sharps otherwise. */
+    fun noteName(pitch: Pitch): String {
+        val pitchClass = pitch.midi % 12
+        return if (prefersFlats) FLAT_NAMES[pitchClass] else pitch.pitchClassName
+    }
+
+    /** Keys whose signatures use flats: F, B♭, E♭, A♭, D♭ major and D, G, C, F, B♭, E♭ minor. */
+    private val prefersFlats: Boolean
+        get() = tonic.midi % 12 in when (mode) {
+            Mode.MAJOR -> setOf(5, 10, 3, 8, 1)
+            Mode.MINOR -> setOf(2, 7, 0, 5, 10, 3)
+        }
+
     private fun voiced(offsets: List<Int>): List<Pitch> = offsets.map(tonic::transpose)
 
     private val Mode.third: Int get() = if (this == Mode.MAJOR) 4 else 3
@@ -78,5 +91,6 @@ data class Key(val tonic: Pitch, val mode: Mode) {
     private companion object {
         val MAJOR_KEY_NAMES = listOf("C", "D♭", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B")
         val MINOR_KEY_NAMES = listOf("C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "G♯", "A", "B♭", "B")
+        val FLAT_NAMES = listOf("C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B")
     }
 }

@@ -166,7 +166,8 @@ fun AnswerFeedback(
     selectedLabel: String,
     /** What the right answer was, e.g. "Major third · 4 semitones". */
     correctSummary: String,
-    notesAsPlayed: String,
+    /** The sounded notes, or null to leave them out. */
+    notesAsPlayed: String?,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -200,11 +201,13 @@ fun AnswerFeedback(
                 correctSummary,
                 style = MaterialTheme.typography.titleMedium,
             )
-            Text(
-                notesAsPlayed,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            notesAsPlayed?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         Spacer(Modifier.size(8.dp))
         Button(onClick = onNext, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {

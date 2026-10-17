@@ -11,17 +11,28 @@ import androidx.room.RoomDatabase
  * 1. interval_attempts
  * 2. chord_attempts (added table, so Room migrates automatically from the exported schemas)
  * 3. scale_degree_attempts (added table, automatic migration)
+ * 4. progression_attempts (added table, automatic migration)
  */
 @Database(
-    entities = [IntervalAttemptEntity::class, ChordAttemptEntity::class, ScaleDegreeAttemptEntity::class],
-    version = 3,
+    entities = [
+        IntervalAttemptEntity::class,
+        ChordAttemptEntity::class,
+        ScaleDegreeAttemptEntity::class,
+        ProgressionAttemptEntity::class,
+    ],
+    version = 4,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3),
+        AutoMigration(from = 3, to = 4),
+    ],
 )
 abstract class EarTrainerDatabase : RoomDatabase() {
     abstract fun intervalAttemptDao(): IntervalAttemptDao
     abstract fun chordAttemptDao(): ChordAttemptDao
     abstract fun scaleDegreeAttemptDao(): ScaleDegreeAttemptDao
+    abstract fun progressionAttemptDao(): ProgressionAttemptDao
     abstract fun sessionDao(): SessionDao
 
     companion object {

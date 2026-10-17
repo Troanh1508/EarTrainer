@@ -22,11 +22,6 @@ enum class DegreeSet(val displayName: String) {
     CHROMATIC("All 12 notes"),
 }
 
-enum class KeyChoice(val displayName: String) {
-    RANDOM("Random key"),
-    C_ONLY("Always C"),
-}
-
 data class ScaleDegreeQuestion(
     val key: Key,
     val degree: ScaleDegree,
@@ -75,15 +70,6 @@ data class ScaleDegreeSettings(
         DegreeSet.DIATONIC -> mode.diatonicDegrees
         DegreeSet.CHROMATIC -> ScaleDegree.entries
     }
-
-    companion object {
-        /**
-         * Tonics are drawn from G3..F♯4: every key is available, and both the cadence (down to an
-         * octave below the tonic) and the target (up to a seventh above) stay in a clear register.
-         */
-        val TONIC_RANGE = 55..66
-        val C_TONIC = Pitch(60)
-    }
 }
 
 class ScaleDegreeQuestionGenerator(
@@ -92,10 +78,7 @@ class ScaleDegreeQuestionGenerator(
 ) {
     fun generate(): ScaleDegreeQuestion {
         val mode = settings.modes.random(random)
-        val tonic = when (settings.keyChoice) {
-            KeyChoice.RANDOM -> Pitch(random.nextInt(ScaleDegreeSettings.TONIC_RANGE.first, ScaleDegreeSettings.TONIC_RANGE.last + 1))
-            KeyChoice.C_ONLY -> ScaleDegreeSettings.C_TONIC
-        }
+        val tonic = settings.keyChoice.pickTonic(random)
         val choices = settings.degreesFor(mode)
         return ScaleDegreeQuestion(Key(tonic, mode), choices.random(random), settings.context, choices)
     }

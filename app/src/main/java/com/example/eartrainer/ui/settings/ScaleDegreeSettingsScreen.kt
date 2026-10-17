@@ -98,8 +98,8 @@ fun ScaleDegreeSettingsScreen(
                 )
 
                 SettingsSection(
-                    title = stringResource(R.string.degree_settings_modes_title),
-                    description = stringResource(R.string.degree_settings_modes_description),
+                    title = stringResource(R.string.settings_modes_title),
+                    description = stringResource(R.string.settings_modes_description),
                 ) {
                     Mode.entries.forEach { mode ->
                         SettingsChip(mode.displayName, selected = mode in settings.modes, onClick = { onModeToggled(mode) })
@@ -120,8 +120,8 @@ fun ScaleDegreeSettingsScreen(
                 HorizontalDivider()
 
                 SettingsSection(
-                    title = stringResource(R.string.degree_settings_key_title),
-                    description = stringResource(R.string.degree_settings_key_description),
+                    title = stringResource(R.string.settings_key_title),
+                    description = stringResource(R.string.settings_key_description),
                 ) {
                     KeyChoice.entries.forEach { choice ->
                         SettingsChip(choice.displayName, selected = settings.keyChoice == choice, onClick = { onKeyChoiceSelected(choice) })

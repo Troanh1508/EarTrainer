@@ -8,9 +8,12 @@ import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
 import com.example.eartrainer.exercise.KeyContext
+import com.example.eartrainer.exercise.ProgressionAttempt
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
+import com.example.eartrainer.music.ChordProgression
 import com.example.eartrainer.music.ChordQuality
+import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Key
 import com.example.eartrainer.music.Mode
@@ -134,6 +137,30 @@ class ProgressViewModelTest {
         assertEquals(1, viewModel.state.totalAttempts)
         assertEquals(0, viewModel.state.totalCorrect)
         assertEquals(ExerciseKind.SCALE_DEGREES, viewModel.state.recentSessions.first().exercise)
+    }
+
+    @Test
+    fun progressionsTabScoresEachChordAfterTheTonic() = runTest {
+        fun progression(vararg steps: Int) = ChordProgression(steps.map { DiatonicChord(Mode.MAJOR, it) })
+        val key = Key(Pitch(60), Mode.MAJOR)
+        // Asked I-vi-IV-V, answered I-vi-ii-V: vi and V right, IV wrong.
+        history.record(ProgressionAttempt("p", 1_000, key, progression(1, 6, 4, 5), progression(1, 6, 2, 5), false, 1, 5_000))
+        // Asked I-IV-V-I, answered correctly: IV, V and the closing I right.
+        history.record(ProgressionAttempt("p", 2_000, key, progression(1, 4, 5, 1), progression(1, 4, 5, 1), true, 1, 4_000))
+        val viewModel = ProgressViewModel(history).also { collected(it) }
+
+        viewModel.onExerciseSelected(ExerciseKind.PROGRESSIONS)
+        val state = viewModel.state
+        assertEquals(ProgressFilter.ProgressionModeFilter(Mode.MAJOR), state.filter)
+        assertEquals(listOf("I", "ii", "iii", "IV", "V", "vi", "vii°"), state.accuracy.map { it.label })
+        assertEquals(AccuracyItem("IV", attempts = 2, correct = 1), state.accuracy.single { it.label == "IV" })
+        assertEquals(AccuracyItem("V", attempts = 2, correct = 2), state.accuracy.single { it.label == "V" })
+        // Only the closing tonic counts; the opening one is given.
+        assertEquals(AccuracyItem("I", attempts = 1, correct = 1), state.accuracy.single { it.label == "I" })
+        assertEquals(6, state.totalAttempts)
+
+        viewModel.onFilterSelected(ProgressFilter.ProgressionModeFilter(Mode.MINOR))
+        assertEquals(0, viewModel.state.totalAttempts)
     }
 
     @Test

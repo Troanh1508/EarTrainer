@@ -9,8 +9,10 @@
     <string name="home_chords_description">Hear a chord and name its quality or inversion.</string>
     <string name="home_degrees_title">Scale Degrees</string>
     <string name="home_degrees_description">Hear a key, then name a note by its role in it.</string>
+    <string name="home_progressions_title">Chord Progressions</string>
+    <string name="home_progressions_description">Hear a progression in a key and name its chords.</string>
     <string name="home_progress_title">Your Progress</string>
-    <string name="home_progress_description">See how accurately you recognise intervals, chords and scale degrees.</string>
+    <string name="home_progress_description">See how accurately you recognise what you hear in each exercise.</string>
     <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
     <string name="home_sound_credit">Piano sound: Upright Piano KW from FreePats (CC0).</string>
 
@@ -54,6 +56,12 @@
     <!-- e.g. "♭3 (Me) in C minor" -->
     <string name="degrees_summary">%1$s (%2$s) in %3$s</string>
 
+    <!-- Chord progressions -->
+    <string name="progressions_title">Chord Progressions</string>
+    <string name="progressions_instruction">Listen to the progression and choose the chords you heard. It always starts on the tonic.</string>
+    <!-- e.g. "I – vi – IV – V in C major (C – Am – F – G)" -->
+    <string name="progressions_summary">%1$s in %2$s (%3$s)</string>
+
     <!-- Interval settings -->
     <string name="settings_title">Practice Settings</string>
     <string name="settings_new_session_note">Changes are saved automatically and start a new practice session.</string>
@@ -77,14 +85,20 @@
     <string name="chord_settings_inversions_always">Always on when identifying inversions.</string>
 
     <!-- Scale degree settings -->
-    <string name="degree_settings_modes_title">Modes</string>
-    <string name="degree_settings_modes_description">Questions randomly use any of the selected modes. Keep at least one.</string>
+    <string name="settings_modes_title">Modes</string>
+    <string name="settings_modes_description">Questions randomly use any of the selected modes. Keep at least one.</string>
     <string name="degree_settings_degrees_title">Notes to identify</string>
     <string name="degree_settings_degrees_description">Only the seven notes of the key, or every note including chromatic ones.</string>
-    <string name="degree_settings_key_title">Key</string>
-    <string name="degree_settings_key_description">Practise in one familiar key, or a new key each question.</string>
+    <string name="settings_key_title">Key</string>
+    <string name="settings_key_description">Practise in one familiar key, or a new key each question.</string>
     <string name="degree_settings_context_title">How the key is set</string>
     <string name="degree_settings_context_description">Played before each note so you can hear where home is.</string>
+
+    <!-- Progression settings -->
+    <string name="progression_settings_vocabulary_title">Chords</string>
+    <string name="progression_settings_vocabulary_description">Which chords of the key progressions can use. Start with I, IV and V.</string>
+    <string name="progression_settings_length_title">Length</string>
+    <string name="progression_settings_length_description">How many chords each progression has, including the opening tonic.</string>
 
     <!-- Progress -->
     <string name="progress_title">Your Progress</string>
@@ -92,17 +106,23 @@
     <string name="progress_exercise_intervals">Intervals</string>
     <string name="progress_exercise_chords">Chords</string>
     <string name="progress_exercise_degrees">Scale degrees</string>
+    <string name="progress_exercise_progressions">Progressions</string>
     <string name="progress_filter_all">All styles</string>
     <string name="progress_filter_all_modes">All modes</string>
     <plurals name="progress_overall">
         <item quantity="one">%1$d of %2$d answer correct</item>
         <item quantity="other">%1$d of %2$d answers correct</item>
     </plurals>
+    <plurals name="progress_overall_chords">
+        <item quantity="one">%1$d of %2$d chord correct</item>
+        <item quantity="other">%1$d of %2$d chords correct</item>
+    </plurals>
     <string name="progress_no_answers_for_filter">No answers here yet</string>
     <string name="progress_by_interval">By interval</string>
     <string name="progress_by_quality">By chord quality</string>
     <string name="progress_by_inversion">By inversion</string>
     <string name="progress_by_degree">By scale degree</string>
+    <string name="progress_by_chord">By chord, after the opening tonic</string>
     <string name="progress_not_practised">Not practised yet</string>
     <string name="progress_answer_score">%1$d of %2$d · %3$s</string>
     <string name="progress_recent_sessions">Recent sessions</string>

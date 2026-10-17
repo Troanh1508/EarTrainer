@@ -11,9 +11,12 @@ import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
 import com.example.eartrainer.exercise.KeyContext
+import com.example.eartrainer.exercise.ProgressionAttempt
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
+import com.example.eartrainer.music.ChordProgression
 import com.example.eartrainer.music.ChordQuality
+import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Key
 import com.example.eartrainer.music.Mode
@@ -128,6 +131,30 @@ class RoomPracticeHistoryTest {
         assertEquals(AnswerAccuracy(ScaleDegree.FIFTH, attempts = 2, correct = 1), all.single { it.item == ScaleDegree.FIFTH })
         assertEquals(AnswerAccuracy(ScaleDegree.FIFTH, attempts = 1, correct = 0), history.scaleDegreeAccuracy(Mode.MINOR).first().single { it.item == ScaleDegree.FIFTH })
         assertEquals(listOf(SessionSummary("d", ExerciseKind.SCALE_DEGREES, 1_000, 2, 1)), history.recentSessions(10).first())
+    }
+
+    @Test
+    fun progressionAccuracyIsScoredPerChordInTheRequestedMode() = runBlocking {
+        fun progression(mode: Mode, vararg steps: Int) = ChordProgression(steps.map { DiatonicChord(mode, it) })
+        val major = Key(Pitch(60), Mode.MAJOR)
+        val minor = Key(Pitch(57), Mode.MINOR)
+        runBlocking {
+            listOf(
+                ProgressionAttempt("p", 1_000, major, progression(Mode.MAJOR, 1, 6, 4, 5), progression(Mode.MAJOR, 1, 6, 2, 5), false, 1, 5_000),
+                ProgressionAttempt("q", 2_000, minor, progression(Mode.MINOR, 1, 4, 5), progression(Mode.MINOR, 1, 4, 5), true, 2, 3_000),
+            ).forEach { database.progressionAttemptDao().insert(it.toEntity()) }
+        }
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        val majorChords = history.progressionAccuracy(Mode.MAJOR).first()
+        assertEquals(DiatonicChord.all(Mode.MAJOR), majorChords.map { it.item })
+        assertEquals(AnswerAccuracy(DiatonicChord(Mode.MAJOR, 4), attempts = 1, correct = 0), majorChords.single { it.item.step == 4 })
+        assertEquals(AnswerAccuracy(DiatonicChord(Mode.MAJOR, 6), attempts = 1, correct = 1), majorChords.single { it.item.step == 6 })
+        assertEquals(0, majorChords.single { it.item.step == 1 }.attempts)
+
+        val minorChords = history.progressionAccuracy(Mode.MINOR).first()
+        assertEquals(2, minorChords.sumOf { it.attempts })
+        assertEquals(listOf("q" to ExerciseKind.PROGRESSIONS, "p" to ExerciseKind.PROGRESSIONS), history.recentSessions(10).first().map { it.sessionId to it.exercise })
     }
 
     @Test

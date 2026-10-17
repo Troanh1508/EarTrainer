@@ -7,15 +7,20 @@ import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.ProgressionAttempt
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
+import com.example.eartrainer.music.ChordProgression
 import com.example.eartrainer.music.ChordQuality
+import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Mode
 import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -44,6 +49,9 @@ interface PracticeHistory {
     /** Saves [attempt] in the background. The write completes even if the calling screen closes. */
     fun record(attempt: ScaleDegreeAttempt)
 
+    /** Saves [attempt] in the background. The write completes even if the calling screen closes. */
+    fun record(attempt: ProgressionAttempt)
+
     /** Accuracy for every interval, including unpractised ones; [style] null means all styles. */
     fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>>
 
@@ -55,6 +63,12 @@ interface PracticeHistory {
 
     /** Accuracy for every scale degree, including unpractised ones; [mode] null means all modes. */
     fun scaleDegreeAccuracy(mode: Mode?): Flow<List<AnswerAccuracy<ScaleDegree>>>
+
+    /**
+     * How often each chord of [mode] was identified correctly inside progressions, counted per
+     * position. The opening tonic is given rather than tested, so it is not counted.
+     */
+    fun progressionAccuracy(mode: Mode): Flow<List<AnswerAccuracy<DiatonicChord>>>
 
     /** Most recent sessions of any exercise first. Sessions without answers are not recorded. */
     fun recentSessions(limit: Int): Flow<List<SessionSummary>>
@@ -72,6 +86,8 @@ class RoomPracticeHistory(
 
     override fun record(attempt: ScaleDegreeAttempt) = write { database.scaleDegreeAttemptDao().insert(attempt.toEntity()) }
 
+    override fun record(attempt: ProgressionAttempt) = write { database.progressionAttemptDao().insert(attempt.toEntity()) }
+
     override fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>> =
         database.intervalAttemptDao().accuracyByInterval(style?.name).map { rows -> rows.completeOver(Interval.entries) }
 
@@ -86,6 +102,11 @@ class RoomPracticeHistory(
 
     override fun scaleDegreeAccuracy(mode: Mode?): Flow<List<AnswerAccuracy<ScaleDegree>>> =
         database.scaleDegreeAttemptDao().accuracyByDegree(mode?.name).map { rows -> rows.completeOver(ScaleDegree.entries) }
+
+    override fun progressionAccuracy(mode: Mode): Flow<List<AnswerAccuracy<DiatonicChord>>> =
+        database.progressionAttemptDao().answersInMode(mode.name)
+            .map { rows -> progressionChordAccuracy(mode, rows.map { it.progression.toSteps() to it.answer.toSteps() }) }
+            .flowOn(Dispatchers.Default)
 
     override fun recentSessions(limit: Int): Flow<List<SessionSummary>> =
         database.sessionDao().recentSessions(limit).map { rows ->
@@ -146,6 +167,39 @@ internal fun ScaleDegreeAttempt.toEntity() = ScaleDegreeAttemptEntity(
     playCount = playCount,
     responseMillis = responseMillis,
 )
+
+internal fun ProgressionAttempt.toEntity() = ProgressionAttemptEntity(
+    sessionId = sessionId,
+    answeredAtMillis = answeredAtMillis,
+    tonicMidi = key.tonic.midi,
+    mode = key.mode.name,
+    progression = progression.toSteps(),
+    answer = answer.toSteps(),
+    isCorrect = isCorrect,
+    playCount = playCount,
+    responseMillis = responseMillis,
+)
+
+private fun ChordProgression.toSteps(): String = chords.joinToString(",") { it.step.toString() }
+
+private fun String.toSteps(): List<Int> = split(",").mapNotNull { it.trim().toIntOrNull() }
+
+/**
+ * Per-chord accuracy from (asked, chosen) step lists: every position after the first counts as
+ * one attempt at the chord asked there, correct when the chosen progression has the same chord.
+ */
+internal fun progressionChordAccuracy(mode: Mode, answers: List<Pair<List<Int>, List<Int>>>): List<AnswerAccuracy<DiatonicChord>> {
+    val attempts = IntArray(8)
+    val correct = IntArray(8)
+    for ((asked, chosen) in answers) {
+        for (position in 1 until asked.size) {
+            val step = asked[position].takeIf { it in 1..7 } ?: continue
+            attempts[step]++
+            if (chosen.getOrNull(position) == step) correct[step]++
+        }
+    }
+    return DiatonicChord.all(mode).map { AnswerAccuracy(it, attempts[it.step], correct[it.step]) }
+}
 
 internal fun ChordAttempt.toEntity() = ChordAttemptEntity(
     sessionId = sessionId,

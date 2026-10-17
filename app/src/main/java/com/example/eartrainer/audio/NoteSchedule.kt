@@ -14,6 +14,8 @@ data class PlaybackTiming(
     val gapSeconds: Double = 0.15,
     /** Time between onsets in an arpeggio; short enough that the notes are heard as one chord. */
     val arpeggioStepSeconds: Double = 0.3,
+    /** Length of each chord in a flowing progression, played back to back. */
+    val progressionChordSeconds: Double = 1.1,
     /** Length of each context chord (e.g. in a key-setting cadence), played back to back. */
     val contextChordSeconds: Double = 0.7,
     /** Silence between the context and the question, so the question stands apart. */
@@ -29,7 +31,7 @@ data class PlaybackTiming(
     init {
         require(noteSeconds > 0 && chordSeconds > 0) { "Note durations must be positive" }
         require(gapSeconds >= 0 && leadInSeconds >= 0 && tailSeconds >= 0) { "Silences must not be negative" }
-        require(arpeggioStepSeconds > 0 && contextChordSeconds > 0) { "Durations must be positive" }
+        require(arpeggioStepSeconds > 0 && contextChordSeconds > 0 && progressionChordSeconds > 0) { "Durations must be positive" }
         require(contextPauseSeconds >= 0) { "Silences must not be negative" }
     }
 }
@@ -79,6 +81,13 @@ data class NoteSchedule(
                         cursor += length
                     }
                     cursor
+                }
+                ListeningPrompt.Articulation.FLOWING -> {
+                    val length = frames(timing.progressionChordSeconds)
+                    prompt.moments.forEachIndexed { index, pitches ->
+                        pitches.forEach { notes += ScheduledNote(it, leadIn + index * length, length) }
+                    }
+                    leadIn + prompt.moments.size * length
                 }
                 ListeningPrompt.Articulation.ARPEGGIATED -> {
                     // Every note holds until the shared end, like a sustain pedal, so the last

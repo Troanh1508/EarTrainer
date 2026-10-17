@@ -43,11 +43,17 @@ sealed interface ProgressFilter {
         override val exercise get() = ExerciseKind.SCALE_DEGREES
     }
 
+    /** Per-chord accuracy within progressions in one mode; numerals differ between modes. */
+    data class ProgressionModeFilter(val mode: Mode) : ProgressFilter {
+        override val exercise get() = ExerciseKind.PROGRESSIONS
+    }
+
     companion object {
         fun optionsFor(exercise: ExerciseKind): List<ProgressFilter> = when (exercise) {
             ExerciseKind.INTERVALS -> listOf(IntervalStyleFilter(null)) + IntervalStyle.entries.map(::IntervalStyleFilter)
             ExerciseKind.CHORDS -> ChordTarget.entries.map(::ChordTargetFilter)
             ExerciseKind.SCALE_DEGREES -> listOf(ModeFilter(null)) + Mode.entries.map(::ModeFilter)
+            ExerciseKind.PROGRESSIONS -> Mode.entries.map(::ProgressionModeFilter)
         }
     }
 }
@@ -100,6 +106,8 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
             history.chordAccuracy(selected.target).map { list -> list.map { it.toItem(it.item.displayName) } }
         is ProgressFilter.ModeFilter ->
             history.scaleDegreeAccuracy(selected.mode).map { list -> list.map { it.toItem("${it.item.label} · ${it.item.solfege}") } }
+        is ProgressFilter.ProgressionModeFilter ->
+            history.progressionAccuracy(selected.mode).map { list -> list.map { it.toItem(it.item.numeral) } }
     }
 
     private fun AnswerAccuracy<*>.toItem(label: String) = AccuracyItem(label, attempts, correct)
