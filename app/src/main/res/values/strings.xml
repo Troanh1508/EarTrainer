@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">Ear Trainer</string>
+
+    <!-- Home -->
+    <string name="home_tagline">Train your ears to recognise what you hear.</string>
+    <string name="home_intervals_title">Interval Training</string>
+    <string name="home_intervals_description">Hear two notes and name the distance between them.</string>
+    <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
+
+    <!-- Interval training -->
+    <string name="intervals_title">Interval Training</string>
+    <string name="intervals_instruction">Listen to the two notes and identify the interval.</string>
+    <string name="intervals_question_number">Question %1$d · %2$s</string>
+    <string name="intervals_score">%1$d of %2$d correct</string>
+    <string name="intervals_score_empty">No answers yet</string>
+    <string name="intervals_play">Play</string>
+    <string name="intervals_replay">Replay</string>
+    <string name="intervals_stop">Stop</string>
+    <string name="intervals_listen_first">Play the notes to unlock the answers.</string>
+    <string name="intervals_playback_failed">Audio could not be played. Check your volume and output device, then try again.</string>
+    <string name="intervals_feedback_correct">Correct</string>
+    <string name="intervals_feedback_incorrect">Not quite</string>
+    <string name="intervals_feedback_your_answer">You answered %1$s.</string>
+    <plurals name="intervals_semitones">
+        <item quantity="one">%d semitone</item>
+        <item quantity="other">%d semitones</item>
+    </plurals>
+    <string name="intervals_next">Next question</string>
+    <string name="intervals_choice_correct">correct answer</string>
+    <string name="intervals_choice_incorrect">your answer, incorrect</string>
+    <string name="navigate_back">Back</string>
+</resources>

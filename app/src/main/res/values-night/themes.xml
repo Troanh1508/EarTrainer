@@ -1,0 +1,4 @@
+<resources>
+    <!-- Dark window background avoids a white flash before Compose draws in dark mode. -->
+    <style name="Theme.EarTrainer" parent="android:Theme.Material.NoActionBar" />
+</resources>

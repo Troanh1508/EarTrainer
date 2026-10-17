@@ -1,0 +1,4 @@
+<resources>
+    <!-- Window-level theme only; all in-app UI is styled by the Compose EarTrainerTheme. -->
+    <style name="Theme.EarTrainer" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
