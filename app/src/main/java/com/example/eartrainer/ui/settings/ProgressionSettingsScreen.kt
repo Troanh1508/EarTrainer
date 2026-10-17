@@ -32,6 +32,7 @@ import com.example.eartrainer.R
 import com.example.eartrainer.exercise.ChordVocabulary
 import com.example.eartrainer.exercise.KeyChoice
 import com.example.eartrainer.exercise.ProgressionSettings
+import com.example.eartrainer.exercise.ProgressionSource
 import com.example.eartrainer.music.Mode
 import com.example.eartrainer.ui.theme.EarTrainerTheme
 
@@ -44,6 +45,7 @@ fun ProgressionSettingsRoute(viewModel: ProgressionSettingsViewModel, onNavigate
     }
     ProgressionSettingsScreen(
         settings = loaded,
+        onSourceSelected = viewModel::onSourceSelected,
         onModeToggled = viewModel::onModeToggled,
         onVocabularySelected = viewModel::onVocabularySelected,
         onLengthSelected = viewModel::onLengthSelected,
@@ -57,6 +59,7 @@ fun ProgressionSettingsRoute(viewModel: ProgressionSettingsViewModel, onNavigate
 @Composable
 fun ProgressionSettingsScreen(
     settings: ProgressionSettings,
+    onSourceSelected: (ProgressionSource) -> Unit,
     onModeToggled: (Mode) -> Unit,
     onVocabularySelected: (ChordVocabulary) -> Unit,
     onLengthSelected: (Int) -> Unit,
@@ -95,6 +98,17 @@ fun ProgressionSettingsScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+
+                SettingsSection(
+                    title = stringResource(R.string.progression_settings_source_title),
+                    description = stringResource(R.string.progression_settings_source_description),
+                ) {
+                    ProgressionSource.entries.forEach { source ->
+                        SettingsChip(source.displayName, selected = settings.source == source, onClick = { onSourceSelected(source) })
+                    }
+                }
+
+                HorizontalDivider()
 
                 SettingsSection(
                     title = stringResource(R.string.settings_modes_title),
@@ -160,7 +174,7 @@ private fun ProgressionSettingsPreview() {
     EarTrainerTheme {
         ProgressionSettingsScreen(
             settings = ProgressionSettings(modes = Mode.entries.toSet(), vocabulary = ChordVocabulary.ALL, length = 5),
-            onModeToggled = {}, onVocabularySelected = {}, onLengthSelected = {}, onKeyChoiceSelected = {},
+            onSourceSelected = {}, onModeToggled = {}, onVocabularySelected = {}, onLengthSelected = {}, onKeyChoiceSelected = {},
             onRestoreDefaults = {}, onNavigateUp = {},
         )
     }

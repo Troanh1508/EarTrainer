@@ -40,18 +40,51 @@ class ProgressionQuestionGeneratorTest {
     @Test
     fun everyQuestionHasFourDistinctChoicesIncludingTheAnswer() {
         val settings = ProgressionSettings(modes = Mode.entries.toSet(), vocabulary = ChordVocabulary.ALL, length = 5)
-        generate(settings).forEach { question ->
-            assertEquals(ProgressionSettings.CHOICE_COUNT, question.choices.size)
-            assertEquals(question.choices.size, question.choices.toSet().size)
-            assertTrue(question.progression in question.choices)
-            assertTrue(question.choices.all { it.mode == question.key.mode })
+        listOf(settings, settings.copy(source = ProgressionSource.RANDOM)).forEach { each ->
+            generate(each).forEach { question ->
+                assertEquals(ProgressionSettings.CHOICE_COUNT, question.choices.size)
+                assertEquals(question.choices.size, question.choices.toSet().size)
+                assertTrue(question.progression in question.choices)
+                assertTrue(question.choices.all { it.mode == question.key.mode })
+            }
         }
     }
 
     @Test
+    fun commonSourceAsksOnlyCommonProgressionsThatFitTheVocabulary() {
+        val settings = ProgressionSettings(modes = Mode.entries.toSet(), vocabulary = ChordVocabulary.COMMON, length = 4)
+        generate(settings).forEach { question ->
+            val fitting = ProgressionQuestionGenerator.commonProgressions(question.key.mode, ChordVocabulary.COMMON, 4)
+            assertTrue(question.progression.label, question.progression in fitting)
+            // Plenty fit, so every alternative is a common progression too.
+            assertTrue(question.choices.all { it in fitting })
+        }
+    }
+
+    @Test
+    fun commonSourceFillsChoicesFromRandomWhenTooFewFit() {
+        // i, iv and V allow only two common four-chord progressions in minor.
+        val settings = ProgressionSettings(modes = setOf(Mode.MINOR), vocabulary = ChordVocabulary.PRIMARY, length = 4)
+        val fitting = ProgressionQuestionGenerator.commonProgressions(Mode.MINOR, ChordVocabulary.PRIMARY, 4)
+        assertEquals(2, fitting.size)
+        generate(settings, count = 100).forEach { question ->
+            assertTrue(question.progression in fitting)
+            assertEquals(ProgressionSettings.CHOICE_COUNT, question.choices.toSet().size)
+            assertTrue(question.choices.containsAll(fitting))
+        }
+    }
+
+    @Test
+    fun randomSourceCanAskAnyAllowedProgression() {
+        val settings = ProgressionSettings(vocabulary = ChordVocabulary.PRIMARY, length = 4, source = ProgressionSource.RANDOM)
+        val asked = generate(settings).map { it.progression }.toSet()
+        assertEquals(ProgressionQuestionGenerator.allProgressions(Mode.MAJOR, ChordVocabulary.PRIMARY, 4).toSet(), asked)
+    }
+
+    @Test
     fun distractorsAreTheClosestAlternatives() {
-        // With all seven chords there are always many progressions one chord away.
-        generate(ProgressionSettings(vocabulary = ChordVocabulary.ALL)).forEach { question ->
+        // With all seven chords there are always many random progressions one chord away.
+        generate(ProgressionSettings(vocabulary = ChordVocabulary.ALL, source = ProgressionSource.RANDOM)).forEach { question ->
             (question.choices - question.progression).forEach { assertEquals(1, it.distanceTo(question.progression)) }
         }
     }

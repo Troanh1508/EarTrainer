@@ -95,8 +95,10 @@
     <string name="degree_settings_context_description">Played before each note so you can hear where home is.</string>
 
     <!-- Progression settings -->
+    <string name="progression_settings_source_title">Progressions</string>
+    <string name="progression_settings_source_description">Common progressions are the ones heard in songs and classical pieces. Random uses any order of the chosen chords.</string>
     <string name="progression_settings_vocabulary_title">Chords</string>
-    <string name="progression_settings_vocabulary_description">Which chords of the key progressions can use. Start with I, IV and V.</string>
+    <string name="progression_settings_vocabulary_description">Which chords of the key progressions can use. With common progressions, only those built from these chords are asked.</string>
     <string name="progression_settings_length_title">Length</string>
     <string name="progression_settings_length_description">How many chords each progression has, including the opening tonic.</string>
 

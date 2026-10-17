@@ -1,6 +1,7 @@
 package com.example.eartrainer.exercise
 
 import com.example.eartrainer.music.ChordProgression
+import com.example.eartrainer.music.CommonProgressions
 import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Key
 import com.example.eartrainer.music.ListeningPrompt
@@ -12,6 +13,15 @@ enum class ChordVocabulary(val displayName: String, val steps: Set<Int>) {
     PRIMARY("I, IV and V", setOf(1, 4, 5)),
     COMMON("Add ii and vi", setOf(1, 2, 4, 5, 6)),
     ALL("All seven chords", (1..7).toSet()),
+}
+
+/** Where questions come from. */
+enum class ProgressionSource(val displayName: String) {
+    /** Well-known progressions from popular and classical music. */
+    COMMON("Common progressions"),
+
+    /** Any order of the allowed chords, including unusual ones. */
+    RANDOM("Random"),
 }
 
 data class ProgressionQuestion(
@@ -36,6 +46,7 @@ data class ProgressionSettings(
     val vocabulary: ChordVocabulary = ChordVocabulary.COMMON,
     val length: Int = 4,
     val keyChoice: KeyChoice = KeyChoice.RANDOM,
+    val source: ProgressionSource = ProgressionSource.COMMON,
 ) {
     init {
         require(modes.isNotEmpty()) { "At least one mode must be enabled" }
@@ -66,26 +77,41 @@ class ProgressionQuestionGenerator(
         allProgressions(mode, settings.vocabulary, settings.length)
     }
 
+    /** The common progressions that fit the settings, per mode; empty in random mode. */
+    private val common: Map<Mode, List<ChordProgression>> = settings.modes.associateWith { mode ->
+        if (settings.source == ProgressionSource.COMMON) commonProgressions(mode, settings.vocabulary, settings.length) else emptyList()
+    }
+
     fun generate(): ProgressionQuestion {
         val mode = settings.modes.random(random)
         val tonic = settings.keyChoice.pickTonic(random)
-        val options = catalogue.getValue(mode)
-        val correct = options.random(random)
-        return ProgressionQuestion(Key(tonic, mode), correct, choicesFor(correct, options))
+        val everything = catalogue.getValue(mode)
+        // Falls back to random progressions if no common one fits the chosen chords and length.
+        val preferred = common.getValue(mode).ifEmpty { everything }
+        val correct = preferred.random(random)
+        return ProgressionQuestion(Key(tonic, mode), correct, choicesFor(correct, preferred, everything))
     }
 
     /**
      * The correct progression plus the closest alternatives: those differing in the fewest
      * chords (ties broken randomly). Near-misses make the listener follow every chord rather
-     * than just the overall shape. Shuffled so the answer's position carries no clue.
+     * than just the overall shape. Alternatives come from [preferred] first (common progressions
+     * when enabled) and only then from [everything]. Shuffled so the answer's position carries
+     * no clue.
      */
-    private fun choicesFor(correct: ChordProgression, options: List<ChordProgression>): List<ChordProgression> {
-        val distractors = (options - correct)
-            .shuffled(random)
-            .sortedBy { candidate -> candidate.chords.indices.count { candidate.chords[it] != correct.chords[it] } }
-            .take(ProgressionSettings.CHOICE_COUNT - 1)
-        return (distractors + correct).shuffled(random)
+    private fun choicesFor(
+        correct: ChordProgression,
+        preferred: List<ChordProgression>,
+        everything: List<ChordProgression>,
+    ): List<ChordProgression> {
+        val needed = ProgressionSettings.CHOICE_COUNT - 1
+        val fromPreferred = closest(correct, preferred - correct).take(needed)
+        val fromEverything = closest(correct, everything - correct - fromPreferred.toSet()).take(needed - fromPreferred.size)
+        return (fromPreferred + fromEverything + correct).shuffled(random)
     }
+
+    private fun closest(correct: ChordProgression, candidates: List<ChordProgression>): List<ChordProgression> =
+        candidates.shuffled(random).sortedBy { candidate -> candidate.chords.indices.count { candidate.chords[it] != correct.chords[it] } }
 
     companion object {
         /**
@@ -100,6 +126,10 @@ class ProgressionQuestionGenerator(
             }
             return sequences.map(::ChordProgression)
         }
+
+        /** Common progressions in [mode] with [length] chords that use only the [vocabulary]. */
+        fun commonProgressions(mode: Mode, vocabulary: ChordVocabulary, length: Int): List<ChordProgression> =
+            CommonProgressions.forMode(mode, length).filter { progression -> progression.chords.all { it.step in vocabulary.steps } }
     }
 }
 

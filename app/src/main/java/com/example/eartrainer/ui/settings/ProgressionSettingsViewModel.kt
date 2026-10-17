@@ -11,6 +11,7 @@ import com.example.eartrainer.data.settings.ProgressionSettingsStore
 import com.example.eartrainer.exercise.ChordVocabulary
 import com.example.eartrainer.exercise.KeyChoice
 import com.example.eartrainer.exercise.ProgressionSettings
+import com.example.eartrainer.exercise.ProgressionSource
 import com.example.eartrainer.music.Mode
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,8 @@ class ProgressionSettingsViewModel(private val store: ProgressionSettingsStore) 
 
     val settings: StateFlow<ProgressionSettings?> =
         store.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initialValue = null)
+
+    fun onSourceSelected(source: ProgressionSource) = update { it.copy(source = source) }
 
     fun onModeToggled(mode: Mode) = update { it.withModeToggled(mode) }
 

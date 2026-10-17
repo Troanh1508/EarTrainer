@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.eartrainer.exercise.ChordVocabulary
 import com.example.eartrainer.exercise.KeyChoice
 import com.example.eartrainer.exercise.ProgressionSettings
+import com.example.eartrainer.exercise.ProgressionSource
 import com.example.eartrainer.music.Mode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -36,6 +37,7 @@ class ProgressionSettingsStore(private val dataStore: DataStore<Preferences>) {
         private val VOCABULARY = stringPreferencesKey("progressions.vocabulary")
         private val LENGTH = intPreferencesKey("progressions.length")
         private val KEY_CHOICE = stringPreferencesKey("progressions.key_choice")
+        private val SOURCE = stringPreferencesKey("progressions.source")
 
         /** Ignores unknown names and falls back to defaults for anything missing or invalid. */
         internal fun decode(preferences: Preferences): ProgressionSettings {
@@ -44,7 +46,8 @@ class ProgressionSettingsStore(private val dataStore: DataStore<Preferences>) {
             val vocabulary = preferences[VOCABULARY]?.let { name -> ChordVocabulary.entries.find { it.name == name } } ?: defaults.vocabulary
             val keyChoice = preferences[KEY_CHOICE]?.let { name -> KeyChoice.entries.find { it.name == name } } ?: defaults.keyChoice
             val length = preferences[LENGTH]?.takeIf { it in ProgressionSettings.LENGTH_OPTIONS } ?: defaults.length
-            return runCatching { ProgressionSettings(modes, vocabulary, length, keyChoice) }.getOrDefault(defaults)
+            val source = preferences[SOURCE]?.let { name -> ProgressionSource.entries.find { it.name == name } } ?: defaults.source
+            return runCatching { ProgressionSettings(modes, vocabulary, length, keyChoice, source) }.getOrDefault(defaults)
         }
 
         internal fun encode(settings: ProgressionSettings, preferences: MutablePreferences) {
@@ -52,6 +55,7 @@ class ProgressionSettingsStore(private val dataStore: DataStore<Preferences>) {
             preferences[VOCABULARY] = settings.vocabulary.name
             preferences[LENGTH] = settings.length
             preferences[KEY_CHOICE] = settings.keyChoice.name
+            preferences[SOURCE] = settings.source.name
         }
     }
 }
