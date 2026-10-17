@@ -7,48 +7,93 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
-import com.example.eartrainer.data.history.IntervalAccuracy
+import com.example.eartrainer.data.history.AnswerAccuracy
 import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.SessionSummary
+import com.example.eartrainer.exercise.ChordTarget
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalStyle
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
+/** What the accuracy list shows; each exercise has its own kind of filter. */
+sealed interface ProgressFilter {
+    val exercise: ExerciseKind
+
+    /** Interval accuracy for one playing style, or every style when [style] is null. */
+    data class IntervalStyleFilter(val style: IntervalStyle?) : ProgressFilter {
+        override val exercise get() = ExerciseKind.INTERVALS
+    }
+
+    /** Chord accuracy per quality or per inversion. */
+    data class ChordTargetFilter(val target: ChordTarget) : ProgressFilter {
+        override val exercise get() = ExerciseKind.CHORDS
+    }
+
+    companion object {
+        fun optionsFor(exercise: ExerciseKind): List<ProgressFilter> = when (exercise) {
+            ExerciseKind.INTERVALS -> listOf(IntervalStyleFilter(null)) + IntervalStyle.entries.map(::IntervalStyleFilter)
+            ExerciseKind.CHORDS -> ChordTarget.entries.map(::ChordTargetFilter)
+        }
+    }
+}
+
+/** One row of the accuracy list, ready to display. */
+data class AccuracyItem(val label: String, val attempts: Int, val correct: Int) {
+    val accuracy: Float? get() = if (attempts == 0) null else correct.toFloat() / attempts
+}
+
 data class ProgressUiState(
-    /** Null shows every style. */
-    val styleFilter: IntervalStyle?,
-    val accuracy: List<IntervalAccuracy>,
+    val filter: ProgressFilter,
+    val accuracy: List<AccuracyItem>,
     val recentSessions: List<SessionSummary>,
 ) {
+    val exercise: ExerciseKind get() = filter.exercise
+    val filterOptions: List<ProgressFilter> get() = ProgressFilter.optionsFor(exercise)
     val totalAttempts: Int get() = accuracy.sumOf { it.attempts }
     val totalCorrect: Int get() = accuracy.sumOf { it.correct }
     val overallAccuracy: Float? get() = if (totalAttempts == 0) null else totalCorrect.toFloat() / totalAttempts
 
-    /** Whether anything has ever been recorded, regardless of the current filter. */
+    /** Whether anything has ever been recorded, regardless of the current exercise or filter. */
     val hasHistory: Boolean get() = recentSessions.isNotEmpty()
 }
 
-class ProgressViewModel(history: PracticeHistory) : ViewModel() {
+class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
 
-    private val styleFilter = MutableStateFlow<IntervalStyle?>(null)
+    private val filter = MutableStateFlow<ProgressFilter>(ProgressFilter.IntervalStyleFilter(null))
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<ProgressUiState?> = styleFilter
-        .flatMapLatest { style ->
-            combine(history.intervalAccuracy(style), history.recentSessions(RECENT_SESSION_LIMIT)) { accuracy, sessions ->
-                ProgressUiState(style, accuracy, sessions)
+    val uiState: StateFlow<ProgressUiState?> = filter
+        .flatMapLatest { selected ->
+            combine(accuracyFor(selected), history.recentSessions(RECENT_SESSION_LIMIT)) { accuracy, sessions ->
+                ProgressUiState(selected, accuracy, sessions)
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initialValue = null)
 
-    fun onStyleFilterSelected(style: IntervalStyle?) {
-        styleFilter.value = style
+    fun onExerciseSelected(exercise: ExerciseKind) {
+        if (filter.value.exercise != exercise) filter.value = ProgressFilter.optionsFor(exercise).first()
     }
+
+    fun onFilterSelected(selected: ProgressFilter) {
+        filter.value = selected
+    }
+
+    private fun accuracyFor(selected: ProgressFilter): Flow<List<AccuracyItem>> = when (selected) {
+        is ProgressFilter.IntervalStyleFilter ->
+            history.intervalAccuracy(selected.style).map { list -> list.map { it.toItem(it.item.displayName) } }
+        is ProgressFilter.ChordTargetFilter ->
+            history.chordAccuracy(selected.target).map { list -> list.map { it.toItem(it.item.displayName) } }
+    }
+
+    private fun AnswerAccuracy<*>.toItem(label: String) = AccuracyItem(label, attempts, correct)
 
     companion object {
         const val RECENT_SESSION_LIMIT = 10

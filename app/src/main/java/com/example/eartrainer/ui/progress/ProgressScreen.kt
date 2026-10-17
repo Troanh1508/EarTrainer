@@ -23,8 +23,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -40,9 +42,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.eartrainer.R
-import com.example.eartrainer.data.history.IntervalAccuracy
 import com.example.eartrainer.data.history.SessionSummary
-import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.ChordTarget
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.ui.theme.EarTrainerTheme
 import java.text.DateFormat
@@ -52,14 +54,20 @@ import kotlin.math.roundToInt
 @Composable
 fun ProgressRoute(viewModel: ProgressViewModel, onNavigateUp: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ProgressScreen(state = state, onStyleFilterSelected = viewModel::onStyleFilterSelected, onNavigateUp = onNavigateUp)
+    ProgressScreen(
+        state = state,
+        onExerciseSelected = viewModel::onExerciseSelected,
+        onFilterSelected = viewModel::onFilterSelected,
+        onNavigateUp = onNavigateUp,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProgressScreen(
     state: ProgressUiState?,
-    onStyleFilterSelected: (IntervalStyle?) -> Unit,
+    onExerciseSelected: (ExerciseKind) -> Unit,
+    onFilterSelected: (ProgressFilter) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     Scaffold(
@@ -77,7 +85,7 @@ fun ProgressScreen(
         when {
             state == null -> Surface(Modifier.padding(innerPadding).fillMaxSize()) {}
             !state.hasHistory -> EmptyProgress(Modifier.padding(innerPadding))
-            else -> ProgressContent(state, onStyleFilterSelected, innerPadding)
+            else -> ProgressContent(state, onExerciseSelected, onFilterSelected, innerPadding)
         }
     }
 }
@@ -97,41 +105,78 @@ private fun EmptyProgress(modifier: Modifier = Modifier) {
 @Composable
 private fun ProgressContent(
     state: ProgressUiState,
-    onStyleFilterSelected: (IntervalStyle?) -> Unit,
+    onExerciseSelected: (ExerciseKind) -> Unit,
+    onFilterSelected: (ProgressFilter) -> Unit,
     innerPadding: PaddingValues,
 ) {
     val itemModifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = 24.dp)
-    LazyColumn(
-        contentPadding = PaddingValues(top = innerPadding.calculateTopPadding() + 8.dp, bottom = innerPadding.calculateBottomPadding() + 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        item { StyleFilterRow(state.styleFilter, onStyleFilterSelected, Modifier.widthIn(max = 560.dp).fillMaxWidth()) }
-        item { OverallCard(state, itemModifier) }
-        item { SectionTitle(stringResource(R.string.progress_by_interval), itemModifier) }
-        items(state.accuracy, key = { it.interval.name }) { IntervalAccuracyRow(it, itemModifier) }
-        item { SectionTitle(stringResource(R.string.progress_recent_sessions), itemModifier.padding(top = 12.dp)) }
-        items(state.recentSessions, key = { it.sessionId }) { SessionRow(it, itemModifier) }
+    Column(Modifier.padding(top = innerPadding.calculateTopPadding()).fillMaxSize()) {
+        ExerciseTabs(state.exercise, onExerciseSelected)
+        LazyColumn(
+            contentPadding = PaddingValues(top = 12.dp, bottom = innerPadding.calculateBottomPadding() + 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            item { FilterRow(state, onFilterSelected, Modifier.widthIn(max = 560.dp).fillMaxWidth()) }
+            item { OverallCard(state, itemModifier) }
+            item { SectionTitle(accuracyTitle(state.filter), itemModifier) }
+            items(state.accuracy, key = { it.label }) { AccuracyRow(it, itemModifier) }
+            item { SectionTitle(stringResource(R.string.progress_recent_sessions), itemModifier.padding(top = 12.dp)) }
+            items(state.recentSessions, key = { it.sessionId }) { SessionRow(it, itemModifier) }
+        }
     }
 }
 
 @Composable
-private fun StyleFilterRow(selected: IntervalStyle?, onSelected: (IntervalStyle?) -> Unit, modifier: Modifier = Modifier) {
+private fun ExerciseTabs(selected: ExerciseKind, onSelected: (ExerciseKind) -> Unit) {
+    PrimaryTabRow(selectedTabIndex = selected.ordinal) {
+        ExerciseKind.entries.forEach { exercise ->
+            Tab(
+                selected = exercise == selected,
+                onClick = { onSelected(exercise) },
+                text = { Text(exerciseName(exercise)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun exerciseName(exercise: ExerciseKind) = stringResource(
+    when (exercise) {
+        ExerciseKind.INTERVALS -> R.string.progress_exercise_intervals
+        ExerciseKind.CHORDS -> R.string.progress_exercise_chords
+    },
+)
+
+@Composable
+private fun filterLabel(filter: ProgressFilter): String = when (filter) {
+    is ProgressFilter.IntervalStyleFilter -> filter.style?.displayName ?: stringResource(R.string.progress_filter_all)
+    is ProgressFilter.ChordTargetFilter -> filter.target.displayName
+}
+
+@Composable
+private fun accuracyTitle(filter: ProgressFilter): String = stringResource(
+    when (filter) {
+        is ProgressFilter.IntervalStyleFilter -> R.string.progress_by_interval
+        is ProgressFilter.ChordTargetFilter -> when (filter.target) {
+            ChordTarget.QUALITY -> R.string.progress_by_quality
+            ChordTarget.INVERSION -> R.string.progress_by_inversion
+        }
+    },
+)
+
+@Composable
+private fun FilterRow(state: ProgressUiState, onSelected: (ProgressFilter) -> Unit, modifier: Modifier = Modifier) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 24.dp),
     ) {
-        FilterChip(
-            selected = selected == null,
-            onClick = { onSelected(null) },
-            label = { Text(stringResource(R.string.progress_filter_all)) },
-        )
-        IntervalStyle.entries.forEach { style ->
+        state.filterOptions.forEach { filter ->
             FilterChip(
-                selected = selected == style,
-                onClick = { onSelected(style) },
-                label = { Text(style.displayName) },
+                selected = filter == state.filter,
+                onClick = { onSelected(filter) },
+                label = { Text(filterLabel(filter)) },
             )
         }
     }
@@ -151,7 +196,7 @@ private fun OverallCard(state: ProgressUiState, modifier: Modifier = Modifier) {
             )
             Text(
                 if (state.totalAttempts == 0) {
-                    stringResource(R.string.progress_no_answers_for_style)
+                    stringResource(R.string.progress_no_answers_for_filter)
                 } else {
                     pluralStringResource(R.plurals.progress_overall, state.totalAttempts, state.totalCorrect, state.totalAttempts)
                 },
@@ -168,22 +213,22 @@ private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun IntervalAccuracyRow(item: IntervalAccuracy, modifier: Modifier = Modifier) {
+private fun AccuracyRow(item: AccuracyItem, modifier: Modifier = Modifier) {
     val accuracy = item.accuracy
     Column(modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(item.interval.displayName, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text(item.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Text(
                 if (accuracy == null) {
                     stringResource(R.string.progress_not_practised)
                 } else {
-                    stringResource(R.string.progress_interval_score, item.correct, item.attempts, percent(accuracy))
+                    stringResource(R.string.progress_answer_score, item.correct, item.attempts, percent(accuracy))
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        // No bar for unpractised intervals, so they never look like a 0% score.
+        // No bar for unpractised answers, so they never look like a 0% score.
         if (accuracy != null) {
             LinearProgressIndicator(
                 progress = { accuracy },
@@ -198,13 +243,16 @@ private fun IntervalAccuracyRow(item: IntervalAccuracy, modifier: Modifier = Mod
 private fun SessionRow(session: SessionSummary, modifier: Modifier = Modifier) {
     val formatter = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
     Row(modifier.semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(formatter.format(Date(session.startedAtMillis)), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                exerciseName(session.exercise),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Text(
-            formatter.format(Date(session.startedAtMillis)),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            stringResource(R.string.intervals_score, session.correct, session.attempts),
+            stringResource(R.string.practice_score, session.correct, session.attempts),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -219,14 +267,18 @@ private fun ProgressPreview() {
     EarTrainerTheme {
         ProgressScreen(
             state = ProgressUiState(
-                styleFilter = null,
+                filter = ProgressFilter.IntervalStyleFilter(null),
                 accuracy = Interval.entries.mapIndexed { index, interval ->
                     val practised = index % 4 != 3
-                    IntervalAccuracy(interval, attempts = if (practised) 10 else 0, correct = if (practised) 10 - index % 4 * 3 else 0)
+                    AccuracyItem(interval.displayName, attempts = if (practised) 10 else 0, correct = if (practised) 10 - index % 4 * 3 else 0)
                 },
-                recentSessions = listOf(SessionSummary("a", 1_760_000_000_000, 12, 9), SessionSummary("b", 1_759_900_000_000, 8, 5)),
+                recentSessions = listOf(
+                    SessionSummary("a", ExerciseKind.CHORDS, 1_760_000_000_000, 12, 9),
+                    SessionSummary("b", ExerciseKind.INTERVALS, 1_759_900_000_000, 8, 5),
+                ),
             ),
-            onStyleFilterSelected = {},
+            onExerciseSelected = {},
+            onFilterSelected = {},
             onNavigateUp = {},
         )
     }

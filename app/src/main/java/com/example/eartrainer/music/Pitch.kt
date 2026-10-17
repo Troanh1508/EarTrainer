@@ -20,7 +20,11 @@ value class Pitch(val midi: Int) : Comparable<Pitch> {
 
     /** Scientific pitch notation using sharps, e.g. "C4", "F♯3". */
     val name: String
-        get() = PITCH_CLASS_NAMES[midi % 12] + octave
+        get() = pitchClassName + octave
+
+    /** Note name without octave, e.g. "F♯". */
+    val pitchClassName: String
+        get() = PITCH_CLASS_NAMES[midi % 12]
 
     /** Scientific pitch octave; MIDI 60 is C4. */
     val octave: Int

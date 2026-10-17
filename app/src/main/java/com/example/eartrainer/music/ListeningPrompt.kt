@@ -5,12 +5,23 @@ package com.example.eartrainer.music
  * moments, each sounding one or more pitches together.
  *
  * - Ascending melodic interval: `[[C4], [E4]]`
- * - Harmonic interval: `[[C4, E4]]`
- * - A chord progression later becomes several multi-pitch moments.
+ * - Harmonic interval or block chord: `[[C4, E4, G4]]`
+ * - Arpeggiated chord: `[[C4], [E4], [G4]]` with [Articulation.ARPEGGIATED]
  *
  * Exact timing (durations, gaps) is decided by the audio layer.
  */
-data class ListeningPrompt(val moments: List<List<Pitch>>) {
+data class ListeningPrompt(
+    val moments: List<List<Pitch>>,
+    val articulation: Articulation = Articulation.SEPARATE,
+) {
+
+    enum class Articulation {
+        /** Each moment ends before the next one starts. */
+        SEPARATE,
+
+        /** Moments start in quick succession and keep ringing until the last one has sounded. */
+        ARPEGGIATED,
+    }
 
     init {
         require(moments.isNotEmpty()) { "A prompt needs at least one moment" }
@@ -25,5 +36,9 @@ data class ListeningPrompt(val moments: List<List<Pitch>>) {
         /** Pitches played together as a single moment. */
         fun simultaneous(pitches: List<Pitch>): ListeningPrompt =
             ListeningPrompt(listOf(pitches))
+
+        /** Pitches played from first to last, each held so the chord sounds whole at the end. */
+        fun arpeggiated(pitches: List<Pitch>): ListeningPrompt =
+            ListeningPrompt(pitches.map { listOf(it) }, Articulation.ARPEGGIATED)
     }
 }

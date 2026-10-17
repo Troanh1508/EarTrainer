@@ -1,20 +1,11 @@
-package com.example.eartrainer.ui.intervals
+package com.example.eartrainer.ui.practice
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.audio.AudioPlayer
-import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.exercise.ExerciseEngine
-import com.example.eartrainer.exercise.IntervalAttempt
-import com.example.eartrainer.exercise.IntervalExerciseSettings
-import com.example.eartrainer.exercise.IntervalQuestion
-import com.example.eartrainer.exercise.IntervalQuestionGenerator
-import com.example.eartrainer.music.Interval
+import com.example.eartrainer.exercise.ExerciseQuestion
+import com.example.eartrainer.exercise.ExerciseState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
@@ -27,21 +18,27 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-class IntervalTrainingViewModel(
-    settings: Flow<IntervalExerciseSettings>,
-    private val history: PracticeHistory,
+/**
+ * Drives any listen-and-answer exercise: playback, answering, scoring, advancing and recording.
+ * Each exercise type supplies how to make questions from its settings ([questionSource]) and
+ * how to save an answered question ([recordAttempt]).
+ *
+ * @param A answer type, @param Q question type, @param S settings type.
+ */
+class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
+    settings: Flow<S>,
+    private val questionSource: (S) -> () -> Q,
+    private val recordAttempt: (state: ExerciseState<A, Q>, sessionId: String) -> Unit,
     private val audioPlayer: AudioPlayer,
-    private val questionSource: (IntervalExerciseSettings) -> () -> IntervalQuestion =
-        { IntervalQuestionGenerator(it)::generate },
     private val clock: () -> Long = System::currentTimeMillis,
     private val newSessionId: () -> String = { UUID.randomUUID().toString() },
 ) : ViewModel() {
 
     /** Null until the saved settings have loaded and the first session has started. */
-    private val _uiState = MutableStateFlow<IntervalTrainingUiState?>(null)
-    val uiState: StateFlow<IntervalTrainingUiState?> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<PracticeUiState<A, Q>?>(null)
+    val uiState: StateFlow<PracticeUiState<A, Q>?> = _uiState.asStateFlow()
 
-    private lateinit var engine: ExerciseEngine<Interval, IntervalQuestion>
+    private lateinit var engine: ExerciseEngine<A, Q>
     private var sessionId = ""
     private var playbackJob: Job? = null
 
@@ -87,13 +84,13 @@ class IntervalTrainingViewModel(
 
     fun onStopClick() = stopPlayback()
 
-    fun onAnswerSelected(answer: Interval) {
+    fun onAnswerSelected(answer: A) {
         val current = _uiState.value ?: return
         val next = current.exercise.submitAnswer(answer, clock())
         // Invalid submissions (duplicate taps, not yet heard) return the same state.
         if (next === current.exercise) return
         _uiState.value = current.copy(exercise = next)
-        IntervalAttempt.from(next, sessionId)?.let(history::record)
+        recordAttempt(next, sessionId)
     }
 
     fun onNextClick() {
@@ -107,11 +104,11 @@ class IntervalTrainingViewModel(
     /** Called when the screen leaves the foreground so audio never keeps playing in the background. */
     fun onScreenHidden() = stopPlayback()
 
-    private fun startSession(settings: IntervalExerciseSettings) {
+    private fun startSession(settings: S) {
         stopPlayback()
         engine = ExerciseEngine(questionSource(settings))
         sessionId = newSessionId()
-        _uiState.value = IntervalTrainingUiState(exercise = engine.start())
+        _uiState.value = PracticeUiState(exercise = engine.start())
     }
 
     private fun stopPlayback() {
@@ -123,18 +120,5 @@ class IntervalTrainingViewModel(
     override fun onCleared() {
         playbackJob?.cancel()
         audioPlayer.release()
-    }
-
-    companion object {
-        val Factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer {
-                val container = (this[APPLICATION_KEY] as EarTrainerApplication).container
-                IntervalTrainingViewModel(
-                    settings = container.intervalSettings.settings,
-                    history = container.practiceHistory,
-                    audioPlayer = container.createAudioPlayer(),
-                )
-            }
-        }
     }
 }

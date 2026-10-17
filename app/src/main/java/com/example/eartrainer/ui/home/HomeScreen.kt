@@ -25,7 +25,7 @@ import com.example.eartrainer.R
 import com.example.eartrainer.ui.theme.EarTrainerTheme
 
 @Composable
-fun HomeScreen(onOpenIntervalTraining: () -> Unit, onOpenProgress: () -> Unit) {
+fun HomeScreen(onOpenIntervalTraining: () -> Unit, onOpenChordTraining: () -> Unit, onOpenProgress: () -> Unit) {
     Surface(Modifier.fillMaxSize()) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -50,6 +50,11 @@ fun HomeScreen(onOpenIntervalTraining: () -> Unit, onOpenProgress: () -> Unit) {
                     title = stringResource(R.string.home_intervals_title),
                     description = stringResource(R.string.home_intervals_description),
                     onClick = onOpenIntervalTraining,
+                )
+                HomeEntryCard(
+                    title = stringResource(R.string.home_chords_title),
+                    description = stringResource(R.string.home_chords_description),
+                    onClick = onOpenChordTraining,
                 )
                 HomeEntryCard(
                     title = stringResource(R.string.home_progress_title),
@@ -94,5 +99,5 @@ private fun HomeEntryCard(title: String, description: String, onClick: () -> Uni
 @Preview
 @Composable
 private fun HomeScreenPreview() {
-    EarTrainerTheme { HomeScreen(onOpenIntervalTraining = {}, onOpenProgress = {}) }
+    EarTrainerTheme { HomeScreen(onOpenIntervalTraining = {}, onOpenChordTraining = {}, onOpenProgress = {}) }
 }

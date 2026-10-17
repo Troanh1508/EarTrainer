@@ -3,8 +3,15 @@ package com.example.eartrainer.data.history
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.eartrainer.exercise.ChordAnswer
+import com.example.eartrainer.exercise.ChordAttempt
+import com.example.eartrainer.exercise.ChordStyle
+import com.example.eartrainer.exercise.ChordTarget
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.music.ChordInversion
+import com.example.eartrainer.music.ChordQuality
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Pitch
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +31,6 @@ import org.junit.runner.RunWith
 class RoomPracticeHistoryTest {
 
     private lateinit var database: EarTrainerDatabase
-    private lateinit var dao: IntervalAttemptDao
 
     // Queries never use the write scope; only record() does.
     private val unusedScope = CoroutineScope(SupervisorJob())
@@ -35,65 +41,101 @@ class RoomPracticeHistoryTest {
             ApplicationProvider.getApplicationContext(),
             EarTrainerDatabase::class.java,
         ).build()
-        dao = database.intervalAttemptDao()
     }
 
     @After
     fun tearDown() = database.close()
 
-    private fun attempt(session: String, at: Long, interval: Interval, style: IntervalStyle, correct: Boolean) =
+    private fun interval(session: String, at: Long, interval: Interval, style: IntervalStyle, correct: Boolean) =
         IntervalAttempt(session, at, interval, style, Pitch(60), if (correct) interval else Interval.TRITONE, correct, 2, 1_500)
 
+    private fun chord(session: String, at: Long, quality: ChordQuality, inversion: ChordInversion, target: ChordTarget, correct: Boolean) =
+        ChordAttempt(
+            session, at, quality, inversion, ChordStyle.ARPEGGIATED, target, Pitch(55),
+            answer = if (target == ChordTarget.QUALITY) ChordAnswer.Quality(quality) else ChordAnswer.Inversion(inversion),
+            isCorrect = correct, playCount = 1, responseMillis = 2_000,
+        )
+
     private fun insertAll(vararg attempts: IntervalAttempt) = runBlocking {
-        attempts.forEach { dao.insert(it.toEntity()) }
+        attempts.forEach { database.intervalAttemptDao().insert(it.toEntity()) }
+    }
+
+    private fun insertChords(vararg attempts: ChordAttempt) = runBlocking {
+        attempts.forEach { database.chordAttemptDao().insert(it.toEntity()) }
     }
 
     @Test
-    fun accuracyCoversEveryIntervalAndFiltersByStyle() = runBlocking {
+    fun intervalAccuracyCoversEveryIntervalAndFiltersByStyle() = runBlocking {
         insertAll(
-            attempt("s1", 1_000, Interval.MAJOR_THIRD, IntervalStyle.MELODIC_ASCENDING, correct = true),
-            attempt("s1", 2_000, Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = false),
-            attempt("s1", 3_000, Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = true),
-            attempt("s2", 4_000, Interval.OCTAVE, IntervalStyle.MELODIC_ASCENDING, correct = true),
+            interval("s1", 1_000, Interval.MAJOR_THIRD, IntervalStyle.MELODIC_ASCENDING, correct = true),
+            interval("s1", 2_000, Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = false),
+            interval("s1", 3_000, Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = true),
+            interval("s2", 4_000, Interval.OCTAVE, IntervalStyle.MELODIC_ASCENDING, correct = true),
         )
-        val history = RoomPracticeHistory(dao, writeScope = unusedScope)
+        val history = RoomPracticeHistory(database, unusedScope)
 
         val all = history.intervalAccuracy(style = null).first()
-        assertEquals(Interval.entries, all.map { it.interval })
-        assertEquals(IntervalAccuracy(Interval.MAJOR_THIRD, attempts = 3, correct = 2), all.single { it.interval == Interval.MAJOR_THIRD })
-        assertEquals(IntervalAccuracy(Interval.OCTAVE, attempts = 1, correct = 1), all.single { it.interval == Interval.OCTAVE })
-        assertNull(all.single { it.interval == Interval.TRITONE }.accuracy)
+        assertEquals(Interval.entries, all.map { it.item })
+        assertEquals(AnswerAccuracy(Interval.MAJOR_THIRD, attempts = 3, correct = 2), all.single { it.item == Interval.MAJOR_THIRD })
+        assertEquals(AnswerAccuracy(Interval.OCTAVE, attempts = 1, correct = 1), all.single { it.item == Interval.OCTAVE })
+        assertNull(all.single { it.item == Interval.TRITONE }.accuracy)
 
         val harmonic = history.intervalAccuracy(IntervalStyle.HARMONIC).first()
-        assertEquals(IntervalAccuracy(Interval.MAJOR_THIRD, attempts = 2, correct = 1), harmonic.single { it.interval == Interval.MAJOR_THIRD })
-        assertEquals(0, harmonic.single { it.interval == Interval.OCTAVE }.attempts)
+        assertEquals(AnswerAccuracy(Interval.MAJOR_THIRD, attempts = 2, correct = 1), harmonic.single { it.item == Interval.MAJOR_THIRD })
+        assertEquals(0, harmonic.single { it.item == Interval.OCTAVE }.attempts)
     }
 
     @Test
-    fun recentSessionsAreGroupedNewestFirstAndLimited() = runBlocking {
-        insertAll(
-            attempt("old", 1_000, Interval.MINOR_SECOND, IntervalStyle.MELODIC_ASCENDING, correct = true),
-            attempt("old", 1_500, Interval.MINOR_SECOND, IntervalStyle.MELODIC_ASCENDING, correct = false),
-            attempt("mid", 5_000, Interval.PERFECT_FIFTH, IntervalStyle.MELODIC_ASCENDING, correct = true),
-            attempt("new", 9_000, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = true),
+    fun chordAccuracyIsSplitByWhatWasAsked() = runBlocking {
+        insertChords(
+            chord("c", 1_000, ChordQuality.MINOR, ChordInversion.FIRST, ChordTarget.QUALITY, correct = true),
+            chord("c", 2_000, ChordQuality.MINOR, ChordInversion.ROOT_POSITION, ChordTarget.QUALITY, correct = false),
+            chord("c", 3_000, ChordQuality.DOMINANT_SEVENTH, ChordInversion.THIRD, ChordTarget.INVERSION, correct = true),
         )
-        val history = RoomPracticeHistory(dao, writeScope = unusedScope)
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        val qualities = history.chordAccuracy(ChordTarget.QUALITY).first()
+        assertEquals(ChordQuality.entries.map { ChordAnswer.Quality(it) }, qualities.map { it.item })
+        assertEquals(2, qualities.single { it.item == ChordAnswer.Quality(ChordQuality.MINOR) }.attempts)
+        // The inversion question is not counted towards its chord's quality.
+        assertEquals(0, qualities.single { it.item == ChordAnswer.Quality(ChordQuality.DOMINANT_SEVENTH) }.attempts)
+
+        val inversions = history.chordAccuracy(ChordTarget.INVERSION).first()
+        assertEquals(ChordInversion.entries.map { ChordAnswer.Inversion(it) }, inversions.map { it.item })
+        assertEquals(1, inversions.single { it.item == ChordAnswer.Inversion(ChordInversion.THIRD) }.correct)
+        assertEquals(0, inversions.single { it.item == ChordAnswer.Inversion(ChordInversion.FIRST) }.attempts)
+    }
+
+    @Test
+    fun recentSessionsCombineExercisesNewestFirstAndAreLimited() = runBlocking {
+        insertAll(
+            interval("old", 1_000, Interval.MINOR_SECOND, IntervalStyle.MELODIC_ASCENDING, correct = true),
+            interval("old", 1_500, Interval.MINOR_SECOND, IntervalStyle.MELODIC_ASCENDING, correct = false),
+            interval("new", 9_000, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = true),
+        )
+        insertChords(chord("mid", 5_000, ChordQuality.MAJOR, ChordInversion.ROOT_POSITION, ChordTarget.QUALITY, correct = true))
+        val history = RoomPracticeHistory(database, unusedScope)
 
         assertEquals(
-            listOf(SessionSummary("new", 9_000, 1, 1), SessionSummary("mid", 5_000, 1, 1)),
+            listOf(
+                SessionSummary("new", ExerciseKind.INTERVALS, 9_000, 1, 1),
+                SessionSummary("mid", ExerciseKind.CHORDS, 5_000, 1, 1),
+            ),
             history.recentSessions(limit = 2).first(),
         )
-        assertEquals(SessionSummary("old", 1_000, 2, 1), history.recentSessions(limit = 10).first().last())
+        assertEquals(SessionSummary("old", ExerciseKind.INTERVALS, 1_000, 2, 1), history.recentSessions(limit = 10).first().last())
     }
 
     @Test
     fun recordWritesThroughTheWriteScope() = runBlocking {
-        val history = RoomPracticeHistory(dao, writeScope = this)
-        history.record(attempt("s", 1_000, Interval.MAJOR_SIXTH, IntervalStyle.MELODIC_DESCENDING, correct = false))
-        // Wait for the background write launched in this scope.
+        val history = RoomPracticeHistory(database, writeScope = this)
+        history.record(interval("s", 1_000, Interval.MAJOR_SIXTH, IntervalStyle.MELODIC_DESCENDING, correct = false))
+        history.record(chord("t", 2_000, ChordQuality.AUGMENTED, ChordInversion.SECOND, ChordTarget.INVERSION, correct = true))
+        // Wait for the background writes launched in this scope.
         coroutineContext[Job]!!.children.forEach { it.join() }
 
-        val sixth = history.intervalAccuracy(IntervalStyle.MELODIC_DESCENDING).first().single { it.interval == Interval.MAJOR_SIXTH }
-        assertEquals(IntervalAccuracy(Interval.MAJOR_SIXTH, attempts = 1, correct = 0), sixth)
+        val sixth = history.intervalAccuracy(IntervalStyle.MELODIC_DESCENDING).first().single { it.item == Interval.MAJOR_SIXTH }
+        assertEquals(AnswerAccuracy(Interval.MAJOR_SIXTH, attempts = 1, correct = 0), sixth)
+        assertEquals(2, history.recentSessions(10).first().size)
     }
 }

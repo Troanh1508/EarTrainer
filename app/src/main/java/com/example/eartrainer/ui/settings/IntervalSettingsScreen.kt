@@ -161,42 +161,6 @@ fun IntervalSettingsScreen(
     }
 }
 
-@Composable
-private fun SettingsSection(
-    title: String,
-    description: String,
-    action: (@Composable () -> Unit)? = null,
-    chips: @Composable () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            action?.invoke()
-        }
-        Text(
-            description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { chips() }
-    }
-}
-
-/** Selected chips show a check mark so their state never relies on colour alone. */
-@Composable
-private fun SettingsChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        leadingIcon = if (selected) {
-            { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
-        } else {
-            null
-        },
-    )
-}
-
 @Preview(showBackground = true)
 @Composable
 private fun IntervalSettingsPreview() {

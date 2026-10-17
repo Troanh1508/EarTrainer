@@ -12,6 +12,8 @@ data class PlaybackTiming(
     val chordSeconds: Double = 1.6,
     /** Silence between consecutive moments. */
     val gapSeconds: Double = 0.15,
+    /** Time between onsets in an arpeggio; short enough that the notes are heard as one chord. */
+    val arpeggioStepSeconds: Double = 0.3,
     /**
      * Silence before the first note. Some devices swallow the first few milliseconds after a
      * track starts, which would otherwise clip the attack.
@@ -23,6 +25,7 @@ data class PlaybackTiming(
     init {
         require(noteSeconds > 0 && chordSeconds > 0) { "Note durations must be positive" }
         require(gapSeconds >= 0 && leadInSeconds >= 0 && tailSeconds >= 0) { "Silences must not be negative" }
+        require(arpeggioStepSeconds > 0) { "Arpeggio step must be positive" }
     }
 }
 
@@ -53,20 +56,47 @@ data class NoteSchedule(
             fun frames(seconds: Double) = (seconds * sampleRate).roundToInt()
 
             val notes = mutableListOf<ScheduledNote>()
-            var cursor = frames(timing.leadInSeconds)
-            prompt.moments.forEachIndexed { index, pitches ->
-                if (index > 0) cursor += frames(timing.gapSeconds)
-                val length = frames(if (pitches.size > 1) timing.chordSeconds else timing.noteSeconds)
-                pitches.forEach { notes += ScheduledNote(it, cursor, length) }
-                cursor += length
+            val leadIn = frames(timing.leadInSeconds)
+            val contentEnd = when (prompt.articulation) {
+                ListeningPrompt.Articulation.SEPARATE -> {
+                    var cursor = leadIn
+                    prompt.moments.forEachIndexed { index, pitches ->
+                        if (index > 0) cursor += frames(timing.gapSeconds)
+                        val length = frames(if (pitches.size > 1) timing.chordSeconds else timing.noteSeconds)
+                        pitches.forEach { notes += ScheduledNote(it, cursor, length) }
+                        cursor += length
+                    }
+                    cursor
+                }
+                ListeningPrompt.Articulation.ARPEGGIATED -> {
+                    // Every note holds until the shared end, like a sustain pedal, so the last
+                    // onset is followed by the whole chord for a full chord length.
+                    val step = frames(timing.arpeggioStepSeconds)
+                    val end = leadIn + step * (prompt.moments.size - 1) + frames(timing.chordSeconds)
+                    prompt.moments.forEachIndexed { index, pitches ->
+                        val start = leadIn + step * index
+                        pitches.forEach { notes += ScheduledNote(it, start, end - start) }
+                    }
+                    end
+                }
             }
             return NoteSchedule(
                 sampleRate = sampleRate,
                 notes = notes,
-                contentEndFrame = cursor,
-                totalFrames = cursor + frames(timing.tailSeconds),
-                maxPolyphony = prompt.moments.maxOf { it.size },
+                contentEndFrame = contentEnd,
+                totalFrames = contentEnd + frames(timing.tailSeconds),
+                maxPolyphony = maxOverlap(notes),
             )
+        }
+
+        /** Most notes sounding at any one frame: a sweep over note starts and ends. */
+        private fun maxOverlap(notes: List<ScheduledNote>): Int {
+            // At equal frames, ends (-1) sort before starts (+1): a note ending exactly where
+            // another begins does not overlap it.
+            val events = notes.flatMap { listOf(it.startFrame to 1, it.endFrame to -1) }
+                .sortedWith(compareBy({ it.first }, { it.second }))
+            var current = 0
+            return events.maxOf { (_, change) -> current += change; current }
         }
     }
 }

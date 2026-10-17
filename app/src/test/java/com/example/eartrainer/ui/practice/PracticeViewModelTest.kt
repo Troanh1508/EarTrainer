@@ -1,4 +1,4 @@
-package com.example.eartrainer.ui.intervals
+package com.example.eartrainer.ui.practice
 
 import com.example.eartrainer.audio.AudioPlaybackException
 import com.example.eartrainer.audio.AudioPlayer
@@ -12,6 +12,7 @@ import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.ListeningPrompt
 import com.example.eartrainer.music.Pitch
 import com.example.eartrainer.testing.FakePracticeHistory
+import com.example.eartrainer.ui.intervals.IntervalPracticeViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,7 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class IntervalTrainingViewModelTest {
+class PracticeViewModelTest {
 
     /** Playback that lasts until the test calls [finish], so every intermediate state is observable. */
     private class FakeAudioPlayer : AudioPlayer {
@@ -77,7 +78,7 @@ class IntervalTrainingViewModelTest {
     private val requestedSettings = mutableListOf<IntervalExerciseSettings>()
     private lateinit var player: FakeAudioPlayer
     private lateinit var history: FakePracticeHistory
-    private lateinit var viewModel: IntervalTrainingViewModel
+    private lateinit var viewModel: IntervalPracticeViewModel
     private var now = 0L
     private var sessionCounter = 0
 
@@ -91,16 +92,17 @@ class IntervalTrainingViewModelTest {
         viewModel = createViewModel(settings)
     }
 
-    private fun createViewModel(settingsFlow: Flow<IntervalExerciseSettings>): IntervalTrainingViewModel {
+    // Exercised through intervals, wired the same way as the app's IntervalPracticeFactory.
+    private fun createViewModel(settingsFlow: Flow<IntervalExerciseSettings>): IntervalPracticeViewModel {
         val remaining = ArrayDeque(questions)
-        return IntervalTrainingViewModel(
+        return IntervalPracticeViewModel(
             settings = settingsFlow,
-            history = history,
-            audioPlayer = player,
             questionSource = { requested ->
                 requestedSettings += requested
                 { remaining.removeFirst() }
             },
+            recordAttempt = { state, sessionId -> IntervalAttempt.from(state, sessionId)?.let(history::record) },
+            audioPlayer = player,
             clock = { now },
             newSessionId = { "session-${++sessionCounter}" },
         )

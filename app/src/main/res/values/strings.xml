@@ -5,33 +5,46 @@
     <string name="home_tagline">Train your ears to recognise what you hear.</string>
     <string name="home_intervals_title">Interval Training</string>
     <string name="home_intervals_description">Hear two notes and name the distance between them.</string>
+    <string name="home_chords_title">Chord Training</string>
+    <string name="home_chords_description">Hear a chord and name its quality or inversion.</string>
     <string name="home_progress_title">Your Progress</string>
-    <string name="home_progress_description">See how accurately you recognise each interval.</string>
+    <string name="home_progress_description">See how accurately you recognise intervals and chords.</string>
     <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
     <string name="home_sound_credit">Piano sound: Upright Piano KW from FreePats (CC0).</string>
 
     <!-- Interval training -->
     <string name="intervals_title">Interval Training</string>
-    <string name="intervals_open_settings">Practice settings</string>
+    <string name="practice_open_settings">Practice settings</string>
     <string name="intervals_instruction">Listen to the two notes and identify the interval.</string>
-    <string name="intervals_question_number">Question %1$d · %2$s</string>
-    <string name="intervals_score">%1$d of %2$d correct</string>
-    <string name="intervals_score_empty">No answers yet</string>
-    <string name="intervals_play">Play</string>
-    <string name="intervals_replay">Replay</string>
-    <string name="intervals_stop">Stop</string>
-    <string name="intervals_listen_first">Play the notes to unlock the answers.</string>
-    <string name="intervals_playback_failed">Audio could not be played. Another app may be using audio, or the output device is unavailable. Try again.</string>
-    <string name="intervals_feedback_correct">Correct</string>
-    <string name="intervals_feedback_incorrect">Not quite</string>
-    <string name="intervals_feedback_your_answer">You answered %1$s.</string>
+    <string name="practice_question_number">Question %1$d · %2$s</string>
+    <string name="practice_score">%1$d of %2$d correct</string>
+    <string name="practice_score_empty">No answers yet</string>
+    <string name="practice_play">Play</string>
+    <string name="practice_replay">Replay</string>
+    <string name="practice_stop">Stop</string>
+    <string name="practice_listen_first">Play the notes to unlock the answers.</string>
+    <string name="practice_playback_failed">Audio could not be played. Another app may be using audio, or the output device is unavailable. Try again.</string>
+    <string name="practice_feedback_correct">Correct</string>
+    <string name="practice_feedback_incorrect">Not quite</string>
+    <string name="practice_feedback_your_answer">You answered %1$s.</string>
     <plurals name="intervals_semitones">
         <item quantity="one">%d semitone</item>
         <item quantity="other">%d semitones</item>
     </plurals>
-    <string name="intervals_next">Next question</string>
-    <string name="intervals_choice_correct">correct answer</string>
-    <string name="intervals_choice_incorrect">your answer, incorrect</string>
+    <string name="practice_next">Next question</string>
+    <string name="practice_choice_correct">correct answer</string>
+    <string name="practice_choice_incorrect">your answer, incorrect</string>
+
+    <!-- Chord training -->
+    <string name="chords_title">Chord Training</string>
+    <string name="chords_instruction_quality">Listen to the chord and identify its quality.</string>
+    <string name="chords_instruction_inversion">Listen to the chord and identify its inversion.</string>
+    <!-- e.g. "C major · 1st inversion" -->
+    <string name="chords_summary">%1$s %2$s · %3$s</string>
+    <string name="chords_bass_root">Root in the bass</string>
+    <string name="chords_bass_third">3rd in the bass</string>
+    <string name="chords_bass_fifth">5th in the bass</string>
+    <string name="chords_bass_seventh">7th in the bass</string>
 
     <!-- Interval settings -->
     <string name="settings_title">Practice Settings</string>
@@ -46,18 +59,31 @@
     <string name="settings_choices_all">All</string>
     <string name="settings_restore_defaults">Restore defaults</string>
 
+    <!-- Chord settings -->
+    <string name="chord_settings_target_title">What to identify</string>
+    <string name="chord_settings_target_description">Name the type of chord, or which chord tone is in the bass.</string>
+    <string name="chord_settings_qualities_title">Chord types</string>
+    <string name="chord_settings_qualities_description">Questions use only the chord types you select. Keep at least %1$d.</string>
+    <string name="chord_settings_inversions_title">Include inversions</string>
+    <string name="chord_settings_inversions_description">Also play chords with the 3rd, 5th or 7th in the bass.</string>
+    <string name="chord_settings_inversions_always">Always on when identifying inversions.</string>
+
     <!-- Progress -->
     <string name="progress_title">Your Progress</string>
-    <string name="progress_empty">Answer a few interval questions and your progress will appear here.</string>
+    <string name="progress_empty">Answer a few questions and your progress will appear here.</string>
+    <string name="progress_exercise_intervals">Intervals</string>
+    <string name="progress_exercise_chords">Chords</string>
     <string name="progress_filter_all">All styles</string>
     <plurals name="progress_overall">
         <item quantity="one">%1$d of %2$d answer correct</item>
         <item quantity="other">%1$d of %2$d answers correct</item>
     </plurals>
-    <string name="progress_no_answers_for_style">No answers in this style yet</string>
+    <string name="progress_no_answers_for_filter">No answers here yet</string>
     <string name="progress_by_interval">By interval</string>
+    <string name="progress_by_quality">By chord quality</string>
+    <string name="progress_by_inversion">By inversion</string>
     <string name="progress_not_practised">Not practised yet</string>
-    <string name="progress_interval_score">%1$d of %2$d · %3$s</string>
+    <string name="progress_answer_score">%1$d of %2$d · %3$s</string>
     <string name="progress_recent_sessions">Recent sessions</string>
 
     <string name="navigate_back">Back</string>

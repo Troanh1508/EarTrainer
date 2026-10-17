@@ -1,4 +1,4 @@
-package com.example.eartrainer.ui.intervals
+package com.example.eartrainer.ui.practice
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -36,7 +35,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.example.eartrainer.R
-import com.example.eartrainer.music.Interval
 import com.example.eartrainer.ui.theme.Stop
 
 @Composable
@@ -50,14 +48,14 @@ fun PlaybackButton(
     val buttonModifier = modifier.heightIn(min = 64.dp)
     if (isPlaying) {
         FilledTonalButton(onClick = onStop, modifier = buttonModifier) {
-            ButtonContent(Icons.Filled.Stop, stringResource(R.string.intervals_stop))
+            ButtonContent(Icons.Filled.Stop, stringResource(R.string.practice_stop))
         }
     } else {
         Button(onClick = onPlay, modifier = buttonModifier) {
             if (hasHeardPrompt) {
-                ButtonContent(Icons.Filled.Refresh, stringResource(R.string.intervals_replay))
+                ButtonContent(Icons.Filled.Refresh, stringResource(R.string.practice_replay))
             } else {
-                ButtonContent(Icons.Filled.PlayArrow, stringResource(R.string.intervals_play))
+                ButtonContent(Icons.Filled.PlayArrow, stringResource(R.string.practice_play))
             }
         }
     }
@@ -70,22 +68,26 @@ private fun ButtonContent(icon: ImageVector, label: String) {
     Text(label, style = MaterialTheme.typography.titleMedium)
 }
 
+/** Text for one answer button: a main label and an optional short form, e.g. "Major third" / "M3". */
+data class ChoiceLabel(val title: String, val subtitle: String? = null)
+
 @Composable
-fun AnswerGrid(
-    choices: List<Interval>,
-    appearanceOf: (Interval) -> ChoiceAppearance,
-    onChoiceSelected: (Interval) -> Unit,
+fun <A> AnswerGrid(
+    choices: List<A>,
+    labelOf: @Composable (A) -> ChoiceLabel,
+    appearanceOf: (A) -> ChoiceAppearance,
+    onChoiceSelected: (A) -> Unit,
     modifier: Modifier = Modifier,
     columns: Int = 2,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         choices.chunked(columns).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                row.forEach { interval ->
+                row.forEach { choice ->
                     AnswerChoice(
-                        interval = interval,
-                        appearance = appearanceOf(interval),
-                        onClick = { onChoiceSelected(interval) },
+                        label = labelOf(choice),
+                        appearance = appearanceOf(choice),
+                        onClick = { onChoiceSelected(choice) },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -99,7 +101,7 @@ private data class ChoiceColors(val container: Color, val content: Color, val bo
 
 @Composable
 private fun AnswerChoice(
-    interval: Interval,
+    label: ChoiceLabel,
     appearance: ChoiceAppearance,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -121,9 +123,9 @@ private fun AnswerChoice(
     }
     val (icon, stateLabel) = when (appearance) {
         ChoiceAppearance.SelectedCorrect, ChoiceAppearance.RevealedCorrect ->
-            Icons.Filled.Check to stringResource(R.string.intervals_choice_correct)
+            Icons.Filled.Check to stringResource(R.string.practice_choice_correct)
         ChoiceAppearance.SelectedIncorrect ->
-            Icons.Filled.Close to stringResource(R.string.intervals_choice_incorrect)
+            Icons.Filled.Close to stringResource(R.string.practice_choice_incorrect)
         else -> null to null
     }
 
@@ -143,12 +145,14 @@ private fun AnswerChoice(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             Column(Modifier.weight(1f)) {
-                Text(interval.displayName, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    interval.abbreviation,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.content.copy(alpha = colors.content.alpha * 0.8f),
-                )
+                Text(label.title, style = MaterialTheme.typography.titleMedium)
+                label.subtitle?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.content.copy(alpha = colors.content.alpha * 0.8f),
+                    )
+                }
             }
             // Icons back up the colour change so the result never relies on colour alone.
             if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -159,8 +163,9 @@ private fun AnswerChoice(
 @Composable
 fun AnswerFeedback(
     isCorrect: Boolean,
-    selected: Interval,
-    correct: Interval,
+    selectedLabel: String,
+    /** What the right answer was, e.g. "Major third · 4 semitones". */
+    correctSummary: String,
     notesAsPlayed: String,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
@@ -179,20 +184,20 @@ fun AnswerFeedback(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    stringResource(if (isCorrect) R.string.intervals_feedback_correct else R.string.intervals_feedback_incorrect),
+                    stringResource(if (isCorrect) R.string.practice_feedback_correct else R.string.practice_feedback_incorrect),
                     style = MaterialTheme.typography.titleLarge,
                     color = accent,
                 )
             }
             if (!isCorrect) {
                 Text(
-                    stringResource(R.string.intervals_feedback_your_answer, selected.displayName),
+                    stringResource(R.string.practice_feedback_your_answer, selectedLabel),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Text(
-                "${correct.displayName} · ${pluralStringResource(R.plurals.intervals_semitones, correct.semitones, correct.semitones)}",
+                correctSummary,
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
@@ -203,7 +208,7 @@ fun AnswerFeedback(
         }
         Spacer(Modifier.size(8.dp))
         Button(onClick = onNext, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-            Text(stringResource(R.string.intervals_next), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.practice_next), style = MaterialTheme.typography.titleMedium)
         }
     }
 }

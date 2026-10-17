@@ -13,6 +13,7 @@ import com.example.eartrainer.audio.ToneSynthesizer
 import com.example.eartrainer.data.history.EarTrainerDatabase
 import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.RoomPracticeHistory
+import com.example.eartrainer.data.settings.ChordSettingsStore
 import com.example.eartrainer.data.settings.IntervalSettingsStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -31,10 +32,12 @@ class AppContainer(private val context: Context) {
     private val database by lazy { EarTrainerDatabase.create(context) }
 
     val practiceHistory: PracticeHistory by lazy {
-        RoomPracticeHistory(database.intervalAttemptDao(), applicationScope)
+        RoomPracticeHistory(database, applicationScope)
     }
 
     val intervalSettings by lazy { IntervalSettingsStore(context.settingsDataStore) }
+
+    val chordSettings by lazy { ChordSettingsStore(context.settingsDataStore) }
 
     /**
      * The piano is decoded once per process, in the background, and shared by every player.

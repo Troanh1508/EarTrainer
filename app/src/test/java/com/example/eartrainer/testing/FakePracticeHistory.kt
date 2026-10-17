@@ -1,37 +1,68 @@
 package com.example.eartrainer.testing
 
-import com.example.eartrainer.data.history.IntervalAccuracy
+import com.example.eartrainer.data.history.AnswerAccuracy
 import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.SessionSummary
+import com.example.eartrainer.exercise.ChordAnswer
+import com.example.eartrainer.exercise.ChordAttempt
+import com.example.eartrainer.exercise.ChordTarget
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.music.ChordInversion
+import com.example.eartrainer.music.ChordQuality
 import com.example.eartrainer.music.Interval
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 /** In-memory [PracticeHistory] with the same aggregation rules as the Room implementation. */
 class FakePracticeHistory : PracticeHistory {
-    private val attempts = MutableStateFlow<List<IntervalAttempt>>(emptyList())
+    private val intervals = MutableStateFlow<List<IntervalAttempt>>(emptyList())
+    private val chords = MutableStateFlow<List<ChordAttempt>>(emptyList())
 
-    val recorded: List<IntervalAttempt> get() = attempts.value
+    val recorded: List<IntervalAttempt> get() = intervals.value
+    val recordedChords: List<ChordAttempt> get() = chords.value
 
-    override fun record(attempt: IntervalAttempt) {
-        attempts.update { it + attempt }
-    }
+    override fun record(attempt: IntervalAttempt) = intervals.update { it + attempt }
 
-    override fun intervalAccuracy(style: IntervalStyle?): Flow<List<IntervalAccuracy>> = attempts.map { all ->
+    override fun record(attempt: ChordAttempt) = chords.update { it + attempt }
+
+    override fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>> = intervals.map { all ->
         Interval.entries.map { interval ->
             val matching = all.filter { it.interval == interval && (style == null || it.style == style) }
-            IntervalAccuracy(interval, attempts = matching.size, correct = matching.count { it.isCorrect })
+            AnswerAccuracy(interval, attempts = matching.size, correct = matching.count { it.isCorrect })
         }
     }
 
-    override fun recentSessions(limit: Int): Flow<List<SessionSummary>> = attempts.map { all ->
-        all.groupBy { it.sessionId }
+    override fun chordAccuracy(target: ChordTarget): Flow<List<AnswerAccuracy<ChordAnswer>>> = chords.map { all ->
+        val asked = all.filter { it.target == target }
+        when (target) {
+            ChordTarget.QUALITY -> ChordQuality.entries.map { quality ->
+                val matching = asked.filter { it.quality == quality }
+                AnswerAccuracy<ChordAnswer>(ChordAnswer.Quality(quality), matching.size, matching.count { it.isCorrect })
+            }
+            ChordTarget.INVERSION -> ChordInversion.entries.map { inversion ->
+                val matching = asked.filter { it.inversion == inversion }
+                AnswerAccuracy<ChordAnswer>(ChordAnswer.Inversion(inversion), matching.size, matching.count { it.isCorrect })
+            }
+        }
+    }
+
+    override fun recentSessions(limit: Int): Flow<List<SessionSummary>> = combine(intervals, chords) { intervalList, chordList ->
+        val rows = intervalList.map { Triple(it.sessionId, ExerciseKind.INTERVALS, it.answeredAtMillis to it.isCorrect) } +
+            chordList.map { Triple(it.sessionId, ExerciseKind.CHORDS, it.answeredAtMillis to it.isCorrect) }
+        rows.groupBy { it.first }
             .map { (id, session) ->
-                SessionSummary(id, session.minOf { it.answeredAtMillis }, session.size, session.count { it.isCorrect })
+                SessionSummary(
+                    sessionId = id,
+                    exercise = session.first().second,
+                    startedAtMillis = session.minOf { it.third.first },
+                    attempts = session.size,
+                    correct = session.count { it.third.second },
+                )
             }
             .sortedByDescending { it.startedAtMillis }
             .take(limit)
