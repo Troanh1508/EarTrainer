@@ -2,18 +2,23 @@ package com.example.eartrainer.ui.intervals
 
 import com.example.eartrainer.audio.AudioPlaybackException
 import com.example.eartrainer.audio.AudioPlayer
-import com.example.eartrainer.exercise.ExerciseEngine
 import com.example.eartrainer.exercise.ExercisePhase
+import com.example.eartrainer.exercise.IntervalAttempt
+import com.example.eartrainer.exercise.IntervalExerciseSettings
 import com.example.eartrainer.exercise.IntervalQuestion
 import com.example.eartrainer.exercise.IntervalStyle
 import com.example.eartrainer.exercise.SessionScore
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.ListeningPrompt
 import com.example.eartrainer.music.Pitch
+import com.example.eartrainer.testing.FakePracticeHistory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -23,6 +28,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -35,6 +41,7 @@ class IntervalTrainingViewModelTest {
         val played = mutableListOf<ListeningPrompt>()
         var cancellations = 0
         var failNext = false
+        var released = false
         private var pending: CompletableDeferred<Unit>? = null
 
         override suspend fun play(prompt: ListeningPrompt) {
@@ -56,27 +63,47 @@ class IntervalTrainingViewModelTest {
             pending?.complete(Unit)
         }
 
-        override fun release() = Unit
+        override fun release() {
+            released = true
+        }
     }
 
     private val choices = listOf(Interval.MAJOR_THIRD, Interval.PERFECT_FOURTH, Interval.PERFECT_FIFTH)
-    private val questions = listOf(
-        IntervalQuestion(Pitch(60), Interval.MAJOR_THIRD, IntervalStyle.MELODIC_ASCENDING, choices),
-        IntervalQuestion(Pitch(62), Interval.PERFECT_FIFTH, IntervalStyle.MELODIC_ASCENDING, choices),
-        IntervalQuestion(Pitch(64), Interval.PERFECT_FOURTH, IntervalStyle.MELODIC_ASCENDING, choices),
-    )
+    private val questions = List(6) { index ->
+        IntervalQuestion(Pitch(60 + index), choices[index % 3], IntervalStyle.MELODIC_ASCENDING, choices)
+    }
 
+    private val settings = MutableStateFlow(IntervalExerciseSettings())
+    private val requestedSettings = mutableListOf<IntervalExerciseSettings>()
     private lateinit var player: FakeAudioPlayer
+    private lateinit var history: FakePracticeHistory
     private lateinit var viewModel: IntervalTrainingViewModel
+    private var now = 0L
+    private var sessionCounter = 0
 
-    private val state get() = viewModel.uiState.value
+    private val state get() = checkNotNull(viewModel.uiState.value)
 
     @Before
     fun setUp() {
         Dispatchers.setMain(StandardTestDispatcher())
-        val remaining = ArrayDeque(questions)
         player = FakeAudioPlayer()
-        viewModel = IntervalTrainingViewModel(ExerciseEngine { remaining.removeFirst() }, player)
+        history = FakePracticeHistory()
+        viewModel = createViewModel(settings)
+    }
+
+    private fun createViewModel(settingsFlow: Flow<IntervalExerciseSettings>): IntervalTrainingViewModel {
+        val remaining = ArrayDeque(questions)
+        return IntervalTrainingViewModel(
+            settings = settingsFlow,
+            history = history,
+            audioPlayer = player,
+            questionSource = { requested ->
+                requestedSettings += requested
+                { remaining.removeFirst() }
+            },
+            clock = { now },
+            newSessionId = { "session-${++sessionCounter}" },
+        )
     }
 
     @After
@@ -92,15 +119,34 @@ class IntervalTrainingViewModelTest {
     }
 
     @Test
-    fun startsUnheardAndIdle() {
+    fun staysLoadingUntilSettingsArrive() = runTest {
+        val pendingSettings = MutableSharedFlow<IntervalExerciseSettings>()
+        val loading = createViewModel(pendingSettings)
+        advanceUntilIdle()
+        assertNull(loading.uiState.value)
+        loading.onPlayClick()
+        loading.onAnswerSelected(Interval.MAJOR_THIRD)
+        advanceUntilIdle()
+        assertTrue(player.played.isEmpty())
+
+        pendingSettings.emit(IntervalExerciseSettings())
+        advanceUntilIdle()
+        assertEquals(1, checkNotNull(loading.uiState.value).exercise.questionNumber)
+    }
+
+    @Test
+    fun startsOnceSettingsLoad() = runTest {
+        advanceUntilIdle()
         assertEquals(1, state.exercise.questionNumber)
         assertEquals(ExercisePhase.Unheard, state.exercise.phase)
         assertEquals(PlaybackStatus.Idle, state.playback)
         assertFalse(state.canAnswer)
+        assertEquals(listOf(IntervalExerciseSettings()), requestedSettings)
     }
 
     @Test
     fun playingReflectsPlaybackAndUnlocksAnswers() = runTest {
+        advanceUntilIdle()
         viewModel.onPlayClick()
         advanceUntilIdle()
         assertEquals(PlaybackStatus.Playing, state.playback)
@@ -115,25 +161,45 @@ class IntervalTrainingViewModelTest {
 
     @Test
     fun answersBeforeListeningAreIgnored() = runTest {
+        advanceUntilIdle()
         viewModel.onAnswerSelected(Interval.MAJOR_THIRD)
         assertEquals(SessionScore(), state.exercise.score)
-        assertEquals(ExercisePhase.Unheard, state.exercise.phase)
+        assertTrue(history.recorded.isEmpty())
     }
 
     @Test
-    fun correctAnswerUpdatesScoreExactlyOnce() = runTest {
+    fun correctAnswerUpdatesScoreAndHistoryExactlyOnce() = runTest {
+        advanceUntilIdle()
+        now = 1_000
         playToEnd()
+        now = 3_500
         viewModel.onAnswerSelected(Interval.MAJOR_THIRD)
         viewModel.onAnswerSelected(Interval.MAJOR_THIRD)
         viewModel.onAnswerSelected(Interval.PERFECT_FIFTH)
 
         assertEquals(SessionScore(answered = 1, correct = 1), state.exercise.score)
-        assertEquals(ExercisePhase.Answered(Interval.MAJOR_THIRD, isCorrect = true), state.exercise.phase)
         assertEquals(ChoiceAppearance.SelectedCorrect, state.appearanceOf(Interval.MAJOR_THIRD))
+        assertEquals(
+            listOf(
+                IntervalAttempt(
+                    sessionId = "session-1",
+                    answeredAtMillis = 3_500,
+                    interval = Interval.MAJOR_THIRD,
+                    style = IntervalStyle.MELODIC_ASCENDING,
+                    lowerPitch = Pitch(60),
+                    answer = Interval.MAJOR_THIRD,
+                    isCorrect = true,
+                    playCount = 1,
+                    responseMillis = 2_500,
+                ),
+            ),
+            history.recorded,
+        )
     }
 
     @Test
     fun incorrectAnswerRevealsTheCorrectOne() = runTest {
+        advanceUntilIdle()
         playToEnd()
         viewModel.onAnswerSelected(Interval.PERFECT_FIFTH)
 
@@ -141,28 +207,30 @@ class IntervalTrainingViewModelTest {
         assertEquals(ChoiceAppearance.SelectedIncorrect, state.appearanceOf(Interval.PERFECT_FIFTH))
         assertEquals(ChoiceAppearance.RevealedCorrect, state.appearanceOf(Interval.MAJOR_THIRD))
         assertEquals(ChoiceAppearance.Dimmed, state.appearanceOf(Interval.PERFECT_FOURTH))
+        assertFalse(history.recorded.single().isCorrect)
     }
 
     @Test
-    fun replayDoesNotAffectScoreOrQuestion() = runTest {
+    fun replayDoesNotAffectScoreQuestionOrHistory() = runTest {
+        advanceUntilIdle()
         playToEnd()
         playToEnd()
-        val beforeAnswer = state.exercise
-        assertEquals(ExercisePhase.AwaitingAnswer, beforeAnswer.phase)
-
         viewModel.onAnswerSelected(Interval.MAJOR_THIRD)
         val answered = state.exercise
         playToEnd()
         playToEnd()
 
-        assertEquals(answered, state.exercise)
         assertEquals(1, state.exercise.questionNumber)
+        assertEquals(answered.phase, state.exercise.phase)
         assertEquals(SessionScore(answered = 1, correct = 1), state.exercise.score)
         assertEquals(List(4) { questions[0].prompt }, player.played)
+        // Recorded once, with the two plays that happened before answering.
+        assertEquals(2, history.recorded.single().playCount)
     }
 
     @Test
     fun replayWhilePlayingRestartsInsteadOfOverlapping() = runTest {
+        advanceUntilIdle()
         viewModel.onPlayClick()
         advanceUntilIdle()
         viewModel.onPlayClick()
@@ -175,6 +243,7 @@ class IntervalTrainingViewModelTest {
 
     @Test
     fun stopCancelsPlayback() = runTest {
+        advanceUntilIdle()
         viewModel.onPlayClick()
         advanceUntilIdle()
         viewModel.onStopClick()
@@ -187,6 +256,7 @@ class IntervalTrainingViewModelTest {
 
     @Test
     fun cannotAdvanceBeforeAnswering() = runTest {
+        advanceUntilIdle()
         playToEnd()
         viewModel.onNextClick()
         advanceUntilIdle()
@@ -196,6 +266,7 @@ class IntervalTrainingViewModelTest {
 
     @Test
     fun nextStopsCurrentAudioAndPlaysTheNewQuestion() = runTest {
+        advanceUntilIdle()
         viewModel.onPlayClick()
         advanceUntilIdle()
         viewModel.onAnswerSelected(Interval.MAJOR_THIRD)
@@ -217,6 +288,7 @@ class IntervalTrainingViewModelTest {
 
     @Test
     fun playbackFailureIsReportedAndCanBeRetried() = runTest {
+        advanceUntilIdle()
         player.failNext = true
         viewModel.onPlayClick()
         advanceUntilIdle()
@@ -229,6 +301,7 @@ class IntervalTrainingViewModelTest {
 
     @Test
     fun hidingTheScreenStopsPlayback() = runTest {
+        advanceUntilIdle()
         viewModel.onPlayClick()
         advanceUntilIdle()
         viewModel.onScreenHidden()
@@ -236,5 +309,40 @@ class IntervalTrainingViewModelTest {
 
         assertEquals(1, player.cancellations)
         assertEquals(PlaybackStatus.Idle, state.playback)
+    }
+
+    @Test
+    fun changedSettingsStartAFreshSession() = runTest {
+        advanceUntilIdle()
+        playToEnd()
+        viewModel.onAnswerSelected(Interval.MAJOR_THIRD)
+        viewModel.onNextClick()
+        advanceUntilIdle()
+        assertEquals(PlaybackStatus.Playing, state.playback)
+
+        val harmonic = IntervalExerciseSettings(styles = setOf(IntervalStyle.HARMONIC))
+        settings.value = harmonic
+        advanceUntilIdle()
+
+        assertEquals(1, player.cancellations)
+        assertEquals(PlaybackStatus.Idle, state.playback)
+        assertEquals(1, state.exercise.questionNumber)
+        assertEquals(ExercisePhase.Unheard, state.exercise.phase)
+        assertEquals(SessionScore(), state.exercise.score)
+        assertEquals(listOf(IntervalExerciseSettings(), harmonic), requestedSettings)
+
+        playToEnd()
+        viewModel.onAnswerSelected(state.question.correctAnswer)
+        assertEquals(listOf("session-1", "session-2"), history.recorded.map { it.sessionId })
+    }
+
+    @Test
+    fun identicalSettingsEmissionsDoNotRestartTheSession() = runTest {
+        advanceUntilIdle()
+        playToEnd()
+        settings.value = IntervalExerciseSettings()
+        advanceUntilIdle()
+        assertEquals(ExercisePhase.AwaitingAnswer, state.exercise.phase)
+        assertEquals(1, requestedSettings.size)
     }
 }

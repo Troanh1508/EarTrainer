@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,17 +45,24 @@ import com.example.eartrainer.ui.theme.EarTrainerTheme
 @Composable
 fun IntervalTrainingRoute(
     viewModel: IntervalTrainingViewModel,
+    onOpenSettings: () -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onScreenHidden() }
 
+    // Settings load from disk almost instantly; show a plain surface rather than a spinner flash.
+    val loaded = state ?: run {
+        Surface(Modifier.fillMaxSize()) {}
+        return
+    }
     IntervalTrainingScreen(
-        state = state,
+        state = loaded,
         onPlay = viewModel::onPlayClick,
         onStop = viewModel::onStopClick,
         onAnswerSelected = viewModel::onAnswerSelected,
         onNext = viewModel::onNextClick,
+        onOpenSettings = onOpenSettings,
         onNavigateUp = onNavigateUp,
     )
 }
@@ -67,6 +75,7 @@ fun IntervalTrainingScreen(
     onStop: () -> Unit,
     onAnswerSelected: (Interval) -> Unit,
     onNext: () -> Unit,
+    onOpenSettings: () -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     Scaffold(
@@ -76,6 +85,11 @@ fun IntervalTrainingScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.navigate_back))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, stringResource(R.string.intervals_open_settings))
                     }
                 },
             )
@@ -211,7 +225,7 @@ private fun AwaitingAnswerPreview() {
     EarTrainerTheme {
         IntervalTrainingScreen(
             state = previewState(ExercisePhase.AwaitingAnswer, SessionScore(answered = 6, correct = 4)),
-            onPlay = {}, onStop = {}, onAnswerSelected = {}, onNext = {}, onNavigateUp = {},
+            onPlay = {}, onStop = {}, onAnswerSelected = {}, onNext = {}, onOpenSettings = {}, onNavigateUp = {},
         )
     }
 }
@@ -222,10 +236,10 @@ private fun AnsweredIncorrectlyPreview() {
     EarTrainerTheme(darkTheme = true) {
         IntervalTrainingScreen(
             state = previewState(
-                ExercisePhase.Answered(Interval.MINOR_THIRD, isCorrect = false),
+                ExercisePhase.Answered(Interval.MINOR_THIRD, isCorrect = false, answeredAtMillis = 0),
                 SessionScore(answered = 7, correct = 4),
             ),
-            onPlay = {}, onStop = {}, onAnswerSelected = {}, onNext = {}, onNavigateUp = {},
+            onPlay = {}, onStop = {}, onAnswerSelected = {}, onNext = {}, onOpenSettings = {}, onNavigateUp = {},
         )
     }
 }

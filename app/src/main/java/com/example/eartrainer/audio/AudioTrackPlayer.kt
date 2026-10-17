@@ -1,7 +1,9 @@
 package com.example.eartrainer.audio
 
+import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Handler
 import android.os.Looper
@@ -20,7 +22,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Compose recomposition.
  */
 class AudioTrackPlayer(
-    private val sampleRate: Int = DEFAULT_SAMPLE_RATE,
+    context: Context,
     private val timing: PlaybackTiming = PlaybackTiming(),
     private val synthesizer: ToneSynthesizer = ToneSynthesizer(),
 ) : AudioPlayer {
@@ -31,7 +33,24 @@ class AudioTrackPlayer(
         val finished = CompletableDeferred<Unit>()
     }
 
+    private val audioManager = context.getSystemService(AudioManager::class.java)
+
+    /**
+     * Rendering at the output's native rate (usually 48 kHz) means the system mixer plays our
+     * samples as-is instead of resampling them.
+     */
+    private val sampleRate: Int =
+        audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)?.toIntOrNull()
+            ?.takeIf { it > 0 }
+            ?: FALLBACK_SAMPLE_RATE
+
+    private val attributes = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_MEDIA)
+        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+        .build()
+
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val focus = TransientAudioFocus(audioManager, attributes, mainHandler, onLost = ::silenceActive)
     private val lock = Any()
     private var active: ActivePlayback? = null // guarded by lock
     private var released = false // guarded by lock
@@ -50,6 +69,7 @@ class AudioTrackPlayer(
             }
             val playback = checkNotNull(created)
             begin(playback)
+            if (!focus.request()) throw AudioPlaybackException("Another app is using audio")
             playback.track.setPlaybackPositionUpdateListener(
                 object : AudioTrack.OnPlaybackPositionUpdateListener {
                     override fun onMarkerReached(track: AudioTrack) {
@@ -77,11 +97,14 @@ class AudioTrackPlayer(
     }
 
     override fun release() {
-        synchronized(lock) {
+        val wasPlaying = synchronized(lock) {
             released = true
-            active?.let { silence(it) }
+            val current = active
+            current?.let { silence(it) }
             active = null
+            current != null
         }
+        if (wasPlaying) focus.abandon()
         lastRender = null
     }
 
@@ -94,12 +117,7 @@ class AudioTrackPlayer(
     private fun createLoadedTrack(pcm: ShortArray): AudioTrack {
         val track = try {
             AudioTrack.Builder()
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .build(),
-                )
+                .setAudioAttributes(attributes)
                 .setAudioFormat(
                     AudioFormat.Builder()
                         .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
@@ -135,12 +153,20 @@ class AudioTrackPlayer(
 
     /** Runs on completion, cancellation and failure alike; each track is released exactly once by its owner. */
     private fun end(playback: ActivePlayback) {
-        synchronized(lock) {
-            if (active === playback) active = null
+        // Only the playback that still owns the output gives up focus; one that was replaced
+        // by a newer prompt must not abandon the focus that prompt now holds.
+        val wasActive = synchronized(lock) {
+            (active === playback).also { if (it) active = null }
         }
         silence(playback)
+        if (wasActive) focus.abandon()
         playback.track.setPlaybackPositionUpdateListener(null)
         playback.track.release()
+    }
+
+    /** Called when another app or a call takes audio focus; the prompt's play() then returns. */
+    private fun silenceActive() {
+        synchronized(lock) { active?.let { silence(it) } }
     }
 
     private fun silence(playback: ActivePlayback) {
@@ -152,8 +178,8 @@ class AudioTrackPlayer(
         playback.finished.complete(Unit)
     }
 
-    companion object {
-        const val DEFAULT_SAMPLE_RATE = 44_100
-        private const val COMPLETION_GRACE_MILLIS = 1_000L
+    private companion object {
+        const val FALLBACK_SAMPLE_RATE = 44_100
+        const val COMPLETION_GRACE_MILLIS = 1_000L
     }
 }

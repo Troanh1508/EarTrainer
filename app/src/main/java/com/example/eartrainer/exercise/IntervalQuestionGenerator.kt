@@ -12,7 +12,7 @@ data class IntervalExerciseSettings(
     val choiceCount: Int = 6,
 ) {
     init {
-        require(intervals.isNotEmpty()) { "At least one interval must be enabled" }
+        require(intervals.size >= MIN_INTERVALS) { "At least $MIN_INTERVALS intervals must be enabled" }
         require(intervals.toSet().size == intervals.size) { "Intervals must be distinct" }
         require(styles.isNotEmpty()) { "At least one interval style must be enabled" }
         require(pitchRange.first in Pitch.MIDI_RANGE && pitchRange.last in Pitch.MIDI_RANGE) {
@@ -22,6 +22,28 @@ data class IntervalExerciseSettings(
             "Pitch range $pitchRange is too narrow for the widest enabled interval"
         }
         require(choiceCount >= 2) { "A multiple-choice question needs at least two choices" }
+    }
+
+    /** Adds or removes [interval], refusing to drop below [MIN_INTERVALS]. Keeps size order. */
+    fun withIntervalToggled(interval: Interval): IntervalExerciseSettings = when {
+        interval !in intervals -> copy(intervals = (intervals + interval).sortedBy { it.semitones })
+        intervals.size > MIN_INTERVALS -> copy(intervals = intervals - interval)
+        else -> this
+    }
+
+    /** Adds or removes [style], refusing to remove the last one. */
+    fun withStyleToggled(style: IntervalStyle): IntervalExerciseSettings = when {
+        style !in styles -> copy(styles = styles + style)
+        styles.size > 1 -> copy(styles = styles - style)
+        else -> this
+    }
+
+    companion object {
+        /** Fewer than two intervals would make every question a giveaway. */
+        const val MIN_INTERVALS = 2
+
+        /** Choice counts offered in settings; 12 shows every interval. */
+        val CHOICE_COUNT_OPTIONS = listOf(4, 6, 8, 12)
     }
 }
 

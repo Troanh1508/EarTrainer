@@ -5,10 +5,13 @@
     <string name="home_tagline">Train your ears to recognise what you hear.</string>
     <string name="home_intervals_title">Interval Training</string>
     <string name="home_intervals_description">Hear two notes and name the distance between them.</string>
+    <string name="home_progress_title">Your Progress</string>
+    <string name="home_progress_description">See how accurately you recognise each interval.</string>
     <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
 
     <!-- Interval training -->
     <string name="intervals_title">Interval Training</string>
+    <string name="intervals_open_settings">Practice settings</string>
     <string name="intervals_instruction">Listen to the two notes and identify the interval.</string>
     <string name="intervals_question_number">Question %1$d · %2$s</string>
     <string name="intervals_score">%1$d of %2$d correct</string>
@@ -17,7 +20,7 @@
     <string name="intervals_replay">Replay</string>
     <string name="intervals_stop">Stop</string>
     <string name="intervals_listen_first">Play the notes to unlock the answers.</string>
-    <string name="intervals_playback_failed">Audio could not be played. Check your volume and output device, then try again.</string>
+    <string name="intervals_playback_failed">Audio could not be played. Another app may be using audio, or the output device is unavailable. Try again.</string>
     <string name="intervals_feedback_correct">Correct</string>
     <string name="intervals_feedback_incorrect">Not quite</string>
     <string name="intervals_feedback_your_answer">You answered %1$s.</string>
@@ -28,5 +31,33 @@
     <string name="intervals_next">Next question</string>
     <string name="intervals_choice_correct">correct answer</string>
     <string name="intervals_choice_incorrect">your answer, incorrect</string>
+
+    <!-- Interval settings -->
+    <string name="settings_title">Practice Settings</string>
+    <string name="settings_new_session_note">Changes are saved automatically and start a new practice session.</string>
+    <string name="settings_intervals_title">Intervals</string>
+    <string name="settings_intervals_description">Questions use only the intervals you select. Keep at least %1$d.</string>
+    <string name="settings_select_all">Select all</string>
+    <string name="settings_styles_title">How notes are played</string>
+    <string name="settings_styles_description">Questions randomly use any of the selected styles. Keep at least one.</string>
+    <string name="settings_choices_title">Answer choices</string>
+    <string name="settings_choices_description">How many intervals to choose from in each question.</string>
+    <string name="settings_choices_all">All</string>
+    <string name="settings_restore_defaults">Restore defaults</string>
+
+    <!-- Progress -->
+    <string name="progress_title">Your Progress</string>
+    <string name="progress_empty">Answer a few interval questions and your progress will appear here.</string>
+    <string name="progress_filter_all">All styles</string>
+    <plurals name="progress_overall">
+        <item quantity="one">%1$d of %2$d answer correct</item>
+        <item quantity="other">%1$d of %2$d answers correct</item>
+    </plurals>
+    <string name="progress_no_answers_for_style">No answers in this style yet</string>
+    <string name="progress_by_interval">By interval</string>
+    <string name="progress_not_practised">Not practised yet</string>
+    <string name="progress_interval_score">%1$d of %2$d · %3$s</string>
+    <string name="progress_recent_sessions">Recent sessions</string>
+
     <string name="navigate_back">Back</string>
 </resources>

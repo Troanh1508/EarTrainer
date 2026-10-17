@@ -25,7 +25,7 @@ import com.example.eartrainer.R
 import com.example.eartrainer.ui.theme.EarTrainerTheme
 
 @Composable
-fun HomeScreen(onOpenIntervalTraining: () -> Unit) {
+fun HomeScreen(onOpenIntervalTraining: () -> Unit, onOpenProgress: () -> Unit) {
     Surface(Modifier.fillMaxSize()) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -46,25 +46,16 @@ fun HomeScreen(onOpenIntervalTraining: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                ElevatedCard(onClick = onOpenIntervalTraining, modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(20.dp),
-                    ) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                stringResource(R.string.home_intervals_title),
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-                            Text(
-                                stringResource(R.string.home_intervals_description),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-                    }
-                }
+                HomeEntryCard(
+                    title = stringResource(R.string.home_intervals_title),
+                    description = stringResource(R.string.home_intervals_description),
+                    onClick = onOpenIntervalTraining,
+                )
+                HomeEntryCard(
+                    title = stringResource(R.string.home_progress_title),
+                    description = stringResource(R.string.home_progress_description),
+                    onClick = onOpenProgress,
+                )
                 Text(
                     stringResource(R.string.home_offline_note),
                     style = MaterialTheme.typography.bodySmall,
@@ -75,8 +66,28 @@ fun HomeScreen(onOpenIntervalTraining: () -> Unit) {
     }
 }
 
+@Composable
+private fun HomeEntryCard(title: String, description: String, onClick: () -> Unit) {
+    ElevatedCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(20.dp),
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+        }
+    }
+}
+
 @Preview
 @Composable
 private fun HomeScreenPreview() {
-    EarTrainerTheme { HomeScreen(onOpenIntervalTraining = {}) }
+    EarTrainerTheme { HomeScreen(onOpenIntervalTraining = {}, onOpenProgress = {}) }
 }
