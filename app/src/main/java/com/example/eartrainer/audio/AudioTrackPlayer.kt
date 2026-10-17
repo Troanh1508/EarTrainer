@@ -24,10 +24,19 @@ import kotlinx.coroutines.withTimeoutOrNull
 class AudioTrackPlayer(
     context: Context,
     private val timing: PlaybackTiming = PlaybackTiming(),
-    private val synthesizer: ToneSynthesizer = ToneSynthesizer(),
+    /**
+     * Supplies the instrument. Suspending lets a sampled instrument finish loading in the
+     * background; the first prompt waits for it only if it is not ready yet.
+     */
+    private val renderer: suspend () -> PcmRenderer = ToneSynthesizer().let { synth -> { synth } },
 ) : AudioPlayer {
 
-    private class RenderedPrompt(val prompt: ListeningPrompt, val schedule: NoteSchedule, val pcm: ShortArray)
+    private class RenderedPrompt(
+        val prompt: ListeningPrompt,
+        val renderer: PcmRenderer,
+        val schedule: NoteSchedule,
+        val pcm: ShortArray,
+    )
 
     private class ActivePlayback(val track: AudioTrack) {
         val finished = CompletableDeferred<Unit>()
@@ -108,10 +117,11 @@ class AudioTrackPlayer(
         lastRender = null
     }
 
-    private fun render(prompt: ListeningPrompt): RenderedPrompt {
-        lastRender?.takeIf { it.prompt == prompt }?.let { return it }
+    private suspend fun render(prompt: ListeningPrompt): RenderedPrompt {
+        val instrument = renderer()
+        lastRender?.takeIf { it.prompt == prompt && it.renderer === instrument }?.let { return it }
         val schedule = NoteSchedule.from(prompt, sampleRate, timing)
-        return RenderedPrompt(prompt, schedule, synthesizer.render(schedule)).also { lastRender = it }
+        return RenderedPrompt(prompt, instrument, schedule, instrument.render(schedule)).also { lastRender = it }
     }
 
     private fun createLoadedTrack(pcm: ShortArray): AudioTrack {

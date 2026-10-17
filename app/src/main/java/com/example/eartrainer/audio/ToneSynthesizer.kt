@@ -1,7 +1,6 @@
 package com.example.eartrainer.audio
 
 import kotlin.math.PI
-import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -31,9 +30,6 @@ data class ToneEnvelope(
         val release = if (framesLeft < releaseFrames) raisedCosine(framesLeft.toDouble() / releaseFrames) else 1.0
         return body * attack * release
     }
-
-    /** Smooth 0 → 1 ramp for x in [0, 1]. */
-    private fun raisedCosine(x: Double) = 0.5 - 0.5 * cos(PI * x)
 }
 
 /**
@@ -49,7 +45,7 @@ class ToneSynthesizer(
     private val envelope: ToneEnvelope = ToneEnvelope(),
     /** Peak level (0..1) when [NoteSchedule.maxPolyphony] voices are at full amplitude. */
     private val headroom: Double = 0.8,
-) {
+) : PcmRenderer {
     init {
         require(harmonics.isNotEmpty() && harmonics.all { it >= 0 } && harmonics.sum() > 0) {
             "Harmonic amplitudes must be non-negative with at least one positive value"
@@ -57,7 +53,7 @@ class ToneSynthesizer(
         require(headroom > 0 && headroom <= 1) { "Headroom must be in (0, 1]" }
     }
 
-    fun render(schedule: NoteSchedule): ShortArray {
+    override fun render(schedule: NoteSchedule): ShortArray {
         val sampleRate = schedule.sampleRate
         val mix = DoubleArray(schedule.totalFrames)
         // Dividing by polyphony keeps chords at the same overall loudness as single notes and
@@ -84,10 +80,6 @@ class ToneSynthesizer(
             }
         }
 
-        return ShortArray(mix.size) { i ->
-            (mix[i] * Short.MAX_VALUE).roundToInt()
-                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                .toShort()
-        }
+        return mix.toPcm16()
     }
 }

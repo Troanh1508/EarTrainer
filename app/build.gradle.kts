@@ -36,6 +36,10 @@ android {
     buildFeatures {
         compose = true
     }
+    androidResources {
+        // Instrument recordings are decoded with MediaExtractor straight from the APK, which needs them stored uncompressed.
+        noCompress += "flac"
+    }
 }
 
 room {

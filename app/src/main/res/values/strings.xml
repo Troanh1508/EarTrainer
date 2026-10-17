@@ -8,6 +8,7 @@
     <string name="home_progress_title">Your Progress</string>
     <string name="home_progress_description">See how accurately you recognise each interval.</string>
     <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
+    <string name="home_sound_credit">Piano sound: Upright Piano KW from FreePats (CC0).</string>
 
     <!-- Interval training -->
     <string name="intervals_title">Interval Training</string>
