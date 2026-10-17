@@ -25,6 +25,7 @@ class ChordSettingsStoreTest {
             styles = setOf(ChordStyle.ARPEGGIATED),
             target = ChordTarget.INVERSION,
             includeInversions = true,
+            focusOnWeakSpots = false,
         )
         val preferences = mutablePreferencesOf()
         ChordSettingsStore.encode(custom, preferences)

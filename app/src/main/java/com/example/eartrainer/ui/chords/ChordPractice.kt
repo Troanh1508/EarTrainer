@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.R
+import com.example.eartrainer.data.history.WeakSpots.Companion.asWeightLookup
 import com.example.eartrainer.exercise.ChordAnswer
 import com.example.eartrainer.exercise.ChordAttempt
 import com.example.eartrainer.exercise.ChordExerciseSettings
@@ -38,7 +39,10 @@ val ChordPracticeFactory: ViewModelProvider.Factory = viewModelFactory {
         val container = (this[APPLICATION_KEY] as EarTrainerApplication).container
         ChordPracticeViewModel(
             settings = container.chordSettings.settings,
-            questionSource = { ChordQuestionGenerator(it)::generate },
+            questionSource = { settings ->
+                val weights = container.weakSpots.chords.asWeightLookup().takeIf { settings.focusOnWeakSpots }
+                ChordQuestionGenerator(settings, weightOf = weights)::generate
+            },
             recordAttempt = { state, sessionId -> ChordAttempt.from(state, sessionId)?.let(container.practiceHistory::record) },
             audioPlayer = container.createAudioPlayer(),
         )

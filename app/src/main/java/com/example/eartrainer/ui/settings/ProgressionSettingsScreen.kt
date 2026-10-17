@@ -51,6 +51,7 @@ fun ProgressionSettingsRoute(viewModel: ProgressionSettingsViewModel, onNavigate
         onLengthSelected = viewModel::onLengthSelected,
         onKeyChoiceSelected = viewModel::onKeyChoiceSelected,
         onRestoreDefaults = viewModel::onRestoreDefaults,
+        onFocusOnWeakSpotsChanged = viewModel::onFocusOnWeakSpotsChanged,
         onNavigateUp = onNavigateUp,
     )
 }
@@ -65,6 +66,7 @@ fun ProgressionSettingsScreen(
     onLengthSelected: (Int) -> Unit,
     onKeyChoiceSelected: (KeyChoice) -> Unit,
     onRestoreDefaults: () -> Unit,
+    onFocusOnWeakSpotsChanged: (Boolean) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     Scaffold(
@@ -156,6 +158,15 @@ fun ProgressionSettingsScreen(
                     }
                 }
 
+                HorizontalDivider()
+
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_focus_title),
+                    description = stringResource(R.string.settings_focus_description),
+                    checked = settings.focusOnWeakSpots,
+                    onCheckedChange = onFocusOnWeakSpotsChanged,
+                )
+
                 TextButton(
                     onClick = onRestoreDefaults,
                     enabled = settings != ProgressionSettings(),
@@ -175,7 +186,7 @@ private fun ProgressionSettingsPreview() {
         ProgressionSettingsScreen(
             settings = ProgressionSettings(modes = Mode.entries.toSet(), vocabulary = ChordVocabulary.ALL, length = 5),
             onSourceSelected = {}, onModeToggled = {}, onVocabularySelected = {}, onLengthSelected = {}, onKeyChoiceSelected = {},
-            onRestoreDefaults = {}, onNavigateUp = {},
+            onRestoreDefaults = {}, onFocusOnWeakSpotsChanged = {}, onNavigateUp = {},
         )
     }
 }

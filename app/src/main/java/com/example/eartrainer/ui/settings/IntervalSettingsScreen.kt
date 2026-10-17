@@ -54,6 +54,7 @@ fun IntervalSettingsRoute(viewModel: IntervalSettingsViewModel, onNavigateUp: ()
         onStyleToggled = viewModel::onStyleToggled,
         onChoiceCountSelected = viewModel::onChoiceCountSelected,
         onRestoreDefaults = viewModel::onRestoreDefaults,
+        onFocusOnWeakSpotsChanged = viewModel::onFocusOnWeakSpotsChanged,
         onNavigateUp = onNavigateUp,
     )
 }
@@ -67,6 +68,7 @@ fun IntervalSettingsScreen(
     onStyleToggled: (IntervalStyle) -> Unit,
     onChoiceCountSelected: (Int) -> Unit,
     onRestoreDefaults: () -> Unit,
+    onFocusOnWeakSpotsChanged: (Boolean) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     Scaffold(
@@ -149,6 +151,15 @@ fun IntervalSettingsScreen(
                     }
                 }
 
+                HorizontalDivider()
+
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_focus_title),
+                    description = stringResource(R.string.settings_focus_description),
+                    checked = settings.focusOnWeakSpots,
+                    onCheckedChange = onFocusOnWeakSpotsChanged,
+                )
+
                 TextButton(
                     onClick = onRestoreDefaults,
                     enabled = settings != IntervalExerciseSettings(),
@@ -171,7 +182,7 @@ private fun IntervalSettingsPreview() {
                 styles = setOf(IntervalStyle.MELODIC_ASCENDING, IntervalStyle.HARMONIC),
             ),
             onIntervalToggled = {}, onSelectAllIntervals = {}, onStyleToggled = {},
-            onChoiceCountSelected = {}, onRestoreDefaults = {}, onNavigateUp = {},
+            onChoiceCountSelected = {}, onRestoreDefaults = {}, onFocusOnWeakSpotsChanged = {}, onNavigateUp = {},
         )
     }
 }

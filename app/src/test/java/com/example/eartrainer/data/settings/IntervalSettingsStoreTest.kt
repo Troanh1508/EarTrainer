@@ -29,6 +29,7 @@ class IntervalSettingsStoreTest {
         intervals = listOf(Interval.MAJOR_SECOND, Interval.PERFECT_FIFTH, Interval.OCTAVE),
         styles = setOf(IntervalStyle.MELODIC_DESCENDING, IntervalStyle.HARMONIC),
         choiceCount = 8,
+        focusOnWeakSpots = false,
     )
 
     @Test

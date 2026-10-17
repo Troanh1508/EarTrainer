@@ -47,6 +47,8 @@ data class ProgressionSettings(
     val length: Int = 4,
     val keyChoice: KeyChoice = KeyChoice.RANDOM,
     val source: ProgressionSource = ProgressionSource.COMMON,
+    /** Ask more often about progressions containing chords recently identified wrongly. */
+    val focusOnWeakSpots: Boolean = true,
 ) {
     init {
         require(modes.isNotEmpty()) { "At least one mode must be enabled" }
@@ -71,6 +73,8 @@ data class ProgressionSettings(
 class ProgressionQuestionGenerator(
     private val settings: ProgressionSettings = ProgressionSettings(),
     private val random: Random = Random.Default,
+    /** Relative likelihood of asking about each chord; null treats all progressions equally. */
+    private val weightOf: ((DiatonicChord) -> Double)? = null,
 ) {
     /** Every allowed progression per mode, computed once; at most 7^4 = 2,401 per mode. */
     private val catalogue: Map<Mode, List<ChordProgression>> = settings.modes.associateWith { mode ->
@@ -88,7 +92,10 @@ class ProgressionQuestionGenerator(
         val everything = catalogue.getValue(mode)
         // Falls back to random progressions if no common one fits the chosen chords and length.
         val preferred = common.getValue(mode).ifEmpty { everything }
-        val correct = preferred.random(random)
+        // A progression is as likely as its chords are weak on average; the opening tonic is given.
+        val correct = weightOf?.let { weight ->
+            preferred.weightedRandom(random) { progression -> progression.chords.drop(1).map(weight).average() }
+        } ?: preferred.random(random)
         return ProgressionQuestion(Key(tonic, mode), correct, choicesFor(correct, preferred, everything))
     }
 

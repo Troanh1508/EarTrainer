@@ -13,6 +13,8 @@ data class ChordExerciseSettings(
     val includeInversions: Boolean = false,
     /** Every sounded pitch stays within this range. */
     val pitchRange: IntRange = 48..84,
+    /** Ask more often about qualities or inversions recently answered wrongly. */
+    val focusOnWeakSpots: Boolean = true,
 ) {
     init {
         require(qualities.size >= MIN_QUALITIES) { "At least $MIN_QUALITIES chord qualities must be enabled" }
@@ -56,10 +58,22 @@ data class ChordExerciseSettings(
 class ChordQuestionGenerator(
     private val settings: ChordExerciseSettings = ChordExerciseSettings(),
     private val random: Random = Random.Default,
+    /** Relative likelihood of asking about each answer; null asks them all equally often. */
+    private val weightOf: ((ChordAnswer) -> Double)? = null,
 ) {
     fun generate(): ChordQuestion {
-        val quality = settings.qualities.random(random)
-        val inversion = settings.inversionsFor(quality).random(random)
+        // Weights apply to whatever is being named: the quality, or the inversion.
+        val quality = when {
+            weightOf != null && settings.target == ChordTarget.QUALITY ->
+                settings.qualities.weightedRandom(random) { weightOf(ChordAnswer.Quality(it)) }
+            else -> settings.qualities.random(random)
+        }
+        val inversions = settings.inversionsFor(quality)
+        val inversion = when {
+            weightOf != null && settings.target == ChordTarget.INVERSION ->
+                inversions.weightedRandom(random) { weightOf(ChordAnswer.Inversion(it)) }
+            else -> inversions.random(random)
+        }
         val span = quality.offsetsAboveBass(inversion).last()
         val bass = Pitch(random.nextInt(settings.pitchRange.first, settings.pitchRange.last - span + 1))
         val choices = when (settings.target) {

@@ -2,13 +2,11 @@ package com.example.eartrainer.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,7 +17,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -28,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,6 +50,7 @@ fun ChordSettingsRoute(viewModel: ChordSettingsViewModel, onNavigateUp: () -> Un
         onIncludeInversionsChanged = viewModel::onIncludeInversionsChanged,
         onStyleToggled = viewModel::onStyleToggled,
         onRestoreDefaults = viewModel::onRestoreDefaults,
+        onFocusOnWeakSpotsChanged = viewModel::onFocusOnWeakSpotsChanged,
         onNavigateUp = onNavigateUp,
     )
 }
@@ -68,6 +65,7 @@ fun ChordSettingsScreen(
     onIncludeInversionsChanged: (Boolean) -> Unit,
     onStyleToggled: (ChordStyle) -> Unit,
     onRestoreDefaults: () -> Unit,
+    onFocusOnWeakSpotsChanged: (Boolean) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     Scaffold(
@@ -142,6 +140,15 @@ fun ChordSettingsScreen(
                     }
                 }
 
+                HorizontalDivider()
+
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_focus_title),
+                    description = stringResource(R.string.settings_focus_description),
+                    checked = settings.focusOnWeakSpots,
+                    onCheckedChange = onFocusOnWeakSpotsChanged,
+                )
+
                 TextButton(
                     onClick = onRestoreDefaults,
                     enabled = settings != ChordExerciseSettings(),
@@ -158,26 +165,15 @@ fun ChordSettingsScreen(
 private fun InversionsToggle(settings: ChordExerciseSettings, onChanged: (Boolean) -> Unit) {
     // Naming inversions always uses them, so the switch only matters when naming qualities.
     val namingInversions = settings.target == ChordTarget.INVERSION
-    val checked = namingInversions || settings.includeInversions
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .toggleable(value = checked, enabled = !namingInversions, role = Role.Switch, onValueChange = onChanged),
-    ) {
-        Column(Modifier.weight(1f).padding(end = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(stringResource(R.string.chord_settings_inversions_title), style = MaterialTheme.typography.titleMedium)
-            Text(
-                stringResource(
-                    if (namingInversions) R.string.chord_settings_inversions_always else R.string.chord_settings_inversions_description,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        // The whole row handles the toggle, so the switch itself is not separately clickable.
-        Switch(checked = checked, onCheckedChange = null, enabled = !namingInversions)
-    }
+    SettingsSwitch(
+        title = stringResource(R.string.chord_settings_inversions_title),
+        description = stringResource(
+            if (namingInversions) R.string.chord_settings_inversions_always else R.string.chord_settings_inversions_description,
+        ),
+        checked = namingInversions || settings.includeInversions,
+        onCheckedChange = onChanged,
+        enabled = !namingInversions,
+    )
 }
 
 @Preview(showBackground = true)
@@ -187,7 +183,7 @@ private fun ChordSettingsPreview() {
         ChordSettingsScreen(
             settings = ChordExerciseSettings(includeInversions = true, styles = setOf(ChordStyle.BLOCK, ChordStyle.ARPEGGIATED)),
             onTargetSelected = {}, onQualityToggled = {}, onSelectAllQualities = {}, onIncludeInversionsChanged = {},
-            onStyleToggled = {}, onRestoreDefaults = {}, onNavigateUp = {},
+            onStyleToggled = {}, onRestoreDefaults = {}, onFocusOnWeakSpotsChanged = {}, onNavigateUp = {},
         )
     }
 }

@@ -3,6 +3,7 @@ package com.example.eartrainer.data.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -33,6 +34,7 @@ class IntervalSettingsStore(private val dataStore: DataStore<Preferences>) {
         private val INTERVALS = stringSetPreferencesKey("interval_training.intervals")
         private val STYLES = stringSetPreferencesKey("interval_training.styles")
         private val CHOICE_COUNT = intPreferencesKey("interval_training.choice_count")
+        private val FOCUS = booleanPreferencesKey("interval_training.focus_weak_spots")
 
         /**
          * Reads settings, ignoring unknown enum names (e.g. after a rename) and falling back to
@@ -52,7 +54,12 @@ class IntervalSettingsStore(private val dataStore: DataStore<Preferences>) {
                 ?.takeIf { it in IntervalExerciseSettings.CHOICE_COUNT_OPTIONS }
                 ?: defaults.choiceCount
             return runCatching {
-                defaults.copy(intervals = intervals, styles = styles, choiceCount = choiceCount)
+                defaults.copy(
+                    intervals = intervals,
+                    styles = styles,
+                    choiceCount = choiceCount,
+                    focusOnWeakSpots = preferences[FOCUS] ?: defaults.focusOnWeakSpots,
+                )
             }.getOrDefault(defaults)
         }
 
@@ -60,6 +67,7 @@ class IntervalSettingsStore(private val dataStore: DataStore<Preferences>) {
             preferences[INTERVALS] = settings.intervals.map { it.name }.toSet()
             preferences[STYLES] = settings.styles.map { it.name }.toSet()
             preferences[CHOICE_COUNT] = settings.choiceCount
+            preferences[FOCUS] = settings.focusOnWeakSpots
         }
     }
 }

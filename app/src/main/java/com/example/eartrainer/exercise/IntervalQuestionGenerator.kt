@@ -10,6 +10,8 @@ data class IntervalExerciseSettings(
     /** Every sounded pitch stays within this range. Default C3..C6 is comfortable on small speakers. */
     val pitchRange: IntRange = 48..84,
     val choiceCount: Int = 6,
+    /** Ask more often about intervals recently answered wrongly. */
+    val focusOnWeakSpots: Boolean = true,
 ) {
     init {
         require(intervals.size >= MIN_INTERVALS) { "At least $MIN_INTERVALS intervals must be enabled" }
@@ -50,11 +52,13 @@ data class IntervalExerciseSettings(
 class IntervalQuestionGenerator(
     private val settings: IntervalExerciseSettings = IntervalExerciseSettings(),
     private val random: Random = Random.Default,
+    /** Relative likelihood of asking each interval; null asks them all equally often. */
+    private val weightOf: ((Interval) -> Double)? = null,
 ) {
     private val answerPool = settings.intervals.sortedBy { it.semitones }
 
     fun generate(): IntervalQuestion {
-        val interval = settings.intervals.random(random)
+        val interval = weightOf?.let { settings.intervals.weightedRandom(random, it) } ?: settings.intervals.random(random)
         val highestLowerNote = settings.pitchRange.last - interval.semitones
         val lowerPitch = Pitch(random.nextInt(settings.pitchRange.first, highestLowerNote + 1))
         return IntervalQuestion(

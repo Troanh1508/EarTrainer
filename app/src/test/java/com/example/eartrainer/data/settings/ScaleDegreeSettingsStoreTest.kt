@@ -26,6 +26,7 @@ class ScaleDegreeSettingsStoreTest {
             degreeSet = DegreeSet.CHROMATIC,
             keyChoice = KeyChoice.C_ONLY,
             context = KeyContext.TONIC_CHORD,
+            focusOnWeakSpots = false,
         )
         val preferences = mutablePreferencesOf()
         ScaleDegreeSettingsStore.encode(custom, preferences)

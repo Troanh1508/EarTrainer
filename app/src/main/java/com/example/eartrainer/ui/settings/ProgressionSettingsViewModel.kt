@@ -38,6 +38,8 @@ class ProgressionSettingsViewModel(private val store: ProgressionSettingsStore) 
 
     fun onRestoreDefaults() = update { ProgressionSettings() }
 
+    fun onFocusOnWeakSpotsChanged(focus: Boolean) = update { it.copy(focusOnWeakSpots = focus) }
+
     private fun update(transform: (ProgressionSettings) -> ProgressionSettings) {
         viewModelScope.launch { store.update(transform) }
     }

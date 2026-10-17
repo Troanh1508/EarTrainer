@@ -10,6 +10,7 @@ import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.KeyContext
 import com.example.eartrainer.exercise.ProgressionAttempt
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
@@ -175,6 +176,47 @@ class RoomPracticeHistoryTest {
             history.recentSessions(limit = 2).first(),
         )
         assertEquals(SessionSummary("old", ExerciseKind.INTERVALS, 1_000, 2, 1), history.recentSessions(limit = 10).first().last())
+    }
+
+    @Test
+    fun recentResultsAreNewestFirstLimitedAndScoredByWhatWasAsked() = runBlocking {
+        insertAll(
+            interval("s", 1_000, Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = true),
+            interval("s", 2_000, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = false),
+            interval("s", 3_000, Interval.TRITONE, IntervalStyle.HARMONIC, correct = true),
+        )
+        insertChords(
+            chord("c", 1_000, ChordQuality.MINOR, ChordInversion.FIRST, ChordTarget.QUALITY, correct = false),
+            chord("c", 2_000, ChordQuality.MAJOR, ChordInversion.SECOND, ChordTarget.INVERSION, correct = true),
+        )
+        runBlocking {
+            val key = Key(Pitch(60), Mode.MAJOR)
+            fun progression(vararg steps: Int) = ChordProgression(steps.map { DiatonicChord(Mode.MAJOR, it) })
+            database.progressionAttemptDao().insert(
+                ProgressionAttempt("p", 1_000, key, progression(1, 6, 4, 5), progression(1, 6, 2, 5), false, 1, 5_000).toEntity(),
+            )
+        }
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        assertEquals(
+            listOf(ItemResult(Interval.TRITONE, true), ItemResult(Interval.OCTAVE, false)),
+            history.recentIntervalResults(limit = 2).first(),
+        )
+        assertEquals(
+            listOf(
+                ItemResult<ChordAnswer>(ChordAnswer.Inversion(ChordInversion.SECOND), true),
+                ItemResult<ChordAnswer>(ChordAnswer.Quality(ChordQuality.MINOR), false),
+            ),
+            history.recentChordResults(limit = 10).first(),
+        )
+        assertEquals(
+            listOf(
+                ItemResult(DiatonicChord(Mode.MAJOR, 6), true),
+                ItemResult(DiatonicChord(Mode.MAJOR, 4), false),
+                ItemResult(DiatonicChord(Mode.MAJOR, 5), true),
+            ),
+            history.recentProgressionResults(limit = 10).first(),
+        )
     }
 
     @Test

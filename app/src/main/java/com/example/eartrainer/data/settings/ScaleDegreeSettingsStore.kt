@@ -3,6 +3,7 @@ package com.example.eartrainer.data.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -36,6 +37,7 @@ class ScaleDegreeSettingsStore(private val dataStore: DataStore<Preferences>) {
         private val DEGREE_SET = stringPreferencesKey("scale_degrees.degree_set")
         private val KEY_CHOICE = stringPreferencesKey("scale_degrees.key_choice")
         private val CONTEXT = stringPreferencesKey("scale_degrees.context")
+        private val FOCUS = booleanPreferencesKey("scale_degrees.focus_weak_spots")
 
         private inline fun <reified E : Enum<E>> Preferences.enumOr(key: Preferences.Key<String>, default: E): E =
             this[key]?.let { name -> enumValues<E>().find { it.name == name } } ?: default
@@ -50,6 +52,7 @@ class ScaleDegreeSettingsStore(private val dataStore: DataStore<Preferences>) {
                     degreeSet = preferences.enumOr(DEGREE_SET, defaults.degreeSet),
                     keyChoice = preferences.enumOr(KEY_CHOICE, defaults.keyChoice),
                     context = preferences.enumOr(CONTEXT, defaults.context),
+                    focusOnWeakSpots = preferences[FOCUS] ?: defaults.focusOnWeakSpots,
                 )
             }.getOrDefault(defaults)
         }
@@ -59,6 +62,7 @@ class ScaleDegreeSettingsStore(private val dataStore: DataStore<Preferences>) {
             preferences[DEGREE_SET] = settings.degreeSet.name
             preferences[KEY_CHOICE] = settings.keyChoice.name
             preferences[CONTEXT] = settings.context.name
+            preferences[FOCUS] = settings.focusOnWeakSpots
         }
     }
 }

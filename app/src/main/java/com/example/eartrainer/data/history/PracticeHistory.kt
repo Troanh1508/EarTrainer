@@ -7,6 +7,7 @@ import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.ProgressionAttempt
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
@@ -38,7 +39,7 @@ data class SessionSummary(
     val correct: Int,
 )
 
-/** Local record of every answered question, used for progress views and later adaptive practice. */
+/** Local record of every answered question, used for progress views and weak-spot practice. */
 interface PracticeHistory {
     /** Saves [attempt] in the background. The write completes even if the calling screen closes. */
     fun record(attempt: IntervalAttempt)
@@ -72,6 +73,17 @@ interface PracticeHistory {
 
     /** Most recent sessions of any exercise first. Sessions without answers are not recorded. */
     fun recentSessions(limit: Int): Flow<List<SessionSummary>>
+
+    /** The latest [limit] interval answers, newest first, for weighting practice. */
+    fun recentIntervalResults(limit: Int): Flow<List<ItemResult<Interval>>>
+
+    /** The latest [limit] chord answers; each result is a quality or an inversion, as asked. */
+    fun recentChordResults(limit: Int): Flow<List<ItemResult<ChordAnswer>>>
+
+    fun recentScaleDegreeResults(limit: Int): Flow<List<ItemResult<ScaleDegree>>>
+
+    /** One result per chord after the opening tonic, from the latest [limit] progression answers. */
+    fun recentProgressionResults(limit: Int): Flow<List<ItemResult<DiatonicChord>>>
 }
 
 class RoomPracticeHistory(
@@ -116,6 +128,32 @@ class RoomPracticeHistory(
             }
         }
 
+    override fun recentIntervalResults(limit: Int): Flow<List<ItemResult<Interval>>> =
+        database.intervalAttemptDao().recentResults(limit).map { rows -> rows.toResults(Interval.entries) }
+
+    override fun recentChordResults(limit: Int): Flow<List<ItemResult<ChordAnswer>>> =
+        database.chordAttemptDao().recentResults(limit).map { rows ->
+            rows.mapNotNull { row ->
+                val answer: ChordAnswer? = when (row.target) {
+                    ChordTarget.QUALITY.name -> ChordQuality.entries.find { it.name == row.quality }?.let(ChordAnswer::Quality)
+                    ChordTarget.INVERSION.name -> ChordInversion.entries.find { it.name == row.inversion }?.let(ChordAnswer::Inversion)
+                    else -> null
+                }
+                answer?.let { ItemResult(it, row.isCorrect) }
+            }
+        }
+
+    override fun recentScaleDegreeResults(limit: Int): Flow<List<ItemResult<ScaleDegree>>> =
+        database.scaleDegreeAttemptDao().recentResults(limit).map { rows -> rows.toResults(ScaleDegree.entries) }
+
+    override fun recentProgressionResults(limit: Int): Flow<List<ItemResult<DiatonicChord>>> =
+        database.progressionAttemptDao().recentResults(limit).map { rows ->
+            rows.flatMap { row ->
+                val mode = Mode.entries.find { it.name == row.mode } ?: return@flatMap emptyList()
+                progressionChordResults(mode, row.progression.toSteps(), row.answer.toSteps())
+            }
+        }
+
     private fun write(insert: suspend () -> Unit) {
         writeScope.launch {
             try {
@@ -132,6 +170,12 @@ class RoomPracticeHistory(
     private companion object {
         const val TAG = "PracticeHistory"
     }
+}
+
+/** Results for rows whose stored name still matches a value in [all]; others are skipped. */
+private fun <T : Enum<T>> List<ItemResultRow>.toResults(all: List<T>): List<ItemResult<T>> {
+    val byName = all.associateBy { it.name }
+    return mapNotNull { row -> byName[row.item]?.let { ItemResult(it, row.isCorrect) } }
 }
 
 /** One entry per value in [all], in that order; values without rows get zero attempts. */
@@ -185,20 +229,22 @@ private fun ChordProgression.toSteps(): String = chords.joinToString(",") { it.s
 private fun String.toSteps(): List<Int> = split(",").mapNotNull { it.trim().toIntOrNull() }
 
 /**
- * Per-chord accuracy from (asked, chosen) step lists: every position after the first counts as
- * one attempt at the chord asked there, correct when the chosen progression has the same chord.
+ * Scores a progression answer chord by chord: every position after the opening tonic is one
+ * result for the chord asked there, correct when the chosen progression has the same chord.
  */
-internal fun progressionChordAccuracy(mode: Mode, answers: List<Pair<List<Int>, List<Int>>>): List<AnswerAccuracy<DiatonicChord>> {
-    val attempts = IntArray(8)
-    val correct = IntArray(8)
-    for ((asked, chosen) in answers) {
-        for (position in 1 until asked.size) {
-            val step = asked[position].takeIf { it in 1..7 } ?: continue
-            attempts[step]++
-            if (chosen.getOrNull(position) == step) correct[step]++
-        }
+internal fun progressionChordResults(mode: Mode, asked: List<Int>, chosen: List<Int>): List<ItemResult<DiatonicChord>> =
+    (1 until asked.size).mapNotNull { position ->
+        val step = asked[position].takeIf { it in 1..7 } ?: return@mapNotNull null
+        ItemResult(DiatonicChord(mode, step), chosen.getOrNull(position) == step)
     }
-    return DiatonicChord.all(mode).map { AnswerAccuracy(it, attempts[it.step], correct[it.step]) }
+
+/** Per-chord accuracy over many (asked, chosen) step lists; see [progressionChordResults]. */
+internal fun progressionChordAccuracy(mode: Mode, answers: List<Pair<List<Int>, List<Int>>>): List<AnswerAccuracy<DiatonicChord>> {
+    val results = answers.flatMap { (asked, chosen) -> progressionChordResults(mode, asked, chosen) }
+    return DiatonicChord.all(mode).map { chord ->
+        val forChord = results.filter { it.item == chord }
+        AnswerAccuracy(chord, attempts = forChord.size, correct = forChord.count { it.isCorrect })
+    }
 }
 
 internal fun ChordAttempt.toEntity() = ChordAttemptEntity(

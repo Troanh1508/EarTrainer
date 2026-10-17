@@ -34,6 +34,8 @@ class ScaleDegreeSettingsViewModel(private val store: ScaleDegreeSettingsStore) 
 
     fun onRestoreDefaults() = update { ScaleDegreeSettings() }
 
+    fun onFocusOnWeakSpotsChanged(focus: Boolean) = update { it.copy(focusOnWeakSpots = focus) }
+
     private fun update(transform: (ScaleDegreeSettings) -> ScaleDegreeSettings) {
         viewModelScope.launch { store.update(transform) }
     }

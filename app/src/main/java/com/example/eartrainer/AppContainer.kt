@@ -13,6 +13,7 @@ import com.example.eartrainer.audio.ToneSynthesizer
 import com.example.eartrainer.data.history.EarTrainerDatabase
 import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.RoomPracticeHistory
+import com.example.eartrainer.data.history.WeakSpots
 import com.example.eartrainer.data.settings.ChordSettingsStore
 import com.example.eartrainer.data.settings.IntervalSettingsStore
 import com.example.eartrainer.data.settings.ProgressionSettingsStore
@@ -36,6 +37,9 @@ class AppContainer(private val context: Context) {
     val practiceHistory: PracticeHistory by lazy {
         RoomPracticeHistory(database, applicationScope)
     }
+
+    /** Selection weights for weak-spot practice, kept current from history from app start. */
+    val weakSpots = WeakSpots(practiceHistory, applicationScope)
 
     val intervalSettings by lazy { IntervalSettingsStore(context.settingsDataStore) }
 

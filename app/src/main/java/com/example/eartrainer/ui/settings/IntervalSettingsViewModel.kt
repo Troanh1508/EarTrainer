@@ -34,6 +34,8 @@ class IntervalSettingsViewModel(private val store: IntervalSettingsStore) : View
 
     fun onRestoreDefaults() = update { IntervalExerciseSettings() }
 
+    fun onFocusOnWeakSpotsChanged(focus: Boolean) = update { it.copy(focusOnWeakSpots = focus) }
+
     private fun update(transform: (IntervalExerciseSettings) -> IntervalExerciseSettings) {
         viewModelScope.launch { store.update(transform) }
     }

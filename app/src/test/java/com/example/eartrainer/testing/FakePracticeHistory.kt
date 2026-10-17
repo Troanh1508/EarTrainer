@@ -4,12 +4,14 @@ import com.example.eartrainer.data.history.AnswerAccuracy
 import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.SessionSummary
 import com.example.eartrainer.data.history.progressionChordAccuracy
+import com.example.eartrainer.data.history.progressionChordResults
 import com.example.eartrainer.exercise.ChordAnswer
 import com.example.eartrainer.exercise.ChordAttempt
 import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.ProgressionAttempt
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
@@ -76,6 +78,27 @@ class FakePracticeHistory : PracticeHistory {
             all.filter { it.key.mode == mode }.map { attempt -> attempt.progression.chords.map { it.step } to attempt.answer.chords.map { it.step } },
         )
     }
+
+    override fun recentIntervalResults(limit: Int): Flow<List<ItemResult<Interval>>> =
+        intervals.map { all -> all.asReversed().take(limit).map { ItemResult(it.interval, it.isCorrect) } }
+
+    override fun recentChordResults(limit: Int): Flow<List<ItemResult<ChordAnswer>>> =
+        chords.map { all ->
+            all.asReversed().take(limit).map { attempt ->
+                val item = if (attempt.target == ChordTarget.QUALITY) ChordAnswer.Quality(attempt.quality) else ChordAnswer.Inversion(attempt.inversion)
+                ItemResult(item, attempt.isCorrect)
+            }
+        }
+
+    override fun recentScaleDegreeResults(limit: Int): Flow<List<ItemResult<ScaleDegree>>> =
+        degrees.map { all -> all.asReversed().take(limit).map { ItemResult(it.degree, it.isCorrect) } }
+
+    override fun recentProgressionResults(limit: Int): Flow<List<ItemResult<DiatonicChord>>> =
+        progressions.map { all ->
+            all.asReversed().take(limit).flatMap { attempt ->
+                progressionChordResults(attempt.key.mode, attempt.progression.chords.map { it.step }, attempt.answer.chords.map { it.step })
+            }
+        }
 
     override fun recentSessions(limit: Int): Flow<List<SessionSummary>> = combine(intervals, chords, degrees, progressions) { intervalList, chordList, degreeList, progressionList ->
         val rows = intervalList.map { Triple(it.sessionId, ExerciseKind.INTERVALS, it.answeredAtMillis to it.isCorrect) } +

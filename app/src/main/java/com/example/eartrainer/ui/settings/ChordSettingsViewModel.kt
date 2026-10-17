@@ -35,6 +35,8 @@ class ChordSettingsViewModel(private val store: ChordSettingsStore) : ViewModel(
 
     fun onRestoreDefaults() = update { ChordExerciseSettings() }
 
+    fun onFocusOnWeakSpotsChanged(focus: Boolean) = update { it.copy(focusOnWeakSpots = focus) }
+
     private fun update(transform: (ChordExerciseSettings) -> ChordExerciseSettings) {
         viewModelScope.launch { store.update(transform) }
     }

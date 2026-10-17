@@ -87,6 +87,13 @@ data class ProgressionAttemptEntity(
 /** A stored progression question and the progression chosen, as scale-step lists. */
 data class ProgressionAnswerRow(val progression: String, val answer: String)
 
+/** One recent answer, for weighting practice towards weak spots. */
+data class ItemResultRow(val item: String, val isCorrect: Boolean)
+
+data class ChordResultRow(val target: String, val quality: String, val inversion: String, val isCorrect: Boolean)
+
+data class ProgressionResultRow(val mode: String, val progression: String, val answer: String)
+
 /** Totals for one answer value, e.g. an interval or a chord quality, stored by name. */
 data class AccuracyRow(val item: String, val attempts: Int, val correct: Int)
 
@@ -113,6 +120,9 @@ interface IntervalAttemptDao {
         """,
     )
     fun accuracyByInterval(style: String?): Flow<List<AccuracyRow>>
+
+    @Query("SELECT interval AS item, is_correct AS isCorrect FROM interval_attempts ORDER BY answered_at DESC, id DESC LIMIT :limit")
+    fun recentResults(limit: Int): Flow<List<ItemResultRow>>
 }
 
 @Dao
@@ -141,6 +151,14 @@ interface ChordAttemptDao {
         """,
     )
     fun accuracyByInversion(): Flow<List<AccuracyRow>>
+
+    @Query(
+        """
+        SELECT target, quality, inversion, is_correct AS isCorrect FROM chord_attempts
+        ORDER BY answered_at DESC, id DESC LIMIT :limit
+        """,
+    )
+    fun recentResults(limit: Int): Flow<List<ChordResultRow>>
 }
 
 @Dao
@@ -158,6 +176,9 @@ interface ScaleDegreeAttemptDao {
         """,
     )
     fun accuracyByDegree(mode: String?): Flow<List<AccuracyRow>>
+
+    @Query("SELECT degree AS item, is_correct AS isCorrect FROM scale_degree_attempts ORDER BY answered_at DESC, id DESC LIMIT :limit")
+    fun recentResults(limit: Int): Flow<List<ItemResultRow>>
 }
 
 @Dao
@@ -168,6 +189,9 @@ interface ProgressionAttemptDao {
     /** Every answered progression in [mode]; per-chord totals are worked out from these. */
     @Query("SELECT progression, answer FROM progression_attempts WHERE mode = :mode")
     fun answersInMode(mode: String): Flow<List<ProgressionAnswerRow>>
+
+    @Query("SELECT mode, progression, answer FROM progression_attempts ORDER BY answered_at DESC, id DESC LIMIT :limit")
+    fun recentResults(limit: Int): Flow<List<ProgressionResultRow>>
 }
 
 @Dao

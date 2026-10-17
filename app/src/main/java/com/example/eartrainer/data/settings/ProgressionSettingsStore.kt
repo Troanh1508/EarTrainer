@@ -3,6 +3,7 @@ package com.example.eartrainer.data.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -38,6 +39,7 @@ class ProgressionSettingsStore(private val dataStore: DataStore<Preferences>) {
         private val LENGTH = intPreferencesKey("progressions.length")
         private val KEY_CHOICE = stringPreferencesKey("progressions.key_choice")
         private val SOURCE = stringPreferencesKey("progressions.source")
+        private val FOCUS = booleanPreferencesKey("progressions.focus_weak_spots")
 
         /** Ignores unknown names and falls back to defaults for anything missing or invalid. */
         internal fun decode(preferences: Preferences): ProgressionSettings {
@@ -47,7 +49,8 @@ class ProgressionSettingsStore(private val dataStore: DataStore<Preferences>) {
             val keyChoice = preferences[KEY_CHOICE]?.let { name -> KeyChoice.entries.find { it.name == name } } ?: defaults.keyChoice
             val length = preferences[LENGTH]?.takeIf { it in ProgressionSettings.LENGTH_OPTIONS } ?: defaults.length
             val source = preferences[SOURCE]?.let { name -> ProgressionSource.entries.find { it.name == name } } ?: defaults.source
-            return runCatching { ProgressionSettings(modes, vocabulary, length, keyChoice, source) }.getOrDefault(defaults)
+            val focus = preferences[FOCUS] ?: defaults.focusOnWeakSpots
+            return runCatching { ProgressionSettings(modes, vocabulary, length, keyChoice, source, focus) }.getOrDefault(defaults)
         }
 
         internal fun encode(settings: ProgressionSettings, preferences: MutablePreferences) {
@@ -56,6 +59,7 @@ class ProgressionSettingsStore(private val dataStore: DataStore<Preferences>) {
             preferences[LENGTH] = settings.length
             preferences[KEY_CHOICE] = settings.keyChoice.name
             preferences[SOURCE] = settings.source.name
+            preferences[FOCUS] = settings.focusOnWeakSpots
         }
     }
 }

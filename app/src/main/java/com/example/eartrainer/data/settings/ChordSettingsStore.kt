@@ -36,6 +36,7 @@ class ChordSettingsStore(private val dataStore: DataStore<Preferences>) {
         private val STYLES = stringSetPreferencesKey("chord_training.styles")
         private val TARGET = stringPreferencesKey("chord_training.target")
         private val INCLUDE_INVERSIONS = booleanPreferencesKey("chord_training.include_inversions")
+        private val FOCUS = booleanPreferencesKey("chord_training.focus_weak_spots")
 
         /** Ignores unknown names and falls back to defaults for anything missing or invalid. */
         internal fun decode(preferences: Preferences): ChordExerciseSettings {
@@ -50,7 +51,13 @@ class ChordSettingsStore(private val dataStore: DataStore<Preferences>) {
             val target = preferences[TARGET]?.let { name -> ChordTarget.entries.find { it.name == name } } ?: defaults.target
             val includeInversions = preferences[INCLUDE_INVERSIONS] ?: defaults.includeInversions
             return runCatching {
-                defaults.copy(qualities = qualities, styles = styles, target = target, includeInversions = includeInversions)
+                defaults.copy(
+                    qualities = qualities,
+                    styles = styles,
+                    target = target,
+                    includeInversions = includeInversions,
+                    focusOnWeakSpots = preferences[FOCUS] ?: defaults.focusOnWeakSpots,
+                )
             }.getOrDefault(defaults)
         }
 
@@ -59,6 +66,7 @@ class ChordSettingsStore(private val dataStore: DataStore<Preferences>) {
             preferences[STYLES] = settings.styles.map { it.name }.toSet()
             preferences[TARGET] = settings.target.name
             preferences[INCLUDE_INVERSIONS] = settings.includeInversions
+            preferences[FOCUS] = settings.focusOnWeakSpots
         }
     }
 }

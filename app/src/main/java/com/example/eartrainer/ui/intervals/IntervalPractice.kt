@@ -11,6 +11,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.R
+import com.example.eartrainer.data.history.WeakSpots.Companion.asWeightLookup
 import com.example.eartrainer.exercise.ExercisePhase
 import com.example.eartrainer.exercise.ExerciseState
 import com.example.eartrainer.exercise.IntervalAttempt
@@ -36,7 +37,10 @@ val IntervalPracticeFactory: ViewModelProvider.Factory = viewModelFactory {
         val container = (this[APPLICATION_KEY] as EarTrainerApplication).container
         IntervalPracticeViewModel(
             settings = container.intervalSettings.settings,
-            questionSource = { IntervalQuestionGenerator(it)::generate },
+            questionSource = { settings ->
+                val weights = container.weakSpots.intervals.asWeightLookup().takeIf { settings.focusOnWeakSpots }
+                IntervalQuestionGenerator(settings, weightOf = weights)::generate
+            },
             recordAttempt = { state, sessionId -> IntervalAttempt.from(state, sessionId)?.let(container.practiceHistory::record) },
             audioPlayer = container.createAudioPlayer(),
         )

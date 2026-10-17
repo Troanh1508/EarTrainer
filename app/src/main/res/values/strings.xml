@@ -74,6 +74,8 @@
     <string name="settings_choices_description">How many intervals to choose from in each question.</string>
     <string name="settings_choices_all">All</string>
     <string name="settings_restore_defaults">Restore defaults</string>
+    <string name="settings_focus_title">Focus on weak spots</string>
+    <string name="settings_focus_description">Ask more often about what you have recently got wrong. Everything you selected still comes up.</string>
 
     <!-- Chord settings -->
     <string name="chord_settings_target_title">What to identify</string>

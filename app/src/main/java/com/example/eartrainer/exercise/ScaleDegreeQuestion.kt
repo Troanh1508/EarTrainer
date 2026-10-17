@@ -53,6 +53,8 @@ data class ScaleDegreeSettings(
     val degreeSet: DegreeSet = DegreeSet.DIATONIC,
     val keyChoice: KeyChoice = KeyChoice.RANDOM,
     val context: KeyContext = KeyContext.CADENCE,
+    /** Ask more often about degrees recently answered wrongly. */
+    val focusOnWeakSpots: Boolean = true,
 ) {
     init {
         require(modes.isNotEmpty()) { "At least one mode must be enabled" }
@@ -75,12 +77,15 @@ data class ScaleDegreeSettings(
 class ScaleDegreeQuestionGenerator(
     private val settings: ScaleDegreeSettings = ScaleDegreeSettings(),
     private val random: Random = Random.Default,
+    /** Relative likelihood of asking each degree; null asks them all equally often. */
+    private val weightOf: ((ScaleDegree) -> Double)? = null,
 ) {
     fun generate(): ScaleDegreeQuestion {
         val mode = settings.modes.random(random)
         val tonic = settings.keyChoice.pickTonic(random)
         val choices = settings.degreesFor(mode)
-        return ScaleDegreeQuestion(Key(tonic, mode), choices.random(random), settings.context, choices)
+        val degree = weightOf?.let { choices.weightedRandom(random, it) } ?: choices.random(random)
+        return ScaleDegreeQuestion(Key(tonic, mode), degree, settings.context, choices)
     }
 }
 

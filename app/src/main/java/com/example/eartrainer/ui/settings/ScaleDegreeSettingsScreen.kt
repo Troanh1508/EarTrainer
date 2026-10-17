@@ -50,6 +50,7 @@ fun ScaleDegreeSettingsRoute(viewModel: ScaleDegreeSettingsViewModel, onNavigate
         onKeyChoiceSelected = viewModel::onKeyChoiceSelected,
         onContextSelected = viewModel::onContextSelected,
         onRestoreDefaults = viewModel::onRestoreDefaults,
+        onFocusOnWeakSpotsChanged = viewModel::onFocusOnWeakSpotsChanged,
         onNavigateUp = onNavigateUp,
     )
 }
@@ -63,6 +64,7 @@ fun ScaleDegreeSettingsScreen(
     onKeyChoiceSelected: (KeyChoice) -> Unit,
     onContextSelected: (KeyContext) -> Unit,
     onRestoreDefaults: () -> Unit,
+    onFocusOnWeakSpotsChanged: (Boolean) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     Scaffold(
@@ -139,6 +141,15 @@ fun ScaleDegreeSettingsScreen(
                     }
                 }
 
+                HorizontalDivider()
+
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_focus_title),
+                    description = stringResource(R.string.settings_focus_description),
+                    checked = settings.focusOnWeakSpots,
+                    onCheckedChange = onFocusOnWeakSpotsChanged,
+                )
+
                 TextButton(
                     onClick = onRestoreDefaults,
                     enabled = settings != ScaleDegreeSettings(),
@@ -158,7 +169,7 @@ private fun ScaleDegreeSettingsPreview() {
         ScaleDegreeSettingsScreen(
             settings = ScaleDegreeSettings(modes = Mode.entries.toSet(), degreeSet = DegreeSet.CHROMATIC),
             onModeToggled = {}, onDegreeSetSelected = {}, onKeyChoiceSelected = {}, onContextSelected = {},
-            onRestoreDefaults = {}, onNavigateUp = {},
+            onRestoreDefaults = {}, onFocusOnWeakSpotsChanged = {}, onNavigateUp = {},
         )
     }
 }

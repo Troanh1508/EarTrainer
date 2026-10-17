@@ -22,7 +22,7 @@ class ProgressionSettingsStoreTest {
 
     @Test
     fun encodeThenDecodeRoundTrips() {
-        val custom = ProgressionSettings(Mode.entries.toSet(), ChordVocabulary.ALL, length = 5, keyChoice = KeyChoice.C_ONLY, source = ProgressionSource.RANDOM)
+        val custom = ProgressionSettings(Mode.entries.toSet(), ChordVocabulary.ALL, length = 5, keyChoice = KeyChoice.C_ONLY, source = ProgressionSource.RANDOM, focusOnWeakSpots = false)
         val preferences = mutablePreferencesOf()
         ProgressionSettingsStore.encode(custom, preferences)
         assertEquals(custom, ProgressionSettingsStore.decode(preferences))
