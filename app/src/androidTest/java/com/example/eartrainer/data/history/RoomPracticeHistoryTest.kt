@@ -14,6 +14,8 @@ import com.example.eartrainer.exercise.IntervalStyle
 import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.KeyContext
 import com.example.eartrainer.exercise.ProgressionAttempt
+import com.example.eartrainer.exercise.RhythmAttempt
+import com.example.eartrainer.exercise.RhythmTempo
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordProgression
@@ -24,6 +26,8 @@ import com.example.eartrainer.music.Key
 import com.example.eartrainer.music.Melody
 import com.example.eartrainer.music.Mode
 import com.example.eartrainer.music.Pitch
+import com.example.eartrainer.music.Rhythm
+import com.example.eartrainer.music.RhythmCell
 import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -246,6 +250,25 @@ class RoomPracticeHistoryTest {
             history.recentDictationResults(10).first(),
         )
         assertEquals(ExerciseKind.DICTATION, history.recentSessions(10).first().single().exercise)
+    }
+
+    @Test
+    fun rhythmIsStoredByCellNameAndScoredPerFigure() = runBlocking {
+        val played = Rhythm(listOf(RhythmCell.SIXTEENTHS, RhythmCell.QUARTER_REST, RhythmCell.HALF))
+        val chosen = Rhythm(listOf(RhythmCell.SIXTEENTHS, RhythmCell.QUARTER, RhythmCell.HALF))
+        database.rhythmAttemptDao().insert(RhythmAttempt("r", 1_000, played, RhythmTempo.FAST, chosen, false, 2, 5_000).toEntity())
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        val accuracy = history.rhythmAccuracy().first()
+        assertEquals(RhythmCell.entries, accuracy.map { it.item })
+        assertEquals(AnswerAccuracy(RhythmCell.SIXTEENTHS, attempts = 1, correct = 1), accuracy.single { it.item == RhythmCell.SIXTEENTHS })
+        assertEquals(AnswerAccuracy(RhythmCell.QUARTER_REST, attempts = 1, correct = 0), accuracy.single { it.item == RhythmCell.QUARTER_REST })
+        assertEquals(0, accuracy.single { it.item == RhythmCell.QUARTER }.attempts)
+        assertEquals(
+            listOf(ItemResult(RhythmCell.SIXTEENTHS, true), ItemResult(RhythmCell.QUARTER_REST, false), ItemResult(RhythmCell.HALF, true)),
+            history.recentRhythmResults(10).first(),
+        )
+        assertEquals(ExerciseKind.RHYTHM, history.recentSessions(10).first().single().exercise)
     }
 
     @Test

@@ -1,7 +1,10 @@
 package com.example.eartrainer.ui.practice
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,12 +27,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -79,6 +85,8 @@ fun <A> AnswerGrid(
     onChoiceSelected: (A) -> Unit,
     modifier: Modifier = Modifier,
     columns: Int = 2,
+    /** Draws a choice instead of its text label, e.g. rhythm notation; the label is still read aloud. */
+    graphicOf: (@Composable (A) -> Unit)? = null,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         choices.chunked(columns).forEach { row ->
@@ -89,6 +97,7 @@ fun <A> AnswerGrid(
                         appearance = appearanceOf(choice),
                         onClick = { onChoiceSelected(choice) },
                         modifier = Modifier.weight(1f),
+                        graphic = graphicOf?.let { draw -> { draw(choice) } },
                     )
                 }
                 repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
@@ -105,6 +114,7 @@ private fun AnswerChoice(
     appearance: ChoiceAppearance,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    graphic: (@Composable () -> Unit)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     val colors = when (appearance) {
@@ -120,6 +130,12 @@ private fun AnswerChoice(
             ChoiceColors(scheme.errorContainer, scheme.onErrorContainer, BorderStroke(2.dp, scheme.error))
         ChoiceAppearance.Dimmed ->
             ChoiceColors(scheme.surfaceContainerLow, scheme.onSurface.copy(alpha = 0.6f), BorderStroke(1.dp, scheme.outlineVariant))
+    }
+    // After a wrong answer, make sure the right one is visible even if it is scrolled away or
+    // hidden behind the feedback panel.
+    val bringIntoView = remember { BringIntoViewRequester() }
+    LaunchedEffect(appearance) {
+        if (appearance == ChoiceAppearance.RevealedCorrect) bringIntoView.bringIntoView()
     }
     val (icon, stateLabel) = when (appearance) {
         ChoiceAppearance.SelectedCorrect, ChoiceAppearance.RevealedCorrect ->
@@ -137,6 +153,7 @@ private fun AnswerChoice(
         contentColor = colors.content,
         border = colors.border,
         modifier = modifier
+            .bringIntoViewRequester(bringIntoView)
             .heightIn(min = 72.dp)
             .semantics { if (stateLabel != null) stateDescription = stateLabel },
     ) {
@@ -144,14 +161,18 @@ private fun AnswerChoice(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            Column(Modifier.weight(1f)) {
-                Text(label.title, style = MaterialTheme.typography.titleMedium)
-                label.subtitle?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.content.copy(alpha = colors.content.alpha * 0.8f),
-                    )
+            if (graphic != null) {
+                Box(Modifier.weight(1f).semantics { contentDescription = label.title }) { graphic() }
+            } else {
+                Column(Modifier.weight(1f)) {
+                    Text(label.title, style = MaterialTheme.typography.titleMedium)
+                    label.subtitle?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.content.copy(alpha = colors.content.alpha * 0.8f),
+                        )
+                    }
                 }
             }
             // Icons back up the colour change so the result never relies on colour alone.
@@ -163,7 +184,8 @@ private fun AnswerChoice(
 @Composable
 fun AnswerFeedback(
     isCorrect: Boolean,
-    selectedLabel: String,
+    /** What was chosen, or null to leave it out (e.g. when the choice is drawn, not written). */
+    selectedLabel: String?,
     /** What the right answer was, e.g. "Major third · 4 semitones". */
     correctSummary: String,
     /** The sounded notes, or null to leave them out. */
@@ -190,7 +212,7 @@ fun AnswerFeedback(
                     color = accent,
                 )
             }
-            if (!isCorrect) {
+            if (!isCorrect && selectedLabel != null) {
                 Text(
                     stringResource(R.string.practice_feedback_your_answer, selectedLabel),
                     style = MaterialTheme.typography.bodyMedium,

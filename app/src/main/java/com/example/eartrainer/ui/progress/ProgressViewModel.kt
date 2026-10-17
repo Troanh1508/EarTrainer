@@ -53,6 +53,11 @@ sealed interface ProgressFilter {
         override val exercise get() = ExerciseKind.DICTATION
     }
 
+    /** Accuracy per rhythm figure; rhythms have a single view. */
+    data object RhythmFilter : ProgressFilter {
+        override val exercise get() = ExerciseKind.RHYTHM
+    }
+
     companion object {
         fun optionsFor(exercise: ExerciseKind): List<ProgressFilter> = when (exercise) {
             ExerciseKind.INTERVALS -> listOf(IntervalStyleFilter(null)) + IntervalStyle.entries.map(::IntervalStyleFilter)
@@ -60,6 +65,7 @@ sealed interface ProgressFilter {
             ExerciseKind.SCALE_DEGREES -> listOf(ModeFilter(null)) + Mode.entries.map(::ModeFilter)
             ExerciseKind.PROGRESSIONS -> Mode.entries.map(::ProgressionModeFilter)
             ExerciseKind.DICTATION -> Mode.entries.map(::DictationModeFilter)
+            ExerciseKind.RHYTHM -> listOf(RhythmFilter)
         }
     }
 }
@@ -116,6 +122,8 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
             history.progressionAccuracy(selected.mode).map { list -> list.map { it.toItem(it.item.numeral) } }
         is ProgressFilter.DictationModeFilter ->
             history.dictationAccuracy(selected.mode).map { list -> list.map { it.toItem("${it.item.label} · ${it.item.solfege}") } }
+        ProgressFilter.RhythmFilter ->
+            history.rhythmAccuracy().map { list -> list.map { it.toItem(it.item.displayName.replaceFirstChar(Char::uppercase)) } }
     }
 
     private fun AnswerAccuracy<*>.toItem(label: String) = AccuracyItem(label, attempts, correct)

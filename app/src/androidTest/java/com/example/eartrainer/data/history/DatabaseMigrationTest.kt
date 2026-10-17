@@ -51,12 +51,30 @@ class DatabaseMigrationTest {
         helper.runMigrationsAndValidate(databaseName, 3, true).close()
         helper.runMigrationsAndValidate(databaseName, 4, true).close()
         helper.runMigrationsAndValidate(databaseName, 5, true).close()
+        helper.runMigrationsAndValidate(databaseName, 6, true).close()
 
         assertEquals(listOf(SessionSummaryRow("from-v1", ExerciseKind.INTERVALS.name, 1_000, 1, 1)), sessionsAfterUpgrade())
     }
 
     @Test
-    fun version4To5KeepsProgressionHistory() {
+    fun version5To6KeepsDictationHistory() {
+        helper.createDatabase(databaseName, 5).apply {
+            execSQL(
+                """
+                INSERT INTO dictation_attempts
+                    (session_id, answered_at, tonic_midi, mode, melody, answer, is_correct, play_count, response_ms)
+                VALUES ('from-v5', 5000, 62, 'MINOR', 'TONIC,SECOND,THIRD', 'TONIC,SECOND,THIRD', 1, 2, 7000)
+                """,
+            )
+            close()
+        }
+        helper.runMigrationsAndValidate(databaseName, 6, true).close()
+
+        assertEquals(listOf(SessionSummaryRow("from-v5", ExerciseKind.DICTATION.name, 5_000, 1, 1)), sessionsAfterUpgrade())
+    }
+
+    @Test
+    fun version4UpgradesToLatestAndKeepsProgressionHistory() {
         helper.createDatabase(databaseName, 4).apply {
             execSQL(
                 """
@@ -68,6 +86,7 @@ class DatabaseMigrationTest {
             close()
         }
         helper.runMigrationsAndValidate(databaseName, 5, true).close()
+        helper.runMigrationsAndValidate(databaseName, 6, true).close()
 
         assertEquals(listOf(SessionSummaryRow("from-v4", ExerciseKind.PROGRESSIONS.name, 4_000, 1, 1)), sessionsAfterUpgrade())
     }
@@ -86,6 +105,7 @@ class DatabaseMigrationTest {
         }
         helper.runMigrationsAndValidate(databaseName, 4, true).close()
         helper.runMigrationsAndValidate(databaseName, 5, true).close()
+        helper.runMigrationsAndValidate(databaseName, 6, true).close()
 
         assertEquals(listOf(SessionSummaryRow("from-v3", ExerciseKind.SCALE_DEGREES.name, 3_000, 1, 1)), sessionsAfterUpgrade())
     }
@@ -105,6 +125,7 @@ class DatabaseMigrationTest {
         helper.runMigrationsAndValidate(databaseName, 3, true).close()
         helper.runMigrationsAndValidate(databaseName, 4, true).close()
         helper.runMigrationsAndValidate(databaseName, 5, true).close()
+        helper.runMigrationsAndValidate(databaseName, 6, true).close()
 
         assertEquals(listOf(SessionSummaryRow("from-v2", ExerciseKind.CHORDS.name, 2_000, 1, 0)), sessionsAfterUpgrade())
     }

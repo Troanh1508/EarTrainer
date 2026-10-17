@@ -40,7 +40,7 @@ data class PracticeTexts<A, Q : ExerciseQuestion<A>>(
     val title: String,
     val instruction: @Composable (Q) -> String,
     /** Short description of how this question is played, e.g. "Harmonic". */
-    val questionDetail: (Q) -> String,
+    val questionDetail: @Composable (Q) -> String,
     val choiceLabel: @Composable (A) -> ChoiceLabel,
     /** What the right answer was, shown after answering. */
     val correctSummary: @Composable (Q) -> String,
@@ -48,6 +48,10 @@ data class PracticeTexts<A, Q : ExerciseQuestion<A>>(
     val showNotesAsPlayed: Boolean = true,
     /** How a sounded note is written, e.g. "E♭4" rather than "D♯4" when the question is in a flat key. */
     val noteName: (Q, Pitch) -> String = { _, pitch -> pitch.name },
+    /** Draws each choice instead of showing its text label (which is still read aloud). */
+    val choiceGraphic: (@Composable (A) -> Unit)? = null,
+    /** Whether feedback repeats the chosen answer in words; drawn choices already show it. */
+    val showSelectedInFeedback: Boolean = true,
 )
 
 /** Connects a multiple-choice exercise's [PracticeViewModel] to [PracticeScreen]. */
@@ -110,6 +114,7 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScreen(
             appearanceOf = state::appearanceOf,
             onChoiceSelected = onAnswerSelected,
             columns = choiceColumns,
+            graphicOf = texts.choiceGraphic,
         )
     }
 }
@@ -152,7 +157,7 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScaffold(
                 Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
                     AnswerFeedback(
                         isCorrect = answer.isCorrect,
-                        selectedLabel = texts.choiceLabel(answer.selectedAnswer).title,
+                        selectedLabel = if (texts.showSelectedInFeedback) texts.choiceLabel(answer.selectedAnswer).title else null,
                         correctSummary = texts.correctSummary(state.question),
                         notesAsPlayed = if (texts.showNotesAsPlayed) state.notesAsPlayed { texts.noteName(state.question, it) } else null,
                         onNext = onNext,

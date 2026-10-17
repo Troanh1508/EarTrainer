@@ -13,6 +13,8 @@
     <string name="home_progressions_description">Hear a progression in a key and name its chords.</string>
     <string name="home_dictation_title">Melodic Dictation</string>
     <string name="home_dictation_description">Hear a short melody and write it down note by note.</string>
+    <string name="home_rhythm_title">Rhythm</string>
+    <string name="home_rhythm_description">Hear a rhythm and pick the matching notation.</string>
     <string name="home_progress_title">Your Progress</string>
     <string name="home_progress_description">See how accurately you recognise what you hear in each exercise.</string>
     <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
@@ -78,6 +80,13 @@
     <!-- Spoken for a wrong note: "♭3, incorrect, should be 3" -->
     <string name="dictation_slot_wrong">%1$s, incorrect, should be %2$s</string>
 
+    <!-- Rhythm -->
+    <string name="rhythm_title">Rhythm</string>
+    <string name="rhythm_instruction">After a one-bar count-in, listen to the rhythm and choose the notation that matches it.</string>
+    <!-- Question detail, e.g. "90 BPM" -->
+    <string name="rhythm_detail">%1$d BPM</string>
+    <string name="rhythm_summary">The rhythm you heard is marked with a tick. Replay to hear it again.</string>
+
     <!-- Interval settings -->
     <string name="settings_title">Practice Settings</string>
     <string name="settings_new_session_note">Changes are saved automatically and start a new practice session.</string>
@@ -124,6 +133,20 @@
     <string name="dictation_settings_length_title">Length</string>
     <string name="dictation_settings_length_description">How many notes each melody has, including the opening tonic.</string>
 
+    <!-- Rhythm settings -->
+    <string name="rhythm_settings_vocabulary_title">Rhythms</string>
+    <string name="rhythm_settings_vocabulary_description">Which note values and rests rhythms can use. Each level adds to the one before.</string>
+    <string name="rhythm_settings_bars_title">Length</string>
+    <string name="rhythm_settings_bars_description">How long each rhythm is, in 4/4 bars.</string>
+    <plurals name="rhythm_bars">
+        <item quantity="one">%d bar</item>
+        <item quantity="other">%d bars</item>
+    </plurals>
+    <string name="rhythm_settings_tempo_title">Tempo</string>
+    <string name="rhythm_settings_tempo_description">How fast the beat is, in beats per minute.</string>
+    <!-- e.g. "Medium · 90 BPM" -->
+    <string name="rhythm_settings_tempo_option">%1$s · %2$d BPM</string>
+
     <!-- Progress -->
     <string name="progress_title">Your Progress</string>
     <string name="progress_empty">Answer a few questions and your progress will appear here.</string>
@@ -132,8 +155,10 @@
     <string name="progress_exercise_degrees">Scale degrees</string>
     <string name="progress_exercise_progressions">Progressions</string>
     <string name="progress_exercise_dictation">Dictation</string>
+    <string name="progress_exercise_rhythm">Rhythm</string>
     <string name="progress_filter_all">All styles</string>
     <string name="progress_filter_all_modes">All modes</string>
+    <string name="progress_filter_all_rhythms">All rhythms</string>
     <plurals name="progress_overall">
         <item quantity="one">%1$d of %2$d answer correct</item>
         <item quantity="other">%1$d of %2$d answers correct</item>
@@ -146,6 +171,10 @@
         <item quantity="one">%1$d of %2$d note correct</item>
         <item quantity="other">%1$d of %2$d notes correct</item>
     </plurals>
+    <plurals name="progress_overall_figures">
+        <item quantity="one">%1$d of %2$d figure correct</item>
+        <item quantity="other">%1$d of %2$d figures correct</item>
+    </plurals>
     <string name="progress_no_answers_for_filter">No answers here yet</string>
     <string name="progress_by_interval">By interval</string>
     <string name="progress_by_quality">By chord quality</string>
@@ -153,6 +182,7 @@
     <string name="progress_by_degree">By scale degree</string>
     <string name="progress_by_chord">By chord, after the opening tonic</string>
     <string name="progress_by_note">By note, after the opening tonic</string>
+    <string name="progress_by_rhythm">By rhythm figure</string>
     <string name="progress_not_practised">Not practised yet</string>
     <string name="progress_answer_score">%1$d of %2$d · %3$s</string>
     <string name="progress_recent_sessions">Recent sessions</string>

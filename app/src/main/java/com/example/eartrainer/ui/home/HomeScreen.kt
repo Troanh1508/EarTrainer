@@ -33,6 +33,7 @@ fun HomeScreen(
     onOpenScaleDegreeTraining: () -> Unit,
     onOpenProgressionTraining: () -> Unit,
     onOpenDictationTraining: () -> Unit,
+    onOpenRhythmTraining: () -> Unit,
     onOpenProgress: () -> Unit,
 ) {
     Surface(Modifier.fillMaxSize()) {
@@ -85,6 +86,11 @@ fun HomeScreen(
                     onClick = onOpenDictationTraining,
                 )
                 HomeEntryCard(
+                    title = stringResource(R.string.home_rhythm_title),
+                    description = stringResource(R.string.home_rhythm_description),
+                    onClick = onOpenRhythmTraining,
+                )
+                HomeEntryCard(
                     title = stringResource(R.string.home_progress_title),
                     description = stringResource(R.string.home_progress_description),
                     onClick = onOpenProgress,
@@ -127,5 +133,5 @@ private fun HomeEntryCard(title: String, description: String, onClick: () -> Uni
 @Preview
 @Composable
 private fun HomeScreenPreview() {
-    EarTrainerTheme { HomeScreen(onOpenIntervalTraining = {}, onOpenChordTraining = {}, onOpenScaleDegreeTraining = {}, onOpenProgressionTraining = {}, onOpenDictationTraining = {}, onOpenProgress = {}) }
+    EarTrainerTheme { HomeScreen(onOpenIntervalTraining = {}, onOpenChordTraining = {}, onOpenScaleDegreeTraining = {}, onOpenProgressionTraining = {}, onOpenDictationTraining = {}, onOpenRhythmTraining = {}, onOpenProgress = {}) }
 }

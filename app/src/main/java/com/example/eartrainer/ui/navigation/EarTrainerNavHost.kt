@@ -13,6 +13,7 @@ import com.example.eartrainer.ui.intervals.IntervalTrainingRoute
 import com.example.eartrainer.ui.progress.ProgressRoute
 import com.example.eartrainer.ui.progress.ProgressViewModel
 import com.example.eartrainer.ui.progressions.ProgressionTrainingRoute
+import com.example.eartrainer.ui.rhythm.RhythmTrainingRoute
 import com.example.eartrainer.ui.settings.ChordSettingsRoute
 import com.example.eartrainer.ui.settings.ChordSettingsViewModel
 import com.example.eartrainer.ui.settings.DictationSettingsRoute
@@ -21,6 +22,8 @@ import com.example.eartrainer.ui.settings.IntervalSettingsRoute
 import com.example.eartrainer.ui.settings.IntervalSettingsViewModel
 import com.example.eartrainer.ui.settings.ProgressionSettingsRoute
 import com.example.eartrainer.ui.settings.ProgressionSettingsViewModel
+import com.example.eartrainer.ui.settings.RhythmSettingsRoute
+import com.example.eartrainer.ui.settings.RhythmSettingsViewModel
 import com.example.eartrainer.ui.settings.ScaleDegreeSettingsRoute
 import com.example.eartrainer.ui.settings.ScaleDegreeSettingsViewModel
 
@@ -36,6 +39,8 @@ private object Routes {
     const val PROGRESSION_SETTINGS = "progression-settings"
     const val DICTATION_TRAINING = "dictation-training"
     const val DICTATION_SETTINGS = "dictation-settings"
+    const val RHYTHM_TRAINING = "rhythm-training"
+    const val RHYTHM_SETTINGS = "rhythm-settings"
     const val PROGRESS = "progress"
 }
 
@@ -50,6 +55,7 @@ fun EarTrainerNavHost() {
                 onOpenScaleDegreeTraining = { navController.navigate(Routes.SCALE_DEGREE_TRAINING) },
                 onOpenProgressionTraining = { navController.navigate(Routes.PROGRESSION_TRAINING) },
                 onOpenDictationTraining = { navController.navigate(Routes.DICTATION_TRAINING) },
+                onOpenRhythmTraining = { navController.navigate(Routes.RHYTHM_TRAINING) },
                 onOpenProgress = { navController.navigate(Routes.PROGRESS) },
             )
         }
@@ -102,6 +108,16 @@ fun EarTrainerNavHost() {
         composable(Routes.DICTATION_SETTINGS) {
             val viewModel: DictationSettingsViewModel = viewModel(factory = DictationSettingsViewModel.Factory)
             DictationSettingsRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
+        }
+        composable(Routes.RHYTHM_TRAINING) {
+            RhythmTrainingRoute(
+                onOpenSettings = { navController.navigate(Routes.RHYTHM_SETTINGS) },
+                onNavigateUp = { navController.navigateUp() },
+            )
+        }
+        composable(Routes.RHYTHM_SETTINGS) {
+            val viewModel: RhythmSettingsViewModel = viewModel(factory = RhythmSettingsViewModel.Factory)
+            RhythmSettingsRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
         }
         composable(Routes.PROGRESS) {
             val viewModel: ProgressViewModel = viewModel(factory = ProgressViewModel.Factory)

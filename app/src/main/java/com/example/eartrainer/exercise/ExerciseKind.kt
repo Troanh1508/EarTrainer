@@ -7,4 +7,5 @@ enum class ExerciseKind {
     SCALE_DEGREES,
     PROGRESSIONS,
     DICTATION,
+    RHYTHM,
 }

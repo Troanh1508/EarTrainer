@@ -118,7 +118,10 @@ private fun ProgressContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize(),
         ) {
-            item { FilterRow(state, onFilterSelected, Modifier.widthIn(max = 560.dp).fillMaxWidth()) }
+            // Exercises with a single view have nothing to filter.
+            if (state.filterOptions.size > 1) {
+                item { FilterRow(state, onFilterSelected, Modifier.widthIn(max = 560.dp).fillMaxWidth()) }
+            }
             item { OverallCard(state, itemModifier) }
             item { SectionTitle(accuracyTitle(state.filter), itemModifier) }
             items(state.accuracy, key = { it.label }) { AccuracyRow(it, itemModifier) }
@@ -150,6 +153,7 @@ private fun exerciseName(exercise: ExerciseKind) = stringResource(
         ExerciseKind.SCALE_DEGREES -> R.string.progress_exercise_degrees
         ExerciseKind.PROGRESSIONS -> R.string.progress_exercise_progressions
         ExerciseKind.DICTATION -> R.string.progress_exercise_dictation
+        ExerciseKind.RHYTHM -> R.string.progress_exercise_rhythm
     },
 )
 
@@ -160,6 +164,7 @@ private fun filterLabel(filter: ProgressFilter): String = when (filter) {
     is ProgressFilter.ModeFilter -> filter.mode?.displayName ?: stringResource(R.string.progress_filter_all_modes)
     is ProgressFilter.ProgressionModeFilter -> filter.mode.displayName
     is ProgressFilter.DictationModeFilter -> filter.mode.displayName
+    ProgressFilter.RhythmFilter -> stringResource(R.string.progress_filter_all_rhythms)
 }
 
 @Composable
@@ -173,6 +178,7 @@ private fun accuracyTitle(filter: ProgressFilter): String = stringResource(
         is ProgressFilter.ModeFilter -> R.string.progress_by_degree
         is ProgressFilter.ProgressionModeFilter -> R.string.progress_by_chord
         is ProgressFilter.DictationModeFilter -> R.string.progress_by_note
+        ProgressFilter.RhythmFilter -> R.string.progress_by_rhythm
     },
 )
 
@@ -212,6 +218,7 @@ private fun OverallCard(state: ProgressUiState, modifier: Modifier = Modifier) {
                     val counted = when (state.exercise) {
                         ExerciseKind.PROGRESSIONS -> R.plurals.progress_overall_chords
                         ExerciseKind.DICTATION -> R.plurals.progress_overall_notes
+                        ExerciseKind.RHYTHM -> R.plurals.progress_overall_figures
                         else -> R.plurals.progress_overall
                     }
                     pluralStringResource(counted, state.totalAttempts, state.totalCorrect, state.totalAttempts)

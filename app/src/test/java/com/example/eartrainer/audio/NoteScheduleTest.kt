@@ -3,6 +3,7 @@ package com.example.eartrainer.audio
 import com.example.eartrainer.music.ListeningPrompt
 import com.example.eartrainer.music.Pitch
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -93,6 +94,30 @@ class NoteScheduleTest {
         assertEquals(listOf(1_230, 1_880, 2_530), melody.map { it.startFrame })
         assertTrue(melody.all { it.frameCount == 650 })
         assertEquals(1, NoteSchedule.from(prompt.copy(context = emptyList()), sampleRate, melodic).maxPolyphony)
+    }
+
+    @Test
+    fun beatTimingPlacesNotesExactlyAtTheTempo() {
+        // 120 BPM at 1 kHz: one beat is 500 frames.
+        val prompt = ListeningPrompt(
+            moments = listOf(listOf(Pitch(96)), listOf(Pitch(72)), listOf(Pitch(72))),
+            beatTiming = ListeningPrompt.BeatTiming(bpm = 120, startBeats = listOf(0.0, 1.5, 2.0), lengthBeats = listOf(0.25, 0.5, 2.0)),
+        )
+        val schedule = NoteSchedule.from(prompt, sampleRate, timing.copy(beatTimedNoteFraction = 0.8))
+        assertEquals(listOf(30, 780, 1_030), schedule.notes.map { it.startFrame })
+        assertEquals(listOf(100, 200, 800), schedule.notes.map { it.frameCount })
+        assertEquals(1_830, schedule.contentEndFrame)
+        assertEquals(1, schedule.maxPolyphony)
+    }
+
+    @Test
+    fun beatTimingMustCoverEveryMoment() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ListeningPrompt(
+                moments = listOf(listOf(Pitch(60)), listOf(Pitch(62))),
+                beatTiming = ListeningPrompt.BeatTiming(bpm = 90, startBeats = listOf(0.0), lengthBeats = listOf(1.0)),
+            )
+        }
     }
 
     @Test

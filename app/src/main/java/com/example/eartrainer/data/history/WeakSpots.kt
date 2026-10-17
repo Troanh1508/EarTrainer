@@ -5,6 +5,7 @@ import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.WeakSpotWeighting
 import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
+import com.example.eartrainer.music.RhythmCell
 import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +27,7 @@ class WeakSpots(history: PracticeHistory, private val scope: CoroutineScope) {
     val scaleDegrees: StateFlow<Map<ScaleDegree, Double>> = weightsFrom(history.recentScaleDegreeResults(RECENT_ANSWERS))
     val progressionChords: StateFlow<Map<DiatonicChord, Double>> = weightsFrom(history.recentProgressionResults(RECENT_ANSWERS))
     val dictationDegrees: StateFlow<Map<ScaleDegree, Double>> = weightsFrom(history.recentDictationResults(RECENT_ANSWERS))
+    val rhythmCells: StateFlow<Map<RhythmCell, Double>> = weightsFrom(history.recentRhythmResults(RECENT_ANSWERS))
 
     private fun <T> weightsFrom(results: Flow<List<ItemResult<T>>>): StateFlow<Map<T, Double>> =
         results.map { WeakSpotWeighting.weights(it) }.stateIn(scope, SharingStarted.Eagerly, emptyMap())

@@ -15,12 +15,15 @@ import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
 import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.ProgressionAttempt
+import com.example.eartrainer.exercise.RhythmAttempt
+import com.example.eartrainer.exercise.rhythmCellResults
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordQuality
 import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Mode
+import com.example.eartrainer.music.RhythmCell
 import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +38,7 @@ class FakePracticeHistory : PracticeHistory {
     private val degrees = MutableStateFlow<List<ScaleDegreeAttempt>>(emptyList())
     private val progressions = MutableStateFlow<List<ProgressionAttempt>>(emptyList())
     private val dictations = MutableStateFlow<List<DictationAttempt>>(emptyList())
+    private val rhythms = MutableStateFlow<List<RhythmAttempt>>(emptyList())
 
     val recorded: List<IntervalAttempt> get() = intervals.value
 
@@ -47,6 +51,8 @@ class FakePracticeHistory : PracticeHistory {
     override fun record(attempt: ProgressionAttempt) = progressions.update { it + attempt }
 
     override fun record(attempt: DictationAttempt) = dictations.update { it + attempt }
+
+    override fun record(attempt: RhythmAttempt) = rhythms.update { it + attempt }
 
     override fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>> = intervals.map { all ->
         Interval.entries.map { interval ->
@@ -116,12 +122,29 @@ class FakePracticeHistory : PracticeHistory {
     override fun recentDictationResults(limit: Int): Flow<List<ItemResult<ScaleDegree>>> =
         dictations.map { all -> all.asReversed().take(limit).flatMap { dictationNoteResults(it.melody.degrees, it.answer.degrees) } }
 
-    override fun recentSessions(limit: Int): Flow<List<SessionSummary>> = combine(intervals, chords, degrees, progressions, dictations) { intervalList, chordList, degreeList, progressionList, dictationList ->
-        val rows = intervalList.map { Triple(it.sessionId, ExerciseKind.INTERVALS, it.answeredAtMillis to it.isCorrect) } +
-            chordList.map { Triple(it.sessionId, ExerciseKind.CHORDS, it.answeredAtMillis to it.isCorrect) } +
-            degreeList.map { Triple(it.sessionId, ExerciseKind.SCALE_DEGREES, it.answeredAtMillis to it.isCorrect) } +
-            progressionList.map { Triple(it.sessionId, ExerciseKind.PROGRESSIONS, it.answeredAtMillis to it.isCorrect) } +
-            dictationList.map { Triple(it.sessionId, ExerciseKind.DICTATION, it.answeredAtMillis to it.isCorrect) }
+    override fun rhythmAccuracy(): Flow<List<AnswerAccuracy<RhythmCell>>> = rhythms.map { all ->
+        val results = all.flatMap { rhythmCellResults(it.rhythm, it.answer) }
+        RhythmCell.entries.map { cell ->
+            val forCell = results.filter { it.item == cell }
+            AnswerAccuracy(cell, attempts = forCell.size, correct = forCell.count { it.isCorrect })
+        }
+    }
+
+    override fun recentRhythmResults(limit: Int): Flow<List<ItemResult<RhythmCell>>> =
+        rhythms.map { all -> all.asReversed().take(limit).flatMap { rhythmCellResults(it.rhythm, it.answer) } }
+
+    // combine() takes at most five flows, so the sixth exercise is merged in a second step.
+    override fun recentSessions(limit: Int): Flow<List<SessionSummary>> = combine(
+        combine(intervals, chords, degrees, progressions, dictations) { intervalList, chordList, degreeList, progressionList, dictationList ->
+            intervalList.map { Triple(it.sessionId, ExerciseKind.INTERVALS, it.answeredAtMillis to it.isCorrect) } +
+                chordList.map { Triple(it.sessionId, ExerciseKind.CHORDS, it.answeredAtMillis to it.isCorrect) } +
+                degreeList.map { Triple(it.sessionId, ExerciseKind.SCALE_DEGREES, it.answeredAtMillis to it.isCorrect) } +
+                progressionList.map { Triple(it.sessionId, ExerciseKind.PROGRESSIONS, it.answeredAtMillis to it.isCorrect) } +
+                dictationList.map { Triple(it.sessionId, ExerciseKind.DICTATION, it.answeredAtMillis to it.isCorrect) }
+        },
+        rhythms,
+    ) { earlier, rhythmList ->
+        val rows = earlier + rhythmList.map { Triple(it.sessionId, ExerciseKind.RHYTHM, it.answeredAtMillis to it.isCorrect) }
         rows.groupBy { it.first }
             .map { (id, session) ->
                 SessionSummary(

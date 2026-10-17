@@ -10,6 +10,8 @@ import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
 import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.ProgressionAttempt
+import com.example.eartrainer.exercise.RhythmAttempt
+import com.example.eartrainer.exercise.rhythmCellResults
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordProgression
@@ -18,6 +20,8 @@ import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Melody
 import com.example.eartrainer.music.Mode
+import com.example.eartrainer.music.Rhythm
+import com.example.eartrainer.music.RhythmCell
 import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -58,6 +62,9 @@ interface PracticeHistory {
     /** Saves [attempt] in the background. The write completes even if the calling screen closes. */
     fun record(attempt: DictationAttempt)
 
+    /** Saves [attempt] in the background. The write completes even if the calling screen closes. */
+    fun record(attempt: RhythmAttempt)
+
     /** Accuracy for every interval, including unpractised ones; [style] null means all styles. */
     fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>>
 
@@ -82,6 +89,9 @@ interface PracticeHistory {
      */
     fun dictationAccuracy(mode: Mode): Flow<List<AnswerAccuracy<ScaleDegree>>>
 
+    /** How often each rhythm cell was heard correctly, counted per cell of every rhythm asked. */
+    fun rhythmAccuracy(): Flow<List<AnswerAccuracy<RhythmCell>>>
+
     /** Most recent sessions of any exercise first. Sessions without answers are not recorded. */
     fun recentSessions(limit: Int): Flow<List<SessionSummary>>
 
@@ -98,6 +108,9 @@ interface PracticeHistory {
 
     /** One result per note after the opening tonic, from the latest [limit] dictations. */
     fun recentDictationResults(limit: Int): Flow<List<ItemResult<ScaleDegree>>>
+
+    /** One result per cell, from the latest [limit] rhythm answers. */
+    fun recentRhythmResults(limit: Int): Flow<List<ItemResult<RhythmCell>>>
 }
 
 class RoomPracticeHistory(
@@ -115,6 +128,8 @@ class RoomPracticeHistory(
     override fun record(attempt: ProgressionAttempt) = write { database.progressionAttemptDao().insert(attempt.toEntity()) }
 
     override fun record(attempt: DictationAttempt) = write { database.dictationAttemptDao().insert(attempt.toEntity()) }
+
+    override fun record(attempt: RhythmAttempt) = write { database.rhythmAttemptDao().insert(attempt.toEntity()) }
 
     override fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>> =
         database.intervalAttemptDao().accuracyByInterval(style?.name).map { rows -> rows.completeOver(Interval.entries) }
@@ -143,6 +158,17 @@ class RoomPracticeHistory(
                 mode.diatonicDegrees.map { degree ->
                     val forDegree = results.filter { it.item == degree }
                     AnswerAccuracy(degree, attempts = forDegree.size, correct = forDegree.count { it.isCorrect })
+                }
+            }
+            .flowOn(Dispatchers.Default)
+
+    override fun rhythmAccuracy(): Flow<List<AnswerAccuracy<RhythmCell>>> =
+        database.rhythmAttemptDao().allAnswers()
+            .map { rows ->
+                val results = rows.flatMap { it.toCellResults() }
+                RhythmCell.entries.map { cell ->
+                    val forCell = results.filter { it.item == cell }
+                    AnswerAccuracy(cell, attempts = forCell.size, correct = forCell.count { it.isCorrect })
                 }
             }
             .flowOn(Dispatchers.Default)
@@ -185,6 +211,9 @@ class RoomPracticeHistory(
         database.dictationAttemptDao().recentAnswers(limit).map { rows ->
             rows.flatMap { dictationNoteResults(it.melody.toDegrees(), it.answer.toDegrees()) }
         }
+
+    override fun recentRhythmResults(limit: Int): Flow<List<ItemResult<RhythmCell>>> =
+        database.rhythmAttemptDao().recentAnswers(limit).map { rows -> rows.flatMap { it.toCellResults() } }
 
     private fun write(insert: suspend () -> Unit) {
         writeScope.launch {
@@ -304,6 +333,30 @@ internal fun dictationNoteResults(melody: List<ScaleDegree?>, answer: List<Scale
         val played = melody[position] ?: return@mapNotNull null
         ItemResult(played, answer.getOrNull(position) == played)
     }
+
+internal fun RhythmAttempt.toEntity() = RhythmAttemptEntity(
+    sessionId = sessionId,
+    answeredAtMillis = answeredAtMillis,
+    tempo = tempo.name,
+    rhythm = rhythm.toNames(),
+    answer = answer.toNames(),
+    isCorrect = isCorrect,
+    playCount = playCount,
+    responseMillis = responseMillis,
+)
+
+private fun Rhythm.toNames(): String = cells.joinToString(",") { it.name }
+
+/** Null if a stored rhythm no longer parses (e.g. a renamed cell), so one bad row is skipped. */
+private fun String.toRhythmOrNull(): Rhythm? = runCatching {
+    Rhythm(split(",").map { name -> RhythmCell.valueOf(name.trim()) })
+}.getOrNull()
+
+private fun RhythmAnswerRow.toCellResults(): List<ItemResult<RhythmCell>> {
+    val played = rhythm.toRhythmOrNull() ?: return emptyList()
+    val chosen = answer.toRhythmOrNull() ?: return emptyList()
+    return rhythmCellResults(played, chosen)
+}
 
 internal fun ChordAttempt.toEntity() = ChordAttemptEntity(
     sessionId = sessionId,

@@ -10,6 +10,7 @@ package com.example.eartrainer.music
  * - Scale degree: a cadence as [context], then `[[E4]]`
  * - Chord progression: one multi-pitch moment per chord with [Articulation.FLOWING]
  * - Melody: one single-pitch moment per note with [Articulation.MELODIC], usually after a [context]
+ * - Rhythm: one moment per note with exact [beatTiming] at a tempo, which overrides [articulation]
  *
  * Exact timing (durations, gaps) is decided by the audio layer.
  */
@@ -21,7 +22,21 @@ data class ListeningPrompt(
      * key. Played briskly, then a pause separates them from [moments].
      */
     val context: List<List<Pitch>> = emptyList(),
+    /** Exact placement in beats at a tempo; when set, [articulation] is ignored. */
+    val beatTiming: BeatTiming? = null,
 ) {
+
+    /**
+     * Moment i starts [startBeats] i beats in and lasts [lengthBeats] i beats, at [bpm] beats per
+     * minute. Rests are simply gaps between moments.
+     */
+    data class BeatTiming(val bpm: Int, val startBeats: List<Double>, val lengthBeats: List<Double>) {
+        init {
+            require(bpm > 0) { "Tempo must be positive" }
+            require(startBeats.size == lengthBeats.size) { "Every moment needs a start and a length" }
+            require(startBeats.all { it >= 0 } && lengthBeats.all { it > 0 }) { "Starts must not be negative and lengths must be positive" }
+        }
+    }
 
     enum class Articulation {
         /** Each moment ends before the next one starts. */
@@ -40,6 +55,7 @@ data class ListeningPrompt(
     init {
         require(moments.isNotEmpty()) { "A prompt needs at least one moment" }
         require(moments.all { it.isNotEmpty() } && context.all { it.isNotEmpty() }) { "Every moment must sound at least one pitch" }
+        require(beatTiming == null || beatTiming.startBeats.size == moments.size) { "Beat timing must cover every moment" }
     }
 
     companion object {

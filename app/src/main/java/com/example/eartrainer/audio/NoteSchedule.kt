@@ -18,6 +18,11 @@ data class PlaybackTiming(
     val progressionChordSeconds: Double = 1.1,
     /** Length of each note of a melody, played back to back; the release keeps notes distinct. */
     val melodyNoteSeconds: Double = 0.65,
+    /**
+     * Share of its written length a beat-timed note sounds for. Slightly detached notes keep
+     * repeated notes on the same pitch audibly separate, which rhythms depend on.
+     */
+    val beatTimedNoteFraction: Double = 0.85,
     /** Length of each context chord (e.g. in a key-setting cadence), played back to back. */
     val contextChordSeconds: Double = 0.7,
     /** Silence between the context and the question, so the question stands apart. */
@@ -73,7 +78,16 @@ data class NoteSchedule(
                 }
                 leadIn += prompt.context.size * chordLength + frames(timing.contextPauseSeconds)
             }
-            val contentEnd = when (prompt.articulation) {
+            val beatTiming = prompt.beatTiming
+            val contentEnd = if (beatTiming != null) {
+                val framesPerBeat = sampleRate * 60.0 / beatTiming.bpm
+                prompt.moments.forEachIndexed { index, pitches ->
+                    val start = leadIn + (beatTiming.startBeats[index] * framesPerBeat).roundToInt()
+                    val length = (beatTiming.lengthBeats[index] * framesPerBeat * timing.beatTimedNoteFraction).roundToInt().coerceAtLeast(1)
+                    pitches.forEach { notes += ScheduledNote(it, start, length) }
+                }
+                notes.maxOf { it.endFrame }
+            } else when (prompt.articulation) {
                 ListeningPrompt.Articulation.SEPARATE -> {
                     var cursor = leadIn
                     prompt.moments.forEachIndexed { index, pitches ->

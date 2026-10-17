@@ -108,6 +108,26 @@ data class DictationAttemptEntity(
 /** A stored melody and the one written down, as degree-name lists. */
 data class MelodyAnswerRow(val melody: String, val answer: String)
 
+/** Added in schema version 6. Rhythms are stored as comma-separated cell names. */
+@Entity(
+    tableName = "rhythm_attempts",
+    indices = [Index("session_id")],
+)
+data class RhythmAttemptEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "session_id") val sessionId: String,
+    @ColumnInfo(name = "answered_at") val answeredAtMillis: Long,
+    @ColumnInfo(name = "tempo") val tempo: String,
+    @ColumnInfo(name = "rhythm") val rhythm: String,
+    @ColumnInfo(name = "answer") val answer: String,
+    @ColumnInfo(name = "is_correct") val isCorrect: Boolean,
+    @ColumnInfo(name = "play_count") val playCount: Int,
+    @ColumnInfo(name = "response_ms") val responseMillis: Long,
+)
+
+/** A stored rhythm and the one chosen, as cell-name lists. */
+data class RhythmAnswerRow(val rhythm: String, val answer: String)
+
 /** One recent answer, for weighting practice towards weak spots. */
 data class ItemResultRow(val item: String, val isCorrect: Boolean)
 
@@ -229,6 +249,19 @@ interface DictationAttemptDao {
 }
 
 @Dao
+interface RhythmAttemptDao {
+    @Insert
+    suspend fun insert(attempt: RhythmAttemptEntity)
+
+    /** Every rhythm answer; per-cell totals are worked out from these. */
+    @Query("SELECT rhythm, answer FROM rhythm_attempts")
+    fun allAnswers(): Flow<List<RhythmAnswerRow>>
+
+    @Query("SELECT rhythm, answer FROM rhythm_attempts ORDER BY answered_at DESC, id DESC LIMIT :limit")
+    fun recentAnswers(limit: Int): Flow<List<RhythmAnswerRow>>
+}
+
+@Dao
 interface SessionDao {
     /** Sessions from every exercise type, newest first. A session belongs to one exercise only. */
     @Query(
@@ -245,6 +278,8 @@ interface SessionDao {
             SELECT session_id, answered_at, is_correct, 'PROGRESSIONS' AS exercise FROM progression_attempts
             UNION ALL
             SELECT session_id, answered_at, is_correct, 'DICTATION' AS exercise FROM dictation_attempts
+            UNION ALL
+            SELECT session_id, answered_at, is_correct, 'RHYTHM' AS exercise FROM rhythm_attempts
         )
         GROUP BY session_id
         ORDER BY startedAtMillis DESC

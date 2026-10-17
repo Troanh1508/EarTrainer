@@ -10,6 +10,8 @@ import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
 import com.example.eartrainer.exercise.KeyContext
 import com.example.eartrainer.exercise.ProgressionAttempt
+import com.example.eartrainer.exercise.RhythmAttempt
+import com.example.eartrainer.exercise.RhythmTempo
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordProgression
@@ -20,6 +22,8 @@ import com.example.eartrainer.music.Key
 import com.example.eartrainer.music.Melody
 import com.example.eartrainer.music.Mode
 import com.example.eartrainer.music.Pitch
+import com.example.eartrainer.music.Rhythm
+import com.example.eartrainer.music.RhythmCell
 import com.example.eartrainer.music.ScaleDegree
 import com.example.eartrainer.testing.FakePracticeHistory
 import kotlinx.coroutines.Dispatchers
@@ -185,6 +189,23 @@ class ProgressViewModelTest {
         assertEquals(ProgressFilter.DictationModeFilter(Mode.MAJOR), state.filter)
         assertEquals(Mode.MAJOR.diatonicDegrees.map { "${it.label} · ${it.solfege}" }, state.accuracy.map { it.label })
         assertEquals(AccuracyItem("3 · Mi", attempts = 1, correct = 0), state.accuracy.single { it.label == "3 · Mi" })
+        assertEquals(3, state.totalAttempts)
+        assertEquals(2, state.totalCorrect)
+    }
+
+    @Test
+    fun rhythmTabScoresEachFigureOnItsBeat() = runTest {
+        val played = Rhythm(listOf(RhythmCell.QUARTER, RhythmCell.EIGHTHS, RhythmCell.HALF))
+        val chosen = Rhythm(listOf(RhythmCell.QUARTER, RhythmCell.QUARTER_REST, RhythmCell.HALF))
+        history.record(RhythmAttempt("r", 1_000, played, RhythmTempo.MEDIUM, chosen, false, 1, 4_000))
+        val viewModel = ProgressViewModel(history).also { collected(it) }
+
+        viewModel.onExerciseSelected(ExerciseKind.RHYTHM)
+        val state = viewModel.state
+        assertEquals(ProgressFilter.RhythmFilter, state.filter)
+        assertEquals(RhythmCell.entries.size, state.accuracy.size)
+        assertEquals(AccuracyItem("Two eighths", attempts = 1, correct = 0), state.accuracy.single { it.label == "Two eighths" })
+        assertEquals(AccuracyItem("Half", attempts = 1, correct = 1), state.accuracy.single { it.label == "Half" })
         assertEquals(3, state.totalAttempts)
         assertEquals(2, state.totalCorrect)
     }
