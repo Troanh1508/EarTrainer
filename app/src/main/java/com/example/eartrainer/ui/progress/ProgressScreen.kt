@@ -243,7 +243,7 @@ private fun AccuracyRow(item: AccuracyItem, modifier: Modifier = Modifier) {
             Text(item.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Text(
                 if (accuracy == null) {
-                    stringResource(R.string.progress_not_practised)
+                    stringResource(R.string.progress_not_practiced)
                 } else {
                     stringResource(R.string.progress_answer_score, item.correct, item.attempts, percent(accuracy))
                 },
@@ -251,7 +251,7 @@ private fun AccuracyRow(item: AccuracyItem, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        // No bar for unpractised answers, so they never look like a 0% score.
+        // No bar for unpracticed answers, so they never look like a 0% score.
         if (accuracy != null) {
             LinearProgressIndicator(
                 progress = { accuracy },
@@ -292,8 +292,8 @@ private fun ProgressPreview() {
             state = ProgressUiState(
                 filter = ProgressFilter.IntervalStyleFilter(null),
                 accuracy = Interval.entries.mapIndexed { index, interval ->
-                    val practised = index % 4 != 3
-                    AccuracyItem(interval.displayName, attempts = if (practised) 10 else 0, correct = if (practised) 10 - index % 4 * 3 else 0)
+                    val practiced = index % 4 != 3
+                    AccuracyItem(interval.displayName, attempts = if (practiced) 10 else 0, correct = if (practiced) 10 - index % 4 * 3 else 0)
                 },
                 recentSessions = listOf(
                     SessionSummary("a", ExerciseKind.CHORDS, 1_760_000_000_000, 12, 9),

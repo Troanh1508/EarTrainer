@@ -42,7 +42,7 @@ class IntervalQuestionGeneratorTest {
     }
 
     @Test
-    fun choicesAreNeighbouringIntervalsInAscendingOrder() {
+    fun choicesAreNeighboringIntervalsInAscendingOrder() {
         generate(500).forEach { question ->
             val semitones = question.choices.map { it.semitones }
             assertEquals(semitones.sorted(), semitones)

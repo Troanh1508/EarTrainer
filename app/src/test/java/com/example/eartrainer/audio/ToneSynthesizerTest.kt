@@ -80,7 +80,7 @@ class ToneSynthesizerTest {
 
     @Test
     fun renderingIsDeterministic() {
-        val synth = ToneSynthesizer()
-        assertTrue(synth.render(harmonic).contentEquals(synth.render(harmonic)))
+        val synthesizer = ToneSynthesizer()
+        assertTrue(synthesizer.render(harmonic).contentEquals(synthesizer.render(harmonic)))
     }
 }

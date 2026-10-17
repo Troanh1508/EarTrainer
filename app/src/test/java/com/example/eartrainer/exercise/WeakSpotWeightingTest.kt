@@ -61,12 +61,12 @@ class WeakSpotWeightingTest {
         assertEquals(setOf("a", "b"), picks)
     }
 
-    /** Fraction of [count] generated questions for which [isFavoured] holds. */
-    private fun <Q> share(count: Int, generate: () -> Q, isFavoured: (Q) -> Boolean) =
-        List(count) { generate() }.count(isFavoured).toDouble() / count
+    /** Fraction of [count] generated questions for which [isFavored] holds. */
+    private fun <Q> share(count: Int, generate: () -> Q, isFavored: (Q) -> Boolean) =
+        List(count) { generate() }.count(isFavored).toDouble() / count
 
     @Test
-    fun intervalGeneratorFavoursWeakIntervals() {
+    fun intervalGeneratorFavorsWeakIntervals() {
         val weights: (Interval) -> Double = { if (it == Interval.TRITONE) 10.0 else 0.2 }
         val generator = IntervalQuestionGenerator(IntervalExerciseSettings(), Random(3), weights)
         // 10 vs 11 × 0.2 = 2.2: the tritone should be asked about 82% of the time.
@@ -76,20 +76,20 @@ class WeakSpotWeightingTest {
     @Test
     fun chordGeneratorWeightsWhateverIsBeingNamed() {
         val qualities = ChordExerciseSettings(qualities = ChordQuality.entries)
-        val favourMinor7: (ChordAnswer) -> Double = { if (it == ChordAnswer.Quality(ChordQuality.MINOR_SEVENTH)) 10.0 else 0.1 }
-        val byQuality = ChordQuestionGenerator(qualities, Random(4), favourMinor7)
+        val favorMinor7: (ChordAnswer) -> Double = { if (it == ChordAnswer.Quality(ChordQuality.MINOR_SEVENTH)) 10.0 else 0.1 }
+        val byQuality = ChordQuestionGenerator(qualities, Random(4), favorMinor7)
         assertTrue(share(2_000, byQuality::generate) { it.quality == ChordQuality.MINOR_SEVENTH } > 0.85)
 
         val inversions = qualities.copy(target = ChordTarget.INVERSION)
-        val favourSecond: (ChordAnswer) -> Double = {
+        val favorSecond: (ChordAnswer) -> Double = {
             if (it == ChordAnswer.Inversion(ChordInversion.SECOND)) 10.0 else 0.1
         }
-        val byInversion = ChordQuestionGenerator(inversions, Random(5), favourSecond)
+        val byInversion = ChordQuestionGenerator(inversions, Random(5), favorSecond)
         assertTrue(share(2_000, byInversion::generate) { it.inversion == ChordInversion.SECOND } > 0.9)
     }
 
     @Test
-    fun scaleDegreeGeneratorFavoursWeakDegrees() {
+    fun scaleDegreeGeneratorFavorsWeakDegrees() {
         val weights: (ScaleDegree) -> Double = { if (it == ScaleDegree.SIXTH) 10.0 else 0.2 }
         val generator = ScaleDegreeQuestionGenerator(ScaleDegreeSettings(), Random(6), weights)
         // 10 vs 6 × 0.2 = 1.2: the sixth should be asked about 89% of the time.
@@ -97,7 +97,7 @@ class WeakSpotWeightingTest {
     }
 
     @Test
-    fun progressionGeneratorFavoursProgressionsWithWeakChords() {
+    fun progressionGeneratorFavorsProgressionsWithWeakChords() {
         val vi = DiatonicChord(Mode.MAJOR, 6)
         val weights: (DiatonicChord) -> Double = { if (it == vi) 10.0 else 0.2 }
         val settings = ProgressionSettings(source = ProgressionSource.RANDOM)

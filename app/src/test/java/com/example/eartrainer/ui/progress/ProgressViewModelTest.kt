@@ -78,7 +78,7 @@ class ProgressViewModelTest {
     }
 
     @Test
-    fun summarisesIntervalsAndFiltersByStyle() = runTest {
+    fun summarizesIntervalsAndFiltersByStyle() = runTest {
         history.record(interval("a", 1_000, Interval.MAJOR_THIRD, IntervalStyle.MELODIC_ASCENDING, correct = true))
         history.record(interval("a", 2_000, Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = false))
         history.record(interval("b", 9_000, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = true))

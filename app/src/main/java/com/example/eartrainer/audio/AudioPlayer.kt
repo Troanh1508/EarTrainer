@@ -8,7 +8,7 @@ import com.example.eartrainer.music.ListeningPrompt
  */
 interface AudioPlayer {
     /**
-     * Plays [prompt] and suspends until it has finished sounding. Cancelling the calling
+     * Plays [prompt] and suspends until it has finished sounding. Canceling the calling
      * coroutine stops the sound immediately. Starting a new prompt silences any prompt that is
      * still playing, so two prompts never overlap.
      *

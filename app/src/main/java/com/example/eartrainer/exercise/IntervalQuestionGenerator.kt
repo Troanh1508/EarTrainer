@@ -70,8 +70,8 @@ class IntervalQuestionGenerator(
     }
 
     /**
-     * Picks a contiguous run of intervals (by size) that contains the correct one. Neighbouring
-     * sizes make plausible distractors, and randomising where the run starts keeps the correct
+     * Picks a contiguous run of intervals (by size) that contains the correct one. Neighboring
+     * sizes make plausible distractors, and randomizing where the run starts keeps the correct
      * answer from always sitting in the same position.
      */
     private fun choicesFor(correct: Interval): List<Interval> {

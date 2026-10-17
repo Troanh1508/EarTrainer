@@ -175,7 +175,7 @@ private fun AnswerChoice(
                     }
                 }
             }
-            // Icons back up the colour change so the result never relies on colour alone.
+            // Icons back up the color change so the result never relies on color alone.
             if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
         }
     }

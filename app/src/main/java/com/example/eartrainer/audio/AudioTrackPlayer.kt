@@ -12,6 +12,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * [AudioPlayer] backed by a static-mode [AudioTrack].
@@ -28,7 +29,7 @@ class AudioTrackPlayer(
      * Supplies the instrument. Suspending lets a sampled instrument finish loading in the
      * background; the first prompt waits for it only if it is not ready yet.
      */
-    private val renderer: suspend () -> PcmRenderer = ToneSynthesizer().let { synth -> { synth } },
+    private val renderer: suspend () -> PcmRenderer = ToneSynthesizer().let { synthesizer -> { synthesizer } },
 ) : AudioPlayer {
 
     private class RenderedPrompt(
@@ -64,12 +65,12 @@ class AudioTrackPlayer(
     private var active: ActivePlayback? = null // guarded by lock
     private var released = false // guarded by lock
 
-    // Replays of the same question reuse the rendered buffer instead of synthesising again.
+    // Replays of the same question reuse the rendered buffer instead of synthesizing again.
     @Volatile
     private var lastRender: RenderedPrompt? = null
 
     override suspend fun play(prompt: ListeningPrompt) {
-        // Assigned inside withContext rather than returned from it: if the caller is cancelled
+        // Assigned inside withContext rather than returned from it: if the caller is canceled
         // while switching back, withContext discards its result, and the track would leak.
         var created: ActivePlayback? = null
         try {
@@ -96,8 +97,7 @@ class AudioTrackPlayer(
 
             // The marker is the normal completion signal. The timeout only guards against
             // devices that fail to deliver it; it plays no part in note timing.
-            val expectedMillis = (rendered.schedule.durationSeconds * 1000).toLong()
-            withTimeoutOrNull(expectedMillis + COMPLETION_GRACE_MILLIS) { playback.finished.await() }
+            withTimeoutOrNull(rendered.schedule.durationSeconds.seconds + COMPLETION_GRACE) { playback.finished.await() }
         } catch (e: IllegalStateException) {
             throw AudioPlaybackException("Audio output could not start", e)
         } finally {
@@ -147,7 +147,7 @@ class AudioTrackPlayer(
         val written = track.write(pcm, 0, pcm.size)
         if (track.state != AudioTrack.STATE_INITIALIZED || written != pcm.size) {
             track.release()
-            throw AudioPlaybackException("Audio track could not be initialised (write result $written)")
+            throw AudioPlaybackException("Audio track could not be initialized (write result $written)")
         }
         return track
     }
@@ -190,6 +190,6 @@ class AudioTrackPlayer(
 
     private companion object {
         const val FALLBACK_SAMPLE_RATE = 44_100
-        const val COMPLETION_GRACE_MILLIS = 1_000L
+        val COMPLETION_GRACE = 1.seconds
     }
 }

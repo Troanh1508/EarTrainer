@@ -189,7 +189,7 @@ private fun DictationInput(state: PracticeUiState<Melody, DictationQuestion>, on
 /**
  * One box per note. The first is the given tonic. While answering, tapping a box selects it for
  * editing; the selected box is outlined. After checking, each box is marked right or wrong (by
- * colour and wording, never colour alone), with the right note under a wrong one.
+ * color and wording, never color alone), with the right note under a wrong one.
  */
 @Composable
 private fun NoteSlots(
@@ -229,7 +229,7 @@ private fun NoteSlots(
                 container = container,
                 content = content,
                 border = border,
-                emphasised = isSelected || note != null,
+                emphasized = isSelected || note != null,
                 // The tonic is given, and nothing is editable once checked.
                 onClick = if (index > 0 && selected != null) ({ onSelect(index) }) else null,
                 modifier = Modifier.semantics {
@@ -248,7 +248,7 @@ private fun Slot(
     container: Color,
     content: Color,
     border: Color,
-    emphasised: Boolean,
+    emphasized: Boolean,
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
@@ -269,7 +269,7 @@ private fun Slot(
             )
         }
     }
-    val stroke = BorderStroke(if (emphasised) 2.dp else 1.dp, border)
+    val stroke = BorderStroke(if (emphasized) 2.dp else 1.dp, border)
     if (onClick != null) {
         Surface(
             onClick = onClick,

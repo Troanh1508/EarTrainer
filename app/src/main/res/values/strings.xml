@@ -2,7 +2,7 @@
     <string name="app_name">Ear Trainer</string>
 
     <!-- Home -->
-    <string name="home_tagline">Train your ears to recognise what you hear.</string>
+    <string name="home_tagline">Train your ears to recognize what you hear.</string>
     <string name="home_intervals_title">Interval Training</string>
     <string name="home_intervals_description">Hear two notes and name the distance between them.</string>
     <string name="home_chords_title">Chord Training</string>
@@ -16,7 +16,7 @@
     <string name="home_rhythm_title">Rhythm</string>
     <string name="home_rhythm_description">Hear a rhythm and pick the matching notation.</string>
     <string name="home_progress_title">Your Progress</string>
-    <string name="home_progress_description">See how accurately you recognise what you hear in each exercise.</string>
+    <string name="home_progress_description">See how accurately you recognize what you hear in each exercise.</string>
     <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
     <string name="home_sound_credit">Piano sound: Upright Piano KW from FreePats (CC0).</string>
 
@@ -117,7 +117,7 @@
     <string name="degree_settings_degrees_title">Notes to identify</string>
     <string name="degree_settings_degrees_description">Only the seven notes of the key, or every note including chromatic ones.</string>
     <string name="settings_key_title">Key</string>
-    <string name="settings_key_description">Practise in one familiar key, or a new key each question.</string>
+    <string name="settings_key_description">Practice in one familiar key, or a new key each question.</string>
     <string name="settings_context_title">How the key is set</string>
     <string name="settings_context_description">Played before each note so you can hear where home is.</string>
 
@@ -183,7 +183,7 @@
     <string name="progress_by_chord">By chord, after the opening tonic</string>
     <string name="progress_by_note">By note, after the opening tonic</string>
     <string name="progress_by_rhythm">By rhythm figure</string>
-    <string name="progress_not_practised">Not practised yet</string>
+    <string name="progress_not_practiced">Not practiced yet</string>
     <string name="progress_answer_score">%1$d of %2$d · %3$s</string>
     <string name="progress_recent_sessions">Recent sessions</string>
 

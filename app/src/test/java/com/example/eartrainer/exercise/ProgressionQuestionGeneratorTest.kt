@@ -21,7 +21,7 @@ class ProgressionQuestionGeneratorTest {
     private fun ChordProgression.distanceTo(other: ChordProgression) = chords.indices.count { chords[it] != other.chords[it] }
 
     @Test
-    fun catalogueStartsOnTheTonicNeverRepeatsAChordAndUsesOnlyTheVocabulary() {
+    fun catalogStartsOnTheTonicNeverRepeatsAChordAndUsesOnlyTheVocabulary() {
         ChordVocabulary.entries.forEach { vocabulary ->
             ProgressionSettings.LENGTH_OPTIONS.forEach { length ->
                 val all = ProgressionQuestionGenerator.allProgressions(Mode.MAJOR, vocabulary, length)

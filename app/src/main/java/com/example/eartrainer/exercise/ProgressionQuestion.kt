@@ -77,7 +77,7 @@ class ProgressionQuestionGenerator(
     private val weightOf: ((DiatonicChord) -> Double)? = null,
 ) {
     /** Every allowed progression per mode, computed once; at most 7^4 = 2,401 per mode. */
-    private val catalogue: Map<Mode, List<ChordProgression>> = settings.modes.associateWith { mode ->
+    private val catalog: Map<Mode, List<ChordProgression>> = settings.modes.associateWith { mode ->
         allProgressions(mode, settings.vocabulary, settings.length)
     }
 
@@ -89,7 +89,7 @@ class ProgressionQuestionGenerator(
     fun generate(): ProgressionQuestion {
         val mode = settings.modes.random(random)
         val tonic = settings.keyChoice.pickTonic(random)
-        val everything = catalogue.getValue(mode)
+        val everything = catalog.getValue(mode)
         // Falls back to random progressions if no common one fits the chosen chords and length.
         val preferred = common.getValue(mode).ifEmpty { everything }
         // A progression is as likely as its chords are weak on average; the opening tonic is given.

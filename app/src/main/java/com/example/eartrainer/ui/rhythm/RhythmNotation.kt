@@ -112,7 +112,7 @@ private class NotationGlyphs(private val scope: DrawScope, private val color: Co
         stemX
     }
 
-    /** One beam across all stems; a second beam joins neighbouring sixteenths. */
+    /** One beam across all stems; a second beam joins neighboring sixteenths. */
     fun beams(stems: List<Pair<Float, Double>>) = with(scope) {
         val left = stems.first().first - stemWidth / 2
         val right = stems.last().first + stemWidth / 2
@@ -134,7 +134,7 @@ private class NotationGlyphs(private val scope: DrawScope, private val color: Co
         drawPath(path, color, style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
     }
 
-    /** A stylised quarter rest: a zig-zag with a hooked tail, centred on the staff line. */
+    /** A stylized quarter rest: a zig-zag with a hooked tail, centered on the staff line. */
     fun quarterRest(x: Float) = with(scope) {
         val path = Path().apply {
             moveTo(x - 2 * unit, staffY - 13 * unit)
@@ -146,7 +146,7 @@ private class NotationGlyphs(private val scope: DrawScope, private val color: Co
         drawPath(path, color, style = Stroke(width = 2.4f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 
-    /** A stylised eighth rest: a dot with a slanted stroke. */
+    /** A stylized eighth rest: a dot with a slanted stroke. */
     fun eighthRest(x: Float) = with(scope) {
         drawCircle(color, radius = 2.2f * unit, center = Offset(x - 2.5f * unit, staffY - 6 * unit))
         val path = Path().apply {

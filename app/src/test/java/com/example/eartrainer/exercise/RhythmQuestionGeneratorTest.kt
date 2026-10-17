@@ -117,10 +117,10 @@ class RhythmQuestionGeneratorTest {
 
     @Test
     fun weakCellsAppearMoreOften() {
-        val favourRest: (RhythmCell) -> Double = { if (it == RhythmCell.QUARTER_REST) 10.0 else 0.2 }
+        val favorRest: (RhythmCell) -> Double = { if (it == RhythmCell.QUARTER_REST) 10.0 else 0.2 }
         fun restShare(questions: List<RhythmQuestion>) =
             questions.flatMap { it.rhythm.cells }.let { cells -> cells.count { it == RhythmCell.QUARTER_REST }.toDouble() / cells.size }
-        assertTrue(restShare(generate(RhythmSettings(), weights = favourRest)) > restShare(generate(RhythmSettings())) * 1.5)
+        assertTrue(restShare(generate(RhythmSettings(), weights = favorRest)) > restShare(generate(RhythmSettings())) * 1.5)
     }
 
     @Test

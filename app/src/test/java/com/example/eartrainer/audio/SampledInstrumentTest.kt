@@ -59,7 +59,7 @@ class SampledInstrumentTest {
     }
 
     @Test
-    fun neighbouringNotesArePitchShiftedFromTheNearestRecording() {
+    fun neighboringNotesArePitchShiftedFromTheNearestRecording() {
         val bank = SampleBank(listOf(sineSample(57), sineSample(60), sineSample(63)))
         for (midi in listOf(58, 59, 61, 62)) {
             val s = schedule(ListeningPrompt.sequential(listOf(Pitch(midi))))
@@ -94,7 +94,7 @@ class SampledInstrumentTest {
     }
 
     @Test
-    fun recordingsAreLevelledAndChordsStayWithinHeadroom() {
+    fun recordingsAreLeveledAndChordsStayWithinHeadroom() {
         val quiet = sineSample(60, amplitude = 0.1)
         val loud = sineSample(64, amplitude = 0.9)
         val renderer = SampledInstrumentRenderer(SampleBank(listOf(quiet, loud)), headroom = 0.8)

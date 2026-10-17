@@ -13,7 +13,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * FreePats "Upright Piano KW" (small), CC0 public domain; see the README and licence next to
+ * FreePats "Upright Piano KW" (small), CC0 public domain; see the README and license next to
  * the recordings in assets. Recorded roughly every minor third; the root pitches come from the
  * sound bank's SFZ map.
  */

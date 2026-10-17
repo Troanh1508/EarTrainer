@@ -43,7 +43,7 @@ internal fun SettingsSection(
     }
 }
 
-/** Selected chips show a check mark so their state never relies on colour alone. */
+/** Selected chips show a check mark so their state never relies on color alone. */
 @Composable
 internal fun SettingsChip(label: String, selected: Boolean, onClick: () -> Unit) {
     FilterChip(
@@ -59,7 +59,7 @@ internal fun SettingsChip(label: String, selected: Boolean, onClick: () -> Unit)
 }
 
 
-/** A labelled switch; the whole row toggles it, which gives a large touch target. */
+/** A labeled switch; the whole row toggles it, which gives a large touch target. */
 @Composable
 internal fun SettingsSwitch(
     title: String,

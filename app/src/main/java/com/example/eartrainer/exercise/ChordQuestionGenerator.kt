@@ -30,7 +30,7 @@ data class ChordExerciseSettings(
     fun inversionsFor(quality: ChordQuality): List<ChordInversion> =
         if (target == ChordTarget.INVERSION || includeInversions) quality.inversions else listOf(ChordInversion.ROOT_POSITION)
 
-    /** Adds or removes [quality], refusing to drop below [MIN_QUALITIES]. Keeps catalogue order. */
+    /** Adds or removes [quality], refusing to drop below [MIN_QUALITIES]. Keeps catalog order. */
     fun withQualityToggled(quality: ChordQuality): ChordExerciseSettings = when {
         quality !in qualities -> copy(qualities = ChordQuality.entries.filter { it in qualities || it == quality })
         qualities.size > MIN_QUALITIES -> copy(qualities = qualities - quality)

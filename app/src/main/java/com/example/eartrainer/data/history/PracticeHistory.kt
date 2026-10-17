@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
 
 /** How often one answer value (an interval, a chord quality, ...) was identified correctly. */
 data class AnswerAccuracy<T>(val item: T, val attempts: Int, val correct: Int) {
-    /** Fraction correct, or null when it has not been practised. */
+    /** Fraction correct, or null when it has not been practiced. */
     val accuracy: Float? get() = if (attempts == 0) null else correct.toFloat() / attempts
 }
 
@@ -65,16 +65,16 @@ interface PracticeHistory {
     /** Saves [attempt] in the background. The write completes even if the calling screen closes. */
     fun record(attempt: RhythmAttempt)
 
-    /** Accuracy for every interval, including unpractised ones; [style] null means all styles. */
+    /** Accuracy for every interval, including unpracticed ones; [style] null means all styles. */
     fun intervalAccuracy(style: IntervalStyle?): Flow<List<AnswerAccuracy<Interval>>>
 
     /**
      * Accuracy for every possible answer to chord questions with [target]: each quality, or
-     * each inversion. Unpractised answers are included with zero attempts.
+     * each inversion. Unpracticed answers are included with zero attempts.
      */
     fun chordAccuracy(target: ChordTarget): Flow<List<AnswerAccuracy<ChordAnswer>>>
 
-    /** Accuracy for every scale degree, including unpractised ones; [mode] null means all modes. */
+    /** Accuracy for every scale degree, including unpracticed ones; [mode] null means all modes. */
     fun scaleDegreeAccuracy(mode: Mode?): Flow<List<AnswerAccuracy<ScaleDegree>>>
 
     /**
@@ -115,7 +115,7 @@ interface PracticeHistory {
 
 class RoomPracticeHistory(
     private val database: EarTrainerDatabase,
-    /** Application-lifetime scope, so writes are not cancelled with a ViewModel. */
+    /** Application-lifetime scope, so writes are not canceled with a ViewModel. */
     private val writeScope: CoroutineScope,
 ) : PracticeHistory {
 

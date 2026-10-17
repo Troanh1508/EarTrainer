@@ -96,10 +96,10 @@ class DictationQuestionGeneratorTest {
 
     @Test
     fun weakDegreesAppearMoreOften() {
-        val favourSixth: (ScaleDegree) -> Double = { if (it == ScaleDegree.SIXTH) 10.0 else 0.2 }
+        val favorSixth: (ScaleDegree) -> Double = { if (it == ScaleDegree.SIXTH) 10.0 else 0.2 }
         fun sixthShare(questions: List<DictationQuestion>) =
             questions.flatMap { it.melody.degrees.drop(1) }.let { notes -> notes.count { it == ScaleDegree.SIXTH }.toDouble() / notes.size }
-        val weighted = sixthShare(generate(DictationSettings(), weights = favourSixth))
+        val weighted = sixthShare(generate(DictationSettings(), weights = favorSixth))
         val uniform = sixthShare(generate(DictationSettings()))
         assertTrue("weighted $weighted vs uniform $uniform", weighted > uniform * 2)
     }

@@ -55,7 +55,7 @@ class SampleBank(samples: List<InstrumentSample>) {
 /**
  * Plays notes from recorded samples. Each note reads the nearest recording at a rate that both
  * shifts it to the requested pitch and converts its sample rate to the output rate, so one
- * recording serves the neighbouring semitones.
+ * recording serves the neighboring semitones.
  */
 class SampledInstrumentRenderer(
     private val bank: SampleBank,
@@ -73,7 +73,7 @@ class SampledInstrumentRenderer(
     override fun render(schedule: NoteSchedule): ShortArray {
         val outputRate = schedule.sampleRate
         val mix = DoubleArray(schedule.totalFrames)
-        // Same gain staging as the synthesizer: normalised recordings divided across voices can
+        // Same gain staging as the synthesizer: normalized recordings divided across voices can
         // never sum past full scale.
         val voiceGain = headroom / schedule.maxPolyphony
         val fadeInFrames = (FADE_IN_SECONDS * outputRate).roundToInt().coerceAtLeast(1)

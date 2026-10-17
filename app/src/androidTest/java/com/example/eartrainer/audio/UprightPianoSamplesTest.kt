@@ -76,9 +76,9 @@ class UprightPianoSamplesTest {
         val best = scores.maxBy { it.value }.key
         // Parabolic interpolation around the best lag for sub-sample precision.
         val left = scores[best - 1] ?: correlation(best - 1)
-        val centre = scores.getValue(best)
+        val center = scores.getValue(best)
         val right = scores[best + 1] ?: correlation(best + 1)
-        val offset = 0.5 * (left - right) / (left - 2 * centre + right)
+        val offset = 0.5 * (left - right) / (left - 2 * center + right)
         return sampleRate / (best + offset)
     }
 }

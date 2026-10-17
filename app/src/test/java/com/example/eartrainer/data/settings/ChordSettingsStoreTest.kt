@@ -33,7 +33,7 @@ class ChordSettingsStoreTest {
     }
 
     @Test
-    fun qualitiesComeBackInCatalogueOrderAndUnknownValuesAreIgnored() {
+    fun qualitiesComeBackInCatalogOrderAndUnknownValuesAreIgnored() {
         val decoded = ChordSettingsStore.decode(
             preferencesOf(
                 stringSetPreferencesKey("chord_training.qualities") to setOf("MINOR_SEVENTH", "MAJOR", "SUS4"),

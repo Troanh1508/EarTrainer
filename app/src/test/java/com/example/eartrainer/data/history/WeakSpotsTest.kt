@@ -47,7 +47,7 @@ class WeakSpotsTest {
 
         assertTrue(lookup(Interval.MINOR_SIXTH) > WeakSpotWeighting.UNSEEN_WEIGHT)
         assertTrue(lookup(Interval.OCTAVE) < WeakSpotWeighting.UNSEEN_WEIGHT)
-        // Never-practised intervals keep the neutral weight.
+        // Never-practiced intervals keep the neutral weight.
         assertEquals(WeakSpotWeighting.UNSEEN_WEIGHT, lookup(Interval.TRITONE), 1e-12)
     }
 

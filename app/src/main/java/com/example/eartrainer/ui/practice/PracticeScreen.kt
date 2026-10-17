@@ -44,7 +44,7 @@ data class PracticeTexts<A, Q : ExerciseQuestion<A>>(
     val choiceLabel: @Composable (A) -> ChoiceLabel,
     /** What the right answer was, shown after answering. */
     val correctSummary: @Composable (Q) -> String,
-    /** Whether feedback lists the sounded notes; long prompts like progressions summarise them instead. */
+    /** Whether feedback lists the sounded notes; long prompts like progressions summarize them instead. */
     val showNotesAsPlayed: Boolean = true,
     /** How a sounded note is written, e.g. "E♭4" rather than "D♯4" when the question is in a flat key. */
     val noteName: (Q, Pitch) -> String = { _, pitch -> pitch.name },

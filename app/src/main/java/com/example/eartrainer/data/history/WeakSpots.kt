@@ -35,7 +35,7 @@ class WeakSpots(history: PracticeHistory, private val scope: CoroutineScope) {
     companion object {
         /**
          * Only recent answers count, so weights follow current ability: an item that used to be
-         * hard but is now answered reliably stops being favoured.
+         * hard but is now answered reliably stops being favored.
          */
         const val RECENT_ANSWERS = 300
 

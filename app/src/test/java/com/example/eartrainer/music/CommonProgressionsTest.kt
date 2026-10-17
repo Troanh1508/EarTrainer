@@ -16,10 +16,10 @@ class CommonProgressionsTest {
     fun everyEntryIsAValidQuestionStartingOnTheTonicWithoutRepeats() {
         Mode.entries.forEach { mode ->
             lengths.forEach { length ->
-                val catalogue = ProgressionQuestionGenerator.allProgressions(mode, ChordVocabulary.ALL, length).toSet()
+                val catalog = ProgressionQuestionGenerator.allProgressions(mode, ChordVocabulary.ALL, length).toSet()
                 CommonProgressions.forMode(mode, length).forEach { progression ->
-                    // Being in the full catalogue means: right length, starts on the tonic, no chord repeated back to back.
-                    assertTrue("$mode ${progression.label}", progression in catalogue)
+                    // Being in the full catalog means: right length, starts on the tonic, no chord repeated back to back.
+                    assertTrue("$mode ${progression.label}", progression in catalog)
                 }
             }
         }
