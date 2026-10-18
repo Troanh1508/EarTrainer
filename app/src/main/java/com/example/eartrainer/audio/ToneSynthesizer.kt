@@ -9,7 +9,7 @@ import kotlin.math.sin
 /**
  * Amplitude shape of a single note. Raised-cosine attack and release start and end exactly at
  * zero, which is what keeps note boundaries free of clicks. Between them the level decays
- * gently towards [sustainLevel], giving a softer, more instrument-like tone than a flat sine.
+ * gently toward [sustainLevel], giving a softer, more instrument-like tone than a flat sine.
  */
 data class ToneEnvelope(
     val attackSeconds: Double = 0.012,

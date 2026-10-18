@@ -6,7 +6,7 @@ import kotlin.random.Random
 data class ItemResult<T>(val item: T, val isCorrect: Boolean)
 
 /**
- * Turns recent results into selection weights so practice leans towards what the listener gets
+ * Turns recent results into selection weights so practice leans toward what the listener gets
  * wrong. Items are never excluded: even mastered ones keep [MIN_WEIGHT], so they still come up
  * now and then and forgetting is noticed.
  */

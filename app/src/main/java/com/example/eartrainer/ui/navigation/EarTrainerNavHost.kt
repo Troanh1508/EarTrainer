@@ -5,6 +5,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.eartrainer.ui.backup.BackupRoute
+import com.example.eartrainer.ui.backup.BackupViewModel
 import com.example.eartrainer.ui.chords.ChordTrainingRoute
 import com.example.eartrainer.ui.degrees.ScaleDegreeTrainingRoute
 import com.example.eartrainer.ui.dictation.DictationTrainingRoute
@@ -42,6 +44,7 @@ private object Routes {
     const val RHYTHM_TRAINING = "rhythm-training"
     const val RHYTHM_SETTINGS = "rhythm-settings"
     const val PROGRESS = "progress"
+    const val BACKUP = "backup"
 }
 
 @Composable
@@ -57,6 +60,7 @@ fun EarTrainerNavHost() {
                 onOpenDictationTraining = { navController.navigate(Routes.DICTATION_TRAINING) },
                 onOpenRhythmTraining = { navController.navigate(Routes.RHYTHM_TRAINING) },
                 onOpenProgress = { navController.navigate(Routes.PROGRESS) },
+                onOpenBackup = { navController.navigate(Routes.BACKUP) },
             )
         }
         composable(Routes.INTERVAL_TRAINING) {
@@ -122,6 +126,10 @@ fun EarTrainerNavHost() {
         composable(Routes.PROGRESS) {
             val viewModel: ProgressViewModel = viewModel(factory = ProgressViewModel.Factory)
             ProgressRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
+        }
+        composable(Routes.BACKUP) {
+            val viewModel: BackupViewModel = viewModel(factory = BackupViewModel.Factory)
+            BackupRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
         }
     }
 }

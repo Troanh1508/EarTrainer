@@ -10,6 +10,10 @@ import com.example.eartrainer.audio.AudioTrackPlayer
 import com.example.eartrainer.audio.PcmRenderer
 import com.example.eartrainer.audio.SampledInstrumentRenderer
 import com.example.eartrainer.audio.ToneSynthesizer
+import com.example.eartrainer.data.backup.AppDataBackup
+import com.example.eartrainer.data.backup.ContentResolverDocuments
+import com.example.eartrainer.data.backup.DocumentStreams
+import com.example.eartrainer.data.backup.RoomDataBackup
 import com.example.eartrainer.data.history.EarTrainerDatabase
 import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.RoomPracticeHistory
@@ -54,6 +58,11 @@ class AppContainer(private val context: Context) {
     val dictationSettings by lazy { DictationSettingsStore(context.settingsDataStore) }
 
     val rhythmSettings by lazy { RhythmSettingsStore(context.settingsDataStore) }
+
+    /** Export and import of history and settings; Auto Backup needs no code, only the backup rules. */
+    val dataBackup: AppDataBackup by lazy { RoomDataBackup(database, context.settingsDataStore) }
+
+    val documents: DocumentStreams by lazy { ContentResolverDocuments(context.contentResolver) }
 
     /**
      * The piano is decoded once per process, in the background, and shared by every player.

@@ -55,7 +55,7 @@ data class DictationSettings(
     val length: Int = 4,
     val keyChoice: KeyChoice = KeyChoice.RANDOM,
     val context: KeyContext = KeyContext.CADENCE,
-    /** Steer melodies towards degrees recently written down wrongly. */
+    /** Steer melodies toward degrees recently written down wrongly. */
     val focusOnWeakSpots: Boolean = true,
 ) {
     init {

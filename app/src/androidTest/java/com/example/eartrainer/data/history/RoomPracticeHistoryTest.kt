@@ -112,7 +112,7 @@ class RoomPracticeHistoryTest {
         val qualities = history.chordAccuracy(ChordTarget.QUALITY).first()
         assertEquals(ChordQuality.entries.map { ChordAnswer.Quality(it) }, qualities.map { it.item })
         assertEquals(2, qualities.single { it.item == ChordAnswer.Quality(ChordQuality.MINOR) }.attempts)
-        // The inversion question is not counted towards its chord's quality.
+        // The inversion question is not counted toward its chord's quality.
         assertEquals(0, qualities.single { it.item == ChordAnswer.Quality(ChordQuality.DOMINANT_SEVENTH) }.attempts)
 
         val inversions = history.chordAccuracy(ChordTarget.INVERSION).first()

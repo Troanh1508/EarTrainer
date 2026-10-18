@@ -8,14 +8,23 @@ import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
-/** Enum values are stored by name so the database stays readable and reorder-safe. */
+/**
+ * Enum values are stored by name so the database stays readable and reorder-safe.
+ *
+ * The attempt entities double as the backup file format (see BackupFile): renaming or
+ * removing a property breaks importing older backups, so add properties with defaults instead.
+ */
 @Entity(
     tableName = "interval_attempts",
     indices = [Index("session_id"), Index("interval")],
 )
+@Serializable
 data class IntervalAttemptEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    // Left out of backups: imported rows get fresh ids.
+    @Transient @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "session_id") val sessionId: String,
     @ColumnInfo(name = "answered_at") val answeredAtMillis: Long,
     @ColumnInfo(name = "interval") val interval: String,
@@ -32,8 +41,10 @@ data class IntervalAttemptEntity(
     tableName = "chord_attempts",
     indices = [Index("session_id"), Index("target")],
 )
+@Serializable
 data class ChordAttemptEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    // Left out of backups: imported rows get fresh ids.
+    @Transient @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "session_id") val sessionId: String,
     @ColumnInfo(name = "answered_at") val answeredAtMillis: Long,
     @ColumnInfo(name = "quality") val quality: String,
@@ -52,8 +63,10 @@ data class ChordAttemptEntity(
     tableName = "scale_degree_attempts",
     indices = [Index("session_id"), Index("degree")],
 )
+@Serializable
 data class ScaleDegreeAttemptEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    // Left out of backups: imported rows get fresh ids.
+    @Transient @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "session_id") val sessionId: String,
     @ColumnInfo(name = "answered_at") val answeredAtMillis: Long,
     @ColumnInfo(name = "tonic_midi") val tonicMidi: Int,
@@ -71,8 +84,10 @@ data class ScaleDegreeAttemptEntity(
     tableName = "progression_attempts",
     indices = [Index("session_id"), Index("mode")],
 )
+@Serializable
 data class ProgressionAttemptEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    // Left out of backups: imported rows get fresh ids.
+    @Transient @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "session_id") val sessionId: String,
     @ColumnInfo(name = "answered_at") val answeredAtMillis: Long,
     @ColumnInfo(name = "tonic_midi") val tonicMidi: Int,
@@ -92,8 +107,10 @@ data class ProgressionAnswerRow(val progression: String, val answer: String)
     tableName = "dictation_attempts",
     indices = [Index("session_id"), Index("mode")],
 )
+@Serializable
 data class DictationAttemptEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    // Left out of backups: imported rows get fresh ids.
+    @Transient @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "session_id") val sessionId: String,
     @ColumnInfo(name = "answered_at") val answeredAtMillis: Long,
     @ColumnInfo(name = "tonic_midi") val tonicMidi: Int,
@@ -113,8 +130,10 @@ data class MelodyAnswerRow(val melody: String, val answer: String)
     tableName = "rhythm_attempts",
     indices = [Index("session_id")],
 )
+@Serializable
 data class RhythmAttemptEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    // Left out of backups: imported rows get fresh ids.
+    @Transient @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "session_id") val sessionId: String,
     @ColumnInfo(name = "answered_at") val answeredAtMillis: Long,
     @ColumnInfo(name = "tempo") val tempo: String,
@@ -128,7 +147,7 @@ data class RhythmAttemptEntity(
 /** A stored rhythm and the one chosen, as cell-name lists. */
 data class RhythmAnswerRow(val rhythm: String, val answer: String)
 
-/** One recent answer, for weighting practice towards weak spots. */
+/** One recent answer, for weighting practice toward weak spots. */
 data class ItemResultRow(val item: String, val isCorrect: Boolean)
 
 data class ChordResultRow(val target: String, val quality: String, val inversion: String, val isCorrect: Boolean)
@@ -151,6 +170,13 @@ interface IntervalAttemptDao {
     @Insert
     suspend fun insert(attempt: IntervalAttemptEntity)
 
+    @Insert
+    suspend fun insertAll(attempts: List<IntervalAttemptEntity>)
+
+    /** Every stored answer, oldest first, for backups. */
+    @Query("SELECT * FROM interval_attempts ORDER BY answered_at, id")
+    suspend fun all(): List<IntervalAttemptEntity>
+
     /** Totals per interval, optionally limited to one style (null means all styles). */
     @Query(
         """
@@ -170,6 +196,13 @@ interface IntervalAttemptDao {
 interface ChordAttemptDao {
     @Insert
     suspend fun insert(attempt: ChordAttemptEntity)
+
+    @Insert
+    suspend fun insertAll(attempts: List<ChordAttemptEntity>)
+
+    /** Every stored answer, oldest first, for backups. */
+    @Query("SELECT * FROM chord_attempts ORDER BY answered_at, id")
+    suspend fun all(): List<ChordAttemptEntity>
 
     /** Totals per chord quality, for questions that asked for the quality. */
     @Query(
@@ -207,6 +240,13 @@ interface ScaleDegreeAttemptDao {
     @Insert
     suspend fun insert(attempt: ScaleDegreeAttemptEntity)
 
+    @Insert
+    suspend fun insertAll(attempts: List<ScaleDegreeAttemptEntity>)
+
+    /** Every stored answer, oldest first, for backups. */
+    @Query("SELECT * FROM scale_degree_attempts ORDER BY answered_at, id")
+    suspend fun all(): List<ScaleDegreeAttemptEntity>
+
     /** Totals per scale degree, optionally limited to one mode (null means all modes). */
     @Query(
         """
@@ -227,6 +267,13 @@ interface ProgressionAttemptDao {
     @Insert
     suspend fun insert(attempt: ProgressionAttemptEntity)
 
+    @Insert
+    suspend fun insertAll(attempts: List<ProgressionAttemptEntity>)
+
+    /** Every stored answer, oldest first, for backups. */
+    @Query("SELECT * FROM progression_attempts ORDER BY answered_at, id")
+    suspend fun all(): List<ProgressionAttemptEntity>
+
     /** Every answered progression in [mode]; per-chord totals are worked out from these. */
     @Query("SELECT progression, answer FROM progression_attempts WHERE mode = :mode")
     fun answersInMode(mode: String): Flow<List<ProgressionAnswerRow>>
@@ -240,6 +287,13 @@ interface DictationAttemptDao {
     @Insert
     suspend fun insert(attempt: DictationAttemptEntity)
 
+    @Insert
+    suspend fun insertAll(attempts: List<DictationAttemptEntity>)
+
+    /** Every stored answer, oldest first, for backups. */
+    @Query("SELECT * FROM dictation_attempts ORDER BY answered_at, id")
+    suspend fun all(): List<DictationAttemptEntity>
+
     /** Every dictation in [mode]; per-degree totals are worked out from these. */
     @Query("SELECT melody, answer FROM dictation_attempts WHERE mode = :mode")
     fun answersInMode(mode: String): Flow<List<MelodyAnswerRow>>
@@ -252,6 +306,13 @@ interface DictationAttemptDao {
 interface RhythmAttemptDao {
     @Insert
     suspend fun insert(attempt: RhythmAttemptEntity)
+
+    @Insert
+    suspend fun insertAll(attempts: List<RhythmAttemptEntity>)
+
+    /** Every stored answer, oldest first, for backups. */
+    @Query("SELECT * FROM rhythm_attempts ORDER BY answered_at, id")
+    suspend fun all(): List<RhythmAttemptEntity>
 
     /** Every rhythm answer; per-cell totals are worked out from these. */
     @Query("SELECT rhythm, answer FROM rhythm_attempts")

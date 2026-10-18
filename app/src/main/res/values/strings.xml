@@ -17,6 +17,8 @@
     <string name="home_rhythm_description">Hear a rhythm and pick the matching notation.</string>
     <string name="home_progress_title">Your Progress</string>
     <string name="home_progress_description">See how accurately you recognize what you hear in each exercise.</string>
+    <string name="home_backup_title">Backup &amp; Restore</string>
+    <string name="home_backup_description">Keep your history and settings safe, or move them to another device.</string>
     <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
     <string name="home_sound_credit">Piano sound: Upright Piano KW from FreePats (CC0).</string>
 
@@ -188,4 +190,38 @@
     <string name="progress_recent_sessions">Recent sessions</string>
 
     <string name="navigate_back">Back</string>
+
+    <!-- Backup and restore -->
+    <string name="backup_title">Backup &amp; Restore</string>
+    <string name="backup_auto_title">Automatic backup</string>
+    <string name="backup_auto_description">When backup is turned on in your phone settings, Android saves your history and settings to your Google account. They come back when you reinstall Ear Trainer or set up a new phone with the same account.</string>
+    <string name="backup_export_title">Export to a file</string>
+    <string name="backup_export_description">Save all your history and settings in one file. Keep it somewhere safe, or use it to move to another device, even one without a Google account.</string>
+    <string name="backup_export_button">Export</string>
+    <string name="backup_import_title">Import from a file</string>
+    <string name="backup_import_description">Add the history from an exported file to this device. Answers that are already here are not added twice. Your settings are replaced by the ones in the file.</string>
+    <string name="backup_import_button">Import</string>
+    <string name="backup_file_name" translatable="false">ear-trainer-backup-%1$s.json</string>
+    <plurals name="backup_exported">
+        <item quantity="one">Exported %d answer and your settings.</item>
+        <item quantity="other">Exported %d answers and your settings.</item>
+    </plurals>
+    <plurals name="backup_imported">
+        <item quantity="one">Imported %d new answer.</item>
+        <item quantity="other">Imported %d new answers.</item>
+    </plurals>
+    <plurals name="backup_imported_already_present">
+        <item quantity="one">%d was already here.</item>
+        <item quantity="other">%d were already here.</item>
+    </plurals>
+    <plurals name="backup_imported_unreadable">
+        <item quantity="one">%d could not be read and was skipped.</item>
+        <item quantity="other">%d could not be read and were skipped.</item>
+    </plurals>
+    <string name="backup_imported_settings">Settings restored.</string>
+    <string name="backup_export_failed">Could not save the file. Try another location.</string>
+    <string name="backup_import_failed">Could not open that file.</string>
+    <string name="backup_not_a_backup">That file is not an Ear Trainer backup.</string>
+    <string name="backup_newer_version">That backup was made by a newer version of Ear Trainer. Update the app, then try again.</string>
+    <string name="backup_too_large">That file is too large to be an Ear Trainer backup.</string>
 </resources>
