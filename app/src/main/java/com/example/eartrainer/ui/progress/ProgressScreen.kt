@@ -4,6 +4,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
@@ -21,7 +23,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
@@ -37,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,7 +51,7 @@ import com.example.eartrainer.music.Interval
 import com.example.eartrainer.ui.theme.EarTrainerTheme
 import java.text.DateFormat
 import java.util.Date
-import kotlin.math.roundToInt
+import kotlin.math.absoluteValue
 
 @Composable
 fun ProgressRoute(viewModel: ProgressViewModel, onNavigateUp: () -> Unit) {
@@ -109,6 +111,7 @@ private fun ProgressContent(
     onFilterSelected: (ProgressFilter) -> Unit,
     innerPadding: PaddingValues,
 ) {
+    val cardModifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = 16.dp)
     val itemModifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = 24.dp)
     Column(Modifier.padding(top = innerPadding.calculateTopPadding()).fillMaxSize()) {
         ExerciseTabs(state.exercise, onExerciseSelected)
@@ -122,9 +125,9 @@ private fun ProgressContent(
             if (state.filterOptions.size > 1) {
                 item { FilterRow(state, onFilterSelected, Modifier.widthIn(max = 560.dp).fillMaxWidth()) }
             }
-            item { OverallCard(state, itemModifier) }
-            item { SectionTitle(accuracyTitle(state.filter), itemModifier) }
-            items(state.accuracy, key = { it.label }) { AccuracyRow(it, itemModifier) }
+            item { OverviewCard(state, cardModifier) }
+            item { TrendCard(state.trend, cardModifier) }
+            item { AccuracyCard(state, cardModifier) }
             item { SectionTitle(stringResource(R.string.progress_recent_sessions), itemModifier.padding(top = 12.dp)) }
             items(state.recentSessions, key = { it.sessionId }) { SessionRow(it, itemModifier) }
         }
@@ -199,67 +202,120 @@ private fun FilterRow(state: ProgressUiState, onSelected: (ProgressFilter) -> Un
 }
 
 @Composable
-private fun OverallCard(state: ProgressUiState, modifier: Modifier = Modifier) {
+private fun ChartCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = modifier,
     ) {
-        Column(Modifier.padding(20.dp).semantics(mergeDescendants = true) {}) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
+    }
+}
+
+/** A card title with a short note at the end of the line. */
+@Composable
+private fun CardHeader(title: String, note: String?) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        if (note != null) {
             Text(
-                state.overallAccuracy?.let { percent(it) } ?: "—",
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-            Text(
-                if (state.totalAttempts == 0) {
-                    stringResource(R.string.progress_no_answers_for_filter)
-                } else {
-                    // Progressions and dictations are scored chord by chord or note by note.
-                    val counted = when (state.exercise) {
-                        ExerciseKind.PROGRESSIONS -> R.plurals.progress_overall_chords
-                        ExerciseKind.DICTATION -> R.plurals.progress_overall_notes
-                        ExerciseKind.RHYTHM -> R.plurals.progress_overall_figures
-                        else -> R.plurals.progress_overall
-                    }
-                    pluralStringResource(counted, state.totalAttempts, state.totalCorrect, state.totalAttempts)
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                note,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun OverviewCard(state: ProgressUiState, modifier: Modifier = Modifier) {
+    // Progressions, dictations and rhythms are scored chord by chord, note by note or figure by figure.
+    val (summary, unit) = when (state.exercise) {
+        ExerciseKind.PROGRESSIONS -> R.plurals.progress_overall_chords to R.plurals.progress_unit_chords
+        ExerciseKind.DICTATION -> R.plurals.progress_overall_notes to R.plurals.progress_unit_notes
+        ExerciseKind.RHYTHM -> R.plurals.progress_overall_figures to R.plurals.progress_unit_figures
+        else -> R.plurals.progress_overall to R.plurals.progress_unit_answers
+    }
+    val description = if (state.totalAttempts == 0) {
+        stringResource(R.string.progress_no_answers_for_filter)
+    } else {
+        pluralStringResource(summary, state.totalAttempts, state.totalCorrect, state.totalAttempts)
+    }
+    ChartCard(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            AccuracyDonut(state.overallAccuracy, description)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (state.totalAttempts == 0) {
+                    Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Column(Modifier.semantics(mergeDescendants = true) {}) {
+                        Text("${state.totalAttempts}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text(
+                            pluralStringResource(unit, state.totalAttempts),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                state.trendChange?.let { TrendChangePill(it) }
+            }
+        }
+    }
+}
+
+/** How the newer half of the recent sessions compares with the older half. */
+@Composable
+private fun TrendChangePill(change: Int) {
+    val improved = change > 0
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (improved) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+        contentColor = if (improved) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+    ) {
+        Text(
+            when {
+                change > 0 -> pluralStringResource(R.plurals.progress_change_up, change, change)
+                change < 0 -> pluralStringResource(R.plurals.progress_change_down, change.absoluteValue, change.absoluteValue)
+                else -> stringResource(R.string.progress_change_steady)
+            },
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun TrendCard(trend: List<SessionSummary>, modifier: Modifier = Modifier) {
+    ChartCard(modifier) {
+        CardHeader(
+            stringResource(R.string.progress_trend_title),
+            if (trend.isEmpty()) null else pluralStringResource(R.plurals.progress_trend_window, trend.size, trend.size),
+        )
+        if (trend.size >= 2) {
+            AccuracyTrendChart(trend)
+        } else {
+            Text(
+                stringResource(R.string.progress_trend_needs_more),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AccuracyCard(state: ProgressUiState, modifier: Modifier = Modifier) {
+    ChartCard(modifier) {
+        CardHeader(accuracyTitle(state.filter), stringResource(R.string.progress_weakest_first))
+        state.weakestFirst.forEach { AccuracyBarRow(it) }
+        if (state.totalAttempts > 0) AccuracyLegend()
     }
 }
 
 @Composable
 private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(text, style = MaterialTheme.typography.titleMedium, modifier = modifier)
-}
-
-@Composable
-private fun AccuracyRow(item: AccuracyItem, modifier: Modifier = Modifier) {
-    val accuracy = item.accuracy
-    Column(modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(item.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Text(
-                if (accuracy == null) {
-                    stringResource(R.string.progress_not_practiced)
-                } else {
-                    stringResource(R.string.progress_answer_score, item.correct, item.attempts, percent(accuracy))
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        // No bar for unpracticed answers, so they never look like a 0% score.
-        if (accuracy != null) {
-            LinearProgressIndicator(
-                progress = { accuracy },
-                modifier = Modifier.fillMaxWidth(),
-                drawStopIndicator = {},
-            )
-        }
-    }
 }
 
 @Composable
@@ -282,9 +338,7 @@ private fun SessionRow(session: SessionSummary, modifier: Modifier = Modifier) {
     }
 }
 
-private fun percent(fraction: Float) = "${(fraction * 100).roundToInt()}%"
-
-@Preview(showBackground = true)
+@Preview(showBackground = true, heightDp = 1400)
 @Composable
 private fun ProgressPreview() {
     EarTrainerTheme {
@@ -299,6 +353,9 @@ private fun ProgressPreview() {
                     SessionSummary("a", ExerciseKind.CHORDS, 1_760_000_000_000, 12, 9),
                     SessionSummary("b", ExerciseKind.INTERVALS, 1_759_900_000_000, 8, 5),
                 ),
+                trend = listOf(6, 7, 6, 8, 7, 9).mapIndexed { index, correct ->
+                    SessionSummary("t$index", ExerciseKind.INTERVALS, 1_759_000_000_000 + index * 86_400_000L, 10, correct)
+                },
             ),
             onExerciseSelected = {},
             onFilterSelected = {},

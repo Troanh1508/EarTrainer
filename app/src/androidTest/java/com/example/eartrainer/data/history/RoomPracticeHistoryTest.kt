@@ -182,6 +182,14 @@ class RoomPracticeHistoryTest {
             history.recentSessions(limit = 2).first(),
         )
         assertEquals(SessionSummary("old", ExerciseKind.INTERVALS, 1_000, 2, 1), history.recentSessions(limit = 10).first().last())
+
+        // Limited to one exercise, the limit counts only that exercise's sessions.
+        assertEquals(
+            listOf("new", "old"),
+            history.recentSessions(limit = 2, exercise = ExerciseKind.INTERVALS).first().map { it.sessionId },
+        )
+        assertEquals(listOf("mid"), history.recentSessions(limit = 10, exercise = ExerciseKind.CHORDS).first().map { it.sessionId })
+        assertEquals(emptyList<SessionSummary>(), history.recentSessions(limit = 10, exercise = ExerciseKind.RHYTHM).first())
     }
 
     @Test

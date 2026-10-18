@@ -3,6 +3,7 @@ package com.example.eartrainer.ui.progress
 import com.example.eartrainer.exercise.ChordAnswer
 import com.example.eartrainer.exercise.ChordAttempt
 import com.example.eartrainer.exercise.ChordStyle
+import com.example.eartrainer.data.history.SessionSummary
 import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.DictationAttempt
 import com.example.eartrainer.exercise.ExerciseKind
@@ -208,6 +209,56 @@ class ProgressViewModelTest {
         assertEquals(AccuracyItem("Half", attempts = 1, correct = 1), state.accuracy.single { it.label == "Half" })
         assertEquals(3, state.totalAttempts)
         assertEquals(2, state.totalCorrect)
+    }
+
+    @Test
+    fun trendHoldsTheSelectedExercisesLatestSessionsOldestFirst() = runTest {
+        // 14 interval sessions, one answer each, plus a chord session in between.
+        repeat(14) { index ->
+            history.record(interval("i$index", 1_000L * (index + 1), Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = index % 2 == 0))
+        }
+        history.record(chord("c", 5_500, ChordQuality.MAJOR, ChordInversion.ROOT_POSITION, ChordTarget.QUALITY, correct = true))
+        val viewModel = ProgressViewModel(history).also { collected(it) }
+
+        val trend = viewModel.state.trend
+        assertEquals(ProgressViewModel.TREND_SESSION_LIMIT, trend.size)
+        assertEquals((2 until 14).map { "i$it" }, trend.map { it.sessionId })
+
+        viewModel.onExerciseSelected(ExerciseKind.CHORDS)
+        assertEquals(listOf("c"), viewModel.state.trend.map { it.sessionId })
+    }
+
+    @Test
+    fun trendChangeComparesTheNewerHalfWithTheOlderHalf() {
+        fun state(vararg correctOutOfTen: Int) = ProgressUiState(
+            filter = ProgressFilter.IntervalStyleFilter(null),
+            accuracy = emptyList(),
+            recentSessions = emptyList(),
+            trend = correctOutOfTen.mapIndexed { index, correct -> SessionSummary("s$index", ExerciseKind.INTERVALS, index.toLong(), 10, correct) },
+        )
+        assertNull(state(5, 6, 7).trendChange)
+        // Older half 50% and 60% pools to 55%; newer 80% and 90% to 85%.
+        assertEquals(30, state(5, 6, 8, 9).trendChange)
+        // With an odd count the middle session belongs to neither half.
+        assertEquals(-20, state(8, 8, 1, 6, 6).trendChange)
+        assertEquals(0, state(7, 7, 7, 7).trendChange)
+    }
+
+    @Test
+    fun weakestFirstSortsPracticedItemsByAccuracyThenLeavesUnpracticedLast() {
+        val state = ProgressUiState(
+            filter = ProgressFilter.IntervalStyleFilter(null),
+            accuracy = listOf(
+                AccuracyItem("Never", 0, 0),
+                AccuracyItem("Strong", 10, 9),
+                AccuracyItem("Weak, few", 2, 1),
+                AccuracyItem("Weak, many", 10, 5),
+                AccuracyItem("Also never", 0, 0),
+            ),
+            recentSessions = emptyList(),
+        )
+        assertEquals(listOf("Weak, many", "Weak, few", "Strong", "Never", "Also never"), state.weakestFirst.map { it.label })
+        assertEquals(listOf(false, false, true, true, false), state.accuracy.map { it.needsWork })
     }
 
     @Test

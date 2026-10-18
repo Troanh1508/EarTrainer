@@ -92,8 +92,11 @@ interface PracticeHistory {
     /** How often each rhythm cell was heard correctly, counted per cell of every rhythm asked. */
     fun rhythmAccuracy(): Flow<List<AnswerAccuracy<RhythmCell>>>
 
-    /** Most recent sessions of any exercise first. Sessions without answers are not recorded. */
-    fun recentSessions(limit: Int): Flow<List<SessionSummary>>
+    /**
+     * Most recent sessions first, of every exercise or only [exercise]. Sessions without answers
+     * are not recorded.
+     */
+    fun recentSessions(limit: Int, exercise: ExerciseKind? = null): Flow<List<SessionSummary>>
 
     /** The latest [limit] interval answers, newest first, for weighting practice. */
     fun recentIntervalResults(limit: Int): Flow<List<ItemResult<Interval>>>
@@ -173,8 +176,8 @@ class RoomPracticeHistory(
             }
             .flowOn(Dispatchers.Default)
 
-    override fun recentSessions(limit: Int): Flow<List<SessionSummary>> =
-        database.sessionDao().recentSessions(limit).map { rows ->
+    override fun recentSessions(limit: Int, exercise: ExerciseKind?): Flow<List<SessionSummary>> =
+        database.sessionDao().recentSessions(limit, exercise?.name).map { rows ->
             rows.mapNotNull { row ->
                 val exercise = ExerciseKind.entries.find { it.name == row.exercise } ?: return@mapNotNull null
                 SessionSummary(row.sessionId, exercise, row.startedAtMillis, row.attempts, row.correct)

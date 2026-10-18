@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlin.math.roundToInt
 
 /** What the accuracy list shows; each exercise has its own kind of filter. */
 sealed interface ProgressFilter {
@@ -73,12 +74,21 @@ sealed interface ProgressFilter {
 /** One row of the accuracy list, ready to display. */
 data class AccuracyItem(val label: String, val attempts: Int, val correct: Int) {
     val accuracy: Float? get() = if (attempts == 0) null else correct.toFloat() / attempts
+
+    /** Practiced, but answered correctly less often than [WEAK_THRESHOLD]. */
+    val needsWork: Boolean get() = accuracy?.let { it < WEAK_THRESHOLD } ?: false
+
+    companion object {
+        const val WEAK_THRESHOLD = 0.65f
+    }
 }
 
 data class ProgressUiState(
     val filter: ProgressFilter,
     val accuracy: List<AccuracyItem>,
     val recentSessions: List<SessionSummary>,
+    /** The selected exercise's latest sessions, oldest first, for the accuracy-over-time chart. */
+    val trend: List<SessionSummary> = emptyList(),
 ) {
     val exercise: ExerciseKind get() = filter.exercise
     val filterOptions: List<ProgressFilter> get() = ProgressFilter.optionsFor(exercise)
@@ -88,6 +98,29 @@ data class ProgressUiState(
 
     /** Whether anything has ever been recorded, regardless of the current exercise or filter. */
     val hasHistory: Boolean get() = recentSessions.isNotEmpty()
+
+    /** Practiced items from least to most accurate (more answers first on a tie), then unpracticed ones. */
+    val weakestFirst: List<AccuracyItem>
+        get() {
+            val (practiced, unpracticed) = accuracy.partition { it.attempts > 0 }
+            return practiced.sortedWith(compareBy<AccuracyItem> { it.accuracy }.thenByDescending { it.attempts }) + unpracticed
+        }
+
+    /**
+     * Change in percentage points between the older and the newer half of [trend], each half
+     * pooled over all its answers; null until there are enough sessions to compare.
+     */
+    val trendChange: Int?
+        get() {
+            if (trend.size < MIN_SESSIONS_FOR_CHANGE) return null
+            val half = trend.size / 2
+            fun List<SessionSummary>.pooled() = sumOf { it.correct }.toFloat() / sumOf { it.attempts }
+            return ((trend.takeLast(half).pooled() - trend.take(half).pooled()) * 100).roundToInt()
+        }
+
+    companion object {
+        const val MIN_SESSIONS_FOR_CHANGE = 4
+    }
 }
 
 class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
@@ -97,8 +130,12 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<ProgressUiState?> = filter
         .flatMapLatest { selected ->
-            combine(accuracyFor(selected), history.recentSessions(RECENT_SESSION_LIMIT)) { accuracy, sessions ->
-                ProgressUiState(selected, accuracy, sessions)
+            combine(
+                accuracyFor(selected),
+                history.recentSessions(RECENT_SESSION_LIMIT),
+                history.recentSessions(TREND_SESSION_LIMIT, selected.exercise),
+            ) { accuracy, sessions, trend ->
+                ProgressUiState(selected, accuracy, sessions, trend = trend.asReversed())
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initialValue = null)
@@ -130,6 +167,7 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
 
     companion object {
         const val RECENT_SESSION_LIMIT = 10
+        const val TREND_SESSION_LIMIT = 12
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

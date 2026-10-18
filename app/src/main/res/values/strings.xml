@@ -188,7 +188,44 @@
     <string name="progress_by_note">By note, after the opening tonic</string>
     <string name="progress_by_rhythm">By rhythm figure</string>
     <string name="progress_not_practiced">Not practiced yet</string>
-    <string name="progress_answer_score">%1$d of %2$d · %3$s</string>
+    <string name="progress_correct_label">correct</string>
+    <string name="progress_item_score">%1$d of %2$d</string>
+    <plurals name="progress_unit_answers">
+        <item quantity="one">answer</item>
+        <item quantity="other">answers</item>
+    </plurals>
+    <plurals name="progress_unit_chords">
+        <item quantity="one">chord scored</item>
+        <item quantity="other">chords scored</item>
+    </plurals>
+    <plurals name="progress_unit_notes">
+        <item quantity="one">note scored</item>
+        <item quantity="other">notes scored</item>
+    </plurals>
+    <plurals name="progress_unit_figures">
+        <item quantity="one">figure scored</item>
+        <item quantity="other">figures scored</item>
+    </plurals>
+    <plurals name="progress_change_up">
+        <item quantity="one">Up %d point recently</item>
+        <item quantity="other">Up %d points recently</item>
+    </plurals>
+    <plurals name="progress_change_down">
+        <item quantity="one">Down %d point recently</item>
+        <item quantity="other">Down %d points recently</item>
+    </plurals>
+    <string name="progress_change_steady">About the same recently</string>
+    <string name="progress_trend_title">Accuracy over time</string>
+    <plurals name="progress_trend_window">
+        <item quantity="one">Last session</item>
+        <item quantity="other">Last %d sessions</item>
+    </plurals>
+    <string name="progress_trend_needs_more">Practice a couple of sessions of this exercise to see how your accuracy changes.</string>
+    <string name="progress_trend_latest">Latest</string>
+    <string name="progress_trend_description">Accuracy in your last %1$d sessions, oldest first: %2$s</string>
+    <string name="progress_weakest_first">Weakest first</string>
+    <string name="progress_legend_needs_work">Below %1$d%%: needs work</string>
+    <string name="progress_legend_on_track">On track</string>
     <string name="progress_recent_sessions">Recent sessions</string>
 
     <string name="navigate_back">Back</string>

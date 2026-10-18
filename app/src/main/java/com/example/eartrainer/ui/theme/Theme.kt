@@ -1,11 +1,13 @@
 package com.example.eartrainer.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 // A calm indigo palette with a teal tertiary, which the exercise screens use for "correct".
 private val LightColors = lightColorScheme(
@@ -74,3 +76,10 @@ fun EarTrainerTheme(
         content = content,
     )
 }
+
+/**
+ * Marks weak spots in charts. Orange pairs with the indigo primary without relying on hue alone:
+ * in the dark theme it is clearly darker than the primary, and both read as text on the surface.
+ */
+val ColorScheme.weakSpot: Color
+    get() = if (surface.luminance() < 0.5f) Color(0xFFE8832F) else Color(0xFFB45309)

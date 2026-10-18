@@ -324,7 +324,10 @@ interface RhythmAttemptDao {
 
 @Dao
 interface SessionDao {
-    /** Sessions from every exercise type, newest first. A session belongs to one exercise only. */
+    /**
+     * Sessions newest first. A session belongs to one exercise only; [exercise] (an exercise
+     * kind's name) limits them to that exercise, and null includes every exercise.
+     */
     @Query(
         """
         SELECT session_id AS sessionId, exercise, MIN(answered_at) AS startedAtMillis,
@@ -342,10 +345,11 @@ interface SessionDao {
             UNION ALL
             SELECT session_id, answered_at, is_correct, 'RHYTHM' AS exercise FROM rhythm_attempts
         )
+        WHERE :exercise IS NULL OR exercise = :exercise
         GROUP BY session_id
         ORDER BY startedAtMillis DESC
         LIMIT :limit
         """,
     )
-    fun recentSessions(limit: Int): Flow<List<SessionSummaryRow>>
+    fun recentSessions(limit: Int, exercise: String? = null): Flow<List<SessionSummaryRow>>
 }

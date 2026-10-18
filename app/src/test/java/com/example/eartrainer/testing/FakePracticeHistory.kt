@@ -134,7 +134,7 @@ class FakePracticeHistory : PracticeHistory {
         rhythms.map { all -> all.asReversed().take(limit).flatMap { rhythmCellResults(it.rhythm, it.answer) } }
 
     // combine() takes at most five flows, so the sixth exercise is merged in a second step.
-    override fun recentSessions(limit: Int): Flow<List<SessionSummary>> = combine(
+    override fun recentSessions(limit: Int, exercise: ExerciseKind?): Flow<List<SessionSummary>> = combine(
         combine(intervals, chords, degrees, progressions, dictations) { intervalList, chordList, degreeList, progressionList, dictationList ->
             intervalList.map { Triple(it.sessionId, ExerciseKind.INTERVALS, it.answeredAtMillis to it.isCorrect) } +
                 chordList.map { Triple(it.sessionId, ExerciseKind.CHORDS, it.answeredAtMillis to it.isCorrect) } +
@@ -156,6 +156,7 @@ class FakePracticeHistory : PracticeHistory {
                 )
             }
             .sortedByDescending { it.startedAtMillis }
+            .filter { exercise == null || it.exercise == exercise }
             .take(limit)
     }
 }
