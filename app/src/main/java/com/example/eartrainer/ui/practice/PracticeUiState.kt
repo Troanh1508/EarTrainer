@@ -5,6 +5,9 @@ import com.example.eartrainer.exercise.ExerciseQuestion
 import com.example.eartrainer.exercise.ExerciseState
 import com.example.eartrainer.music.Pitch
 
+/** Questions in a normal session. */
+const val SESSION_LENGTH = 20
+
 enum class PlaybackStatus { Idle, Playing, Failed }
 
 /** How an answer button should look; derived here so composables contain no exercise logic. */
@@ -13,9 +16,17 @@ enum class ChoiceAppearance { Available, Disabled, SelectedCorrect, SelectedInco
 data class PracticeUiState<A, Q : ExerciseQuestion<A>>(
     val exercise: ExerciseState<A, Q>,
     val playback: PlaybackStatus = PlaybackStatus.Idle,
-    /** This session's answers in order, true where right; feeds the session strip. */
-    val results: List<Boolean> = emptyList(),
+    /** This session's answered questions in order. */
+    val answered: List<AnsweredQuestion<A, Q>> = emptyList(),
+    /** Questions in this session. */
+    val sessionLength: Int = SESSION_LENGTH,
+    /** The results, once the last question has been answered and the listener moved on. */
+    val summary: PracticeSummary? = null,
 ) {
+    /** This session's answers in order, true where right; feeds the session strip. */
+    val results: List<Boolean> get() = answered.map { it.isCorrect }
+    val isLastQuestion: Boolean get() = exercise.questionNumber >= sessionLength
+
     val question: Q get() = exercise.question
     val isPlaying: Boolean get() = playback == PlaybackStatus.Playing
     val hasHeardPrompt: Boolean get() = exercise.phase != ExercisePhase.Unheard

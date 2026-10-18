@@ -35,12 +35,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.eartrainer.R
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.ExerciseQuestion
 import com.example.eartrainer.music.Pitch
 
 /** Exercise-specific wording for the shared practice screen. */
 data class PracticeTexts<A, Q : ExerciseQuestion<A>>(
     val title: String,
+    /** Which exercise this is; sets how the summary counts and words its score. */
+    val exercise: ExerciseKind,
     val instruction: @Composable (Q) -> String,
     /** Short description of how this question is played, e.g. "Harmonic". */
     val questionDetail: @Composable (Q) -> String,
@@ -65,7 +68,7 @@ fun <A, Q : ExerciseQuestion<A>> PracticeRoute(
     onOpenSettings: () -> Unit,
     onNavigateUp: () -> Unit,
     choiceColumns: Int = 2,
-) = PracticeHost(viewModel) { loaded ->
+) = PracticeHost(viewModel, texts, onNavigateUp) { loaded ->
     PracticeScreen(
         state = loaded,
         texts = texts,
@@ -80,19 +83,32 @@ fun <A, Q : ExerciseQuestion<A>> PracticeRoute(
 }
 
 /**
- * Collects [viewModel]'s state for [content], and stops audio when the screen leaves the
- * foreground. Shows a plain surface until settings have loaded, which is almost instant, rather
+ * Collects [viewModel]'s state for [content], shows the summary once a session ends, and stops
+ * audio when the screen leaves the foreground. Shows a plain surface until settings have loaded, which is almost instant, rather
  * than flashing a spinner.
  */
 @Composable
 fun <A, Q : ExerciseQuestion<A>> PracticeHost(
     viewModel: PracticeViewModel<A, Q, *>,
+    texts: PracticeTexts<A, Q>,
+    onNavigateUp: () -> Unit,
     content: @Composable (PracticeUiState<A, Q>) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onScreenHidden() }
     val loaded = state ?: run {
         Surface(Modifier.fillMaxSize()) {}
+        return
+    }
+    loaded.summary?.let { summary ->
+        PracticeSummaryScreen(
+            summary = summary,
+            title = texts.title,
+            exercise = texts.exercise,
+            onRetryMissed = viewModel::onRetryMissedClick,
+            onNewSession = viewModel::onRestartClick,
+            onDone = onNavigateUp,
+        )
         return
     }
     content(loaded)
@@ -180,6 +196,7 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScaffold(
                         correctSummary = texts.correctSummary(state.question),
                         notesAsPlayed = if (texts.showNotesAsPlayed) state.notesAsPlayed { texts.noteName(state.question, it) } else null,
                         responseMillis = state.responseMillis,
+                        nextLabel = stringResource(if (state.isLastQuestion) R.string.practice_see_results else R.string.practice_next),
                         onNext = onNext,
                         modifier = Modifier
                             .fillMaxWidth()

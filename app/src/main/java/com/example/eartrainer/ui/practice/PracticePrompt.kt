@@ -43,12 +43,9 @@ import androidx.compose.ui.unit.dp
 import com.example.eartrainer.R
 import com.example.eartrainer.ui.theme.Stop
 
-/** Answers shown in the session strip; older ones scroll off the start. */
-private const val STRIP_SLOTS = 20
-
 /**
- * The question number, the score, and one segment per answer this session (right, wrong, the
- * current question, then empty slots), so how the session is going reads at a glance.
+ * The question number, the score, and one segment per question (right, wrong, the current
+ * question, then the ones still to come), so how the session is going reads at a glance.
  */
 @Composable
 internal fun SessionStrip(state: PracticeUiState<*, *>, modifier: Modifier = Modifier) {
@@ -59,17 +56,15 @@ internal fun SessionStrip(state: PracticeUiState<*, *>, modifier: Modifier = Mod
     } else {
         pluralStringResource(R.plurals.practice_session_right, results.size, right, results.size)
     }
-    // The current question takes a slot until it is answered, when it joins the results.
-    val shown = results.takeLast(if (state.answer == null) STRIP_SLOTS - 1 else STRIP_SLOTS)
     val tertiary = MaterialTheme.colorScheme.tertiary
     val error = MaterialTheme.colorScheme.error
     val current = MaterialTheme.colorScheme.primary
     val empty = MaterialTheme.colorScheme.surfaceContainerHighest
-    val colors = shown.map { if (it) tertiary else error } + (if (state.answer == null) listOf(current) else emptyList())
+    val colors = results.map { if (it) tertiary else error } + (if (state.answer == null) listOf(current) else emptyList())
     Column(modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringResource(R.string.practice_session_question, state.exercise.questionNumber),
+                stringResource(R.string.practice_session_question, state.exercise.questionNumber, state.sessionLength),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
@@ -81,7 +76,7 @@ internal fun SessionStrip(state: PracticeUiState<*, *>, modifier: Modifier = Mod
             )
         }
         Row(Modifier.fillMaxWidth().clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            repeat(STRIP_SLOTS) { index ->
+            repeat(state.sessionLength) { index ->
                 Box(Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(colors.getOrNull(index) ?: empty))
             }
         }

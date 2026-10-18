@@ -10,6 +10,10 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.R
+import com.example.eartrainer.data.history.progressionChordPairs
+import com.example.eartrainer.ui.practice.SummaryItem
+import com.example.eartrainer.ui.practice.PracticeSummary
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.data.history.WeakSpots.Companion.asWeightLookup
 import com.example.eartrainer.exercise.ChordVocabulary
 import com.example.eartrainer.exercise.ExercisePhase
@@ -44,6 +48,12 @@ val ProgressionPracticeFactory: ViewModelProvider.Factory = viewModelFactory {
             },
             recordAttempt = { state, sessionId -> ProgressionAttempt.from(state, sessionId)?.let(container.practiceHistory::record) },
             audioPlayer = container.createAudioPlayer(),
+            itemsOf = { question, answer ->
+                val asked = question.progression
+                progressionChordPairs(asked.mode, asked.chords.map { it.step }, answer.chords.map { it.step })
+                    .map { (chord, chosen) -> SummaryItem(chord.numeral, chosen?.numeral, chosen == chord) }
+            },
+            recentSessions = container.practiceHistory.recentSessions(PracticeSummary.AVERAGE_OVER_SESSIONS + 1, ExerciseKind.PROGRESSIONS),
         )
     }
 }
@@ -54,6 +64,7 @@ private const val CHOICE_COLUMNS = 1
 @Composable
 private fun progressionTexts() = PracticeTexts<ChordProgression, ProgressionQuestion>(
     title = stringResource(R.string.progressions_title),
+    exercise = ExerciseKind.PROGRESSIONS,
     instruction = { stringResource(R.string.progressions_instruction) },
     questionDetail = { it.key.name },
     choiceLabel = { ChoiceLabel(it.label) },

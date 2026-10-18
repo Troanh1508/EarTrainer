@@ -10,6 +10,10 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.R
+import com.example.eartrainer.ui.progress.degreeLabel
+import com.example.eartrainer.ui.practice.wholeAnswerItems
+import com.example.eartrainer.ui.practice.PracticeSummary
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.data.history.WeakSpots.Companion.asWeightLookup
 import com.example.eartrainer.exercise.ExercisePhase
 import com.example.eartrainer.exercise.ExerciseState
@@ -44,6 +48,8 @@ val ScaleDegreePracticeFactory: ViewModelProvider.Factory = viewModelFactory {
             },
             recordAttempt = { state, sessionId -> ScaleDegreeAttempt.from(state, sessionId)?.let(container.practiceHistory::record) },
             audioPlayer = container.createAudioPlayer(),
+            itemsOf = wholeAnswerItems(::degreeLabel),
+            recentSessions = container.practiceHistory.recentSessions(PracticeSummary.AVERAGE_OVER_SESSIONS + 1, ExerciseKind.SCALE_DEGREES),
         )
     }
 }
@@ -54,6 +60,7 @@ private const val CHOICE_COLUMNS = 4
 @Composable
 private fun scaleDegreeTexts() = PracticeTexts<ScaleDegree, ScaleDegreeQuestion>(
     title = stringResource(R.string.degrees_title),
+    exercise = ExerciseKind.SCALE_DEGREES,
     instruction = { stringResource(R.string.degrees_instruction) },
     // The key is shown up front: knowing it is part of the exercise, not the answer.
     questionDetail = { it.key.name },

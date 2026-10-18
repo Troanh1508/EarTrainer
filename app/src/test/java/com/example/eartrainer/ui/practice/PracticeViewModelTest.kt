@@ -2,6 +2,8 @@ package com.example.eartrainer.ui.practice
 
 import com.example.eartrainer.audio.AudioPlaybackException
 import com.example.eartrainer.audio.AudioPlayer
+import com.example.eartrainer.data.history.SessionSummary
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.ExercisePhase
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalExerciseSettings
@@ -20,6 +22,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -29,6 +32,8 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -93,7 +98,11 @@ class PracticeViewModelTest {
     }
 
     // Exercised through intervals, wired the same way as the app's IntervalPracticeFactory.
-    private fun createViewModel(settingsFlow: Flow<IntervalExerciseSettings>): IntervalPracticeViewModel {
+    private fun createViewModel(
+        settingsFlow: Flow<IntervalExerciseSettings>,
+        sessionLength: Int = SESSION_LENGTH,
+        recentSessions: Flow<List<SessionSummary>> = flowOf(emptyList()),
+    ): IntervalPracticeViewModel {
         val remaining = ArrayDeque(questions)
         return IntervalPracticeViewModel(
             settings = settingsFlow,
@@ -103,6 +112,9 @@ class PracticeViewModelTest {
             },
             recordAttempt = { state, sessionId -> IntervalAttempt.from(state, sessionId)?.let(history::record) },
             audioPlayer = player,
+            itemsOf = wholeAnswerItems { it.displayName },
+            recentSessions = recentSessions,
+            sessionLength = sessionLength,
             clock = { now },
             newSessionId = { "session-${++sessionCounter}" },
         )
@@ -392,5 +404,78 @@ class PracticeViewModelTest {
         advanceUntilIdle()
         assertEquals(ExercisePhase.AwaitingAnswer, state.exercise.phase)
         assertEquals(1, requestedSettings.size)
+    }
+
+    // Answers the current question once its prompt has played; Next starts playing the next one.
+    private fun TestScope.answerWith(answer: Interval) {
+        advanceUntilIdle()
+        if (!state.hasHeardPrompt) viewModel.onPlayClick()
+        advanceUntilIdle()
+        player.finish()
+        advanceUntilIdle()
+        viewModel.onAnswerSelected(answer)
+    }
+
+    // Questions 1 to 3 ask a major third, a perfect fourth and a perfect fifth; the second is missed.
+    private fun TestScope.playShortSessionMissingTheSecond() {
+        answerWith(Interval.MAJOR_THIRD)
+        viewModel.onNextClick()
+        answerWith(Interval.MAJOR_THIRD)
+        viewModel.onNextClick()
+        answerWith(Interval.PERFECT_FIFTH)
+    }
+
+    @Test
+    fun theLastQuestionLeadsToASummaryComparedWithEarlierSessions() = runTest {
+        val recent = MutableStateFlow<List<SessionSummary>>(emptyList())
+        viewModel = createViewModel(settings, sessionLength = 3, recentSessions = recent)
+        advanceUntilIdle()
+        playShortSessionMissingTheSecond()
+        recent.value = listOf(
+            // The session being summarized is left out of its own average.
+            SessionSummary(history.recorded.first().sessionId, ExerciseKind.INTERVALS, 0, attempts = 3, correct = 2),
+            SessionSummary("earlier", ExerciseKind.INTERVALS, 0, attempts = 4, correct = 2),
+        )
+        assertTrue(state.isLastQuestion)
+        assertNull(state.summary)
+        assertEquals(listOf(true, false, true), state.results)
+
+        viewModel.onNextClick()
+        val summary = checkNotNull(state.summary)
+        assertEquals(3, summary.questions)
+        assertEquals(2, summary.questionsRight)
+        assertEquals(listOf(SessionMistake("Perfect fourth", "Major third", 1)), summary.mistakes)
+        // No fourth question is asked or played.
+        assertEquals(3, state.exercise.questionNumber)
+        assertEquals(3, player.played.size)
+        assertNull(summary.pointsAboveAverage)
+
+        advanceUntilIdle()
+        assertEquals(0.5f, checkNotNull(state.summary).pastAccuracy)
+        assertEquals(17, checkNotNull(state.summary).pointsAboveAverage)
+    }
+
+    @Test
+    fun practicingWhatWasMissedAsksOnlyThoseQuestions() = runTest {
+        viewModel = createViewModel(settings, sessionLength = 3)
+        advanceUntilIdle()
+        viewModel.onRetryMissedClick()
+        assertEquals(1, state.exercise.questionNumber)
+        playShortSessionMissingTheSecond()
+        viewModel.onNextClick()
+        assertNotNull(state.summary)
+
+        viewModel.onRetryMissedClick()
+        assertNull(state.summary)
+        assertEquals(1, state.sessionLength)
+        assertEquals(questions[1], state.question)
+        assertEquals(emptyList<Boolean>(), state.results)
+        answerWith(Interval.PERFECT_FOURTH)
+        viewModel.onNextClick()
+        assertEquals(1, checkNotNull(state.summary).questionsRight)
+        assertNotEquals(history.recorded.first().sessionId, history.recorded.last().sessionId)
+        // Nothing was missed this time, so there is nothing to retry.
+        viewModel.onRetryMissedClick()
+        assertNotNull(state.summary)
     }
 }

@@ -10,6 +10,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.R
+import com.example.eartrainer.ui.practice.wholeAnswerItems
+import com.example.eartrainer.ui.practice.PracticeSummary
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.data.history.WeakSpots.Companion.asWeightLookup
 import com.example.eartrainer.exercise.ChordAnswer
 import com.example.eartrainer.exercise.ChordAttempt
@@ -45,6 +48,8 @@ val ChordPracticeFactory: ViewModelProvider.Factory = viewModelFactory {
             },
             recordAttempt = { state, sessionId -> ChordAttempt.from(state, sessionId)?.let(container.practiceHistory::record) },
             audioPlayer = container.createAudioPlayer(),
+            itemsOf = wholeAnswerItems { it.displayName },
+            recentSessions = container.practiceHistory.recentSessions(PracticeSummary.AVERAGE_OVER_SESSIONS + 1, ExerciseKind.CHORDS),
         )
     }
 }
@@ -52,6 +57,7 @@ val ChordPracticeFactory: ViewModelProvider.Factory = viewModelFactory {
 @Composable
 private fun chordTexts() = PracticeTexts<ChordAnswer, ChordQuestion>(
     title = stringResource(R.string.chords_title),
+    exercise = ExerciseKind.CHORDS,
     instruction = { question ->
         stringResource(
             when (question.target) {

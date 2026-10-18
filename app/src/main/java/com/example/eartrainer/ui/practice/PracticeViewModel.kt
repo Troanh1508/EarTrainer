@@ -3,6 +3,7 @@ package com.example.eartrainer.ui.practice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.eartrainer.audio.AudioPlayer
+import com.example.eartrainer.data.history.SessionSummary
 import com.example.eartrainer.exercise.ExerciseEngine
 import com.example.eartrainer.exercise.ExercisePhase
 import com.example.eartrainer.exercise.ExerciseQuestion
@@ -17,6 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -33,6 +36,12 @@ class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
     private val questionSource: (S) -> () -> Q,
     private val recordAttempt: (state: ExerciseState<A, Q>, sessionId: String) -> Unit,
     private val audioPlayer: AudioPlayer,
+    /** Splits an answer into its scored items for the summary. */
+    private val itemsOf: (Q, A) -> List<SummaryItem>,
+    /** This exercise's recent sessions, for comparing a finished session with the average. */
+    private val recentSessions: Flow<List<SessionSummary>> = flowOf(emptyList()),
+    /** Questions in a session, after which [onNextClick] shows the summary. */
+    private val sessionLength: Int = SESSION_LENGTH,
     private val clock: () -> Long = System::currentTimeMillis,
     private val newSessionId: () -> String = { UUID.randomUUID().toString() },
 ) : ViewModel() {
@@ -97,8 +106,16 @@ class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
         val next = current.exercise.submitAnswer(answer, clock())
         // Invalid submissions (duplicate taps, not yet heard) return the same state.
         if (next === current.exercise) return
-        val isCorrect = (next.phase as? ExercisePhase.Answered<*>)?.isCorrect ?: false
-        _uiState.value = current.copy(exercise = next, results = current.results + isCorrect)
+        val answered = next.phase as? ExercisePhase.Answered<A> ?: return
+        val record = AnsweredQuestion(
+            question = next.question,
+            answer = answered.selectedAnswer,
+            isCorrect = answered.isCorrect,
+            playCount = next.playCount,
+            firstPlayedAtMillis = next.firstPlayedAtMillis ?: answered.answeredAtMillis,
+            answeredAtMillis = answered.answeredAtMillis,
+        )
+        _uiState.value = current.copy(exercise = next, answered = current.answered + record)
         recordAttempt(next, sessionId)
     }
 
@@ -106,6 +123,10 @@ class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
         val current = _uiState.value ?: return
         if (!current.canAdvance) return
         stopPlayback()
+        if (current.isLastQuestion) {
+            finishSession(current)
+            return
+        }
         _uiState.update { it?.copy(exercise = engine.advance(it.exercise)) }
         onPlayClick()
     }
@@ -141,15 +162,42 @@ class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
         _currentSettings.value?.let(::startSession)
     }
 
+    /**
+     * Starts a short session of the questions just missed, in a new order, under the same
+     * settings. Does nothing before a session has finished or when nothing was missed.
+     */
+    fun onRetryMissedClick() {
+        val settings = _currentSettings.value ?: return
+        val missed = _uiState.value?.takeIf { it.summary != null }?.answered?.filter { !it.isCorrect }?.map { it.question }
+        if (missed.isNullOrEmpty()) return
+        val queue = ArrayDeque(missed.shuffled())
+        startSession(settings, nextQuestion = queue::removeFirst, length = missed.size)
+    }
+
     /** Called when the screen leaves the foreground so audio never keeps playing in the background. */
     fun onScreenHidden() = stopPlayback()
 
-    private fun startSession(settings: S) {
+    private fun startSession(settings: S) = startSession(settings, questionSource(settings), sessionLength)
+
+    private fun startSession(settings: S, nextQuestion: () -> Q, length: Int) {
         stopPlayback()
         _currentSettings.value = settings
-        engine = ExerciseEngine(questionSource(settings))
+        engine = ExerciseEngine(nextQuestion)
         sessionId = newSessionId()
-        _uiState.value = PracticeUiState(exercise = engine.start())
+        _uiState.value = PracticeUiState(exercise = engine.start(), sessionLength = length)
+    }
+
+    /** Shows the results, then adds the comparison with recent sessions once it has loaded. */
+    private fun finishSession(current: PracticeUiState<A, Q>) {
+        val session = sessionId
+        _uiState.value = current.copy(summary = PracticeSummary.from(current.answered, itemsOf))
+        viewModelScope.launch {
+            val recent = recentSessions.first()
+            _uiState.update { state ->
+                val summary = state?.summary
+                if (summary != null && session == sessionId) state.copy(summary = summary.comparedWith(recent, session)) else state
+            }
+        }
     }
 
     private fun stopPlayback() {

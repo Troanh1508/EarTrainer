@@ -10,6 +10,11 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.R
+import com.example.eartrainer.ui.progress.rhythmLabel
+import com.example.eartrainer.exercise.rhythmCellPairs
+import com.example.eartrainer.ui.practice.SummaryItem
+import com.example.eartrainer.ui.practice.PracticeSummary
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.data.history.WeakSpots.Companion.asWeightLookup
 import com.example.eartrainer.exercise.ExercisePhase
 import com.example.eartrainer.exercise.ExerciseState
@@ -41,6 +46,11 @@ val RhythmPracticeFactory: ViewModelProvider.Factory = viewModelFactory {
             },
             recordAttempt = { state, sessionId -> RhythmAttempt.from(state, sessionId)?.let(container.practiceHistory::record) },
             audioPlayer = container.createAudioPlayer(),
+            itemsOf = { question, answer ->
+                rhythmCellPairs(question.rhythm, answer)
+                    .map { (cell, chosen) -> SummaryItem(rhythmLabel(cell), chosen?.let(::rhythmLabel), chosen == cell) }
+            },
+            recentSessions = container.practiceHistory.recentSessions(PracticeSummary.AVERAGE_OVER_SESSIONS + 1, ExerciseKind.RHYTHM),
         )
     }
 }
@@ -51,6 +61,7 @@ private const val CHOICE_COLUMNS = 1
 @Composable
 private fun rhythmTexts() = PracticeTexts<Rhythm, RhythmQuestion>(
     title = stringResource(R.string.rhythm_title),
+    exercise = ExerciseKind.RHYTHM,
     instruction = { stringResource(R.string.rhythm_instruction) },
     questionDetail = { stringResource(R.string.rhythm_detail, it.tempo.bpm) },
     // Read aloud for each drawn choice and used in "You answered …".

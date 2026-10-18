@@ -11,6 +11,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.R
+import com.example.eartrainer.ui.practice.wholeAnswerItems
+import com.example.eartrainer.ui.practice.PracticeSummary
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.data.history.WeakSpots.Companion.asWeightLookup
 import com.example.eartrainer.exercise.ExercisePhase
 import com.example.eartrainer.exercise.ExerciseState
@@ -43,6 +46,8 @@ val IntervalPracticeFactory: ViewModelProvider.Factory = viewModelFactory {
             },
             recordAttempt = { state, sessionId -> IntervalAttempt.from(state, sessionId)?.let(container.practiceHistory::record) },
             audioPlayer = container.createAudioPlayer(),
+            itemsOf = wholeAnswerItems { it.displayName },
+            recentSessions = container.practiceHistory.recentSessions(PracticeSummary.AVERAGE_OVER_SESSIONS + 1, ExerciseKind.INTERVALS),
         )
     }
 }
@@ -50,6 +55,7 @@ val IntervalPracticeFactory: ViewModelProvider.Factory = viewModelFactory {
 @Composable
 private fun intervalTexts() = PracticeTexts<Interval, IntervalQuestion>(
     title = stringResource(R.string.intervals_title),
+    exercise = ExerciseKind.INTERVALS,
     instruction = { stringResource(R.string.intervals_instruction) },
     questionDetail = { it.style.displayName },
     choiceLabel = { ChoiceLabel(it.displayName, it.abbreviation) },

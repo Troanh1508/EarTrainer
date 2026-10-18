@@ -70,7 +70,45 @@
         <item quantity="one">%d semitone</item>
         <item quantity="other">%d semitones</item>
     </plurals>
-    <string name="practice_session_question">Question %1$d</string>
+    <string name="practice_session_question">Question %1$d of %2$d</string>
+    <string name="practice_see_results">See results</string>
+    <string name="summary_complete">Session complete</string>
+    <string name="summary_score">%1$d/%2$d</string>
+    <string name="summary_percent">%1$d%% %2$s</string>
+    <plurals name="summary_above_average">
+        <item quantity="one">%1$d point above your recent average</item>
+        <item quantity="other">%1$d points above your recent average</item>
+    </plurals>
+    <plurals name="summary_below_average">
+        <item quantity="one">%1$d point below your recent average</item>
+        <item quantity="other">%1$d points below your recent average</item>
+    </plurals>
+    <string name="summary_level_with_average">Level with your recent average</string>
+    <string name="summary_duration">%1$d:%2$02d</string>
+    <string name="summary_duration_label">minutes</string>
+    <string name="summary_seconds">%1$.1f s</string>
+    <string name="summary_per_answer">per answer</string>
+    <plurals name="summary_replays">
+        <item quantity="one">replay</item>
+        <item quantity="other">replays</item>
+    </plurals>
+    <string name="summary_this_session">This session</string>
+    <string name="summary_right">Right</string>
+    <string name="summary_missed">Missed</string>
+    <plurals name="summary_tally_description">
+        <item quantity="one">%1$s: %2$d of %3$d right</item>
+        <item quantity="other">%1$s: %2$d of %3$d right</item>
+    </plurals>
+    <string name="summary_you_missed">You missed</string>
+    <string name="summary_mistake">%1$s → %2$s</string>
+    <string name="summary_mistake_times">%1$s ×%2$d</string>
+    <string name="summary_no_mistakes">Nothing missed this session.</string>
+    <plurals name="summary_retry_missed">
+        <item quantity="one">Practice the one I missed</item>
+        <item quantity="other">Practice the %1$d I missed</item>
+    </plurals>
+    <string name="summary_new_session">New session</string>
+    <string name="summary_done">Done</string>
     <plurals name="practice_session_right">
         <item quantity="one">%1$d of %2$d right</item>
         <item quantity="other">%1$d of %2$d right</item>

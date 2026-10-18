@@ -153,6 +153,9 @@ private fun <A, Q : ExerciseQuestion<A>> comparisonFactory(
             questionSource = { drill -> drill::nextQuestion },
             recordAttempt = { state, sessionId -> record(container, state, sessionId) },
             audioPlayer = container.createAudioPlayer(),
+            // A round ends on the drill's own result screen, which shows only the score.
+            itemsOf = { _, _ -> emptyList() },
+            sessionLength = Comparison.QUESTIONS_PER_ROUND,
         )
     }
 }

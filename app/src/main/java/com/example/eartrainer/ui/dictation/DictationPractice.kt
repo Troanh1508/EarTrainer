@@ -38,6 +38,11 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.R
+import com.example.eartrainer.ui.progress.degreeLabel
+import com.example.eartrainer.data.history.dictationNotePairs
+import com.example.eartrainer.ui.practice.SummaryItem
+import com.example.eartrainer.ui.practice.PracticeSummary
+import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.data.history.WeakSpots.Companion.asWeightLookup
 import com.example.eartrainer.exercise.DictationAttempt
 import com.example.eartrainer.exercise.DictationQuestion
@@ -75,6 +80,11 @@ val DictationPracticeFactory: ViewModelProvider.Factory = viewModelFactory {
             },
             recordAttempt = { state, sessionId -> DictationAttempt.from(state, sessionId)?.let(container.practiceHistory::record) },
             audioPlayer = container.createAudioPlayer(),
+            itemsOf = { question, answer ->
+                dictationNotePairs(question.melody.degrees, answer.degrees)
+                    .map { (played, written) -> SummaryItem(degreeLabel(played), written?.let(::degreeLabel), written == played) }
+            },
+            recentSessions = container.practiceHistory.recentSessions(PracticeSummary.AVERAGE_OVER_SESSIONS + 1, ExerciseKind.DICTATION),
         )
     }
 }
@@ -85,6 +95,7 @@ private const val KEYPAD_COLUMNS = 4
 @Composable
 private fun dictationTexts() = PracticeTexts<Melody, DictationQuestion>(
     title = stringResource(R.string.dictation_title),
+    exercise = ExerciseKind.DICTATION,
     instruction = { stringResource(R.string.dictation_instruction) },
     questionDetail = { it.key.name },
     choiceLabel = { ChoiceLabel(it.label) },
@@ -99,7 +110,7 @@ fun DictationTrainingRoute(onOpenSettings: () -> Unit, onNavigateUp: () -> Unit)
     // Scoped to the navigation destination; the key keeps it distinct from other practice ViewModels.
     val viewModel: DictationPracticeViewModel = viewModel(key = "dictation-practice", factory = DictationPracticeFactory)
     val texts = dictationTexts()
-    PracticeHost(viewModel) { state ->
+    PracticeHost(viewModel, texts, onNavigateUp) { state ->
         DictationScreen(
             state = state,
             texts = texts,
