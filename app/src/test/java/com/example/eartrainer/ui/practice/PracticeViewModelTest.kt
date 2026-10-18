@@ -4,6 +4,7 @@ import com.example.eartrainer.audio.AudioPlaybackException
 import com.example.eartrainer.audio.AudioPlayer
 import com.example.eartrainer.data.history.SessionSummary
 import com.example.eartrainer.exercise.ExerciseKind
+import com.example.eartrainer.exercise.SESSION_LENGTH
 import com.example.eartrainer.exercise.ExercisePhase
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalExerciseSettings

@@ -8,6 +8,7 @@ import com.example.eartrainer.exercise.ExerciseEngine
 import com.example.eartrainer.exercise.ExercisePhase
 import com.example.eartrainer.exercise.ExerciseQuestion
 import com.example.eartrainer.exercise.ExerciseState
+import com.example.eartrainer.exercise.SESSION_LENGTH
 import com.example.eartrainer.music.ListeningPrompt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job

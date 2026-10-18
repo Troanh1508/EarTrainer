@@ -1,6 +1,7 @@
 package com.example.eartrainer.ui.home
 
 import com.example.eartrainer.data.history.DayCount
+import com.example.eartrainer.data.history.DaySessions
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.ui.log.PracticeLogUiState
 import com.example.eartrainer.ui.progress.AccuracyItem
@@ -16,15 +17,17 @@ data class Suggestion(val exercise: ExerciseKind, val items: List<String>)
 
 data class HomeUiState(
     val answersToday: Int,
-    /** Answers a day that count as reaching today's goal. */
+    /** Sessions finished today, all of their questions answered. */
+    val sessionsToday: Int,
+    /** Finished sessions a day that count as reaching today's goal. */
     val dailyGoal: Int,
     val currentStreak: Int,
     /** Every exercise, in menu order. */
     val exercises: List<ExerciseSummary>,
     val suggestion: Suggestion?,
 ) {
-    val goalProgress: Float get() = (answersToday.toFloat() / dailyGoal).coerceAtMost(1f)
-    val answersToGoal: Int get() = (dailyGoal - answersToday).coerceAtLeast(0)
+    val goalProgress: Float get() = (sessionsToday.toFloat() / dailyGoal).coerceAtMost(1f)
+    val sessionsToGoal: Int get() = (dailyGoal - sessionsToday).coerceAtLeast(0)
 
     companion object {
         /** Fewer answers than this say too little about an item to call it weak. */
@@ -33,6 +36,7 @@ data class HomeUiState(
 
         fun from(
             days: List<DayCount>,
+            finishedSessions: List<DaySessions>,
             today: Long,
             dailyGoal: Int,
             lastExercise: ExerciseKind?,
@@ -50,6 +54,7 @@ data class HomeUiState(
             }
             return HomeUiState(
                 answersToday = days.firstOrNull { it.day == today }?.answers ?: 0,
+                sessionsToday = finishedSessions.firstOrNull { it.day == today }?.sessions ?: 0,
                 dailyGoal = dailyGoal,
                 currentStreak = PracticeLogUiState.from(days, sessions = emptyList(), today = today).currentStreak,
                 exercises = ExerciseKind.entries.map { exercise ->

@@ -4,6 +4,7 @@ import com.example.eartrainer.data.settings.GoalSettingsStore
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.SESSION_LENGTH
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Pitch
 import com.example.eartrainer.testing.FakePracticeHistory
@@ -34,8 +35,8 @@ class HomeViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     // Wrong answers are recorded as an octave.
-    private fun answer(at: Long, interval: Interval, correct: Boolean) =
-        IntervalAttempt("s", at, interval, IntervalStyle.HARMONIC, Pitch(60), if (correct) interval else Interval.OCTAVE, correct, 1, 1_000)
+    private fun answer(at: Long, interval: Interval, correct: Boolean, session: String = "s") =
+        IntervalAttempt(session, at, interval, IntervalStyle.HARMONIC, Pitch(60), if (correct) interval else Interval.OCTAVE, correct, 1, 1_000)
 
     @Test
     fun showsTodaysAnswersAndSuggestsTheWeakestIntervals() = runTest {
@@ -52,13 +53,19 @@ class HomeViewModelTest {
         assertEquals(Suggestion(ExerciseKind.INTERVALS, listOf("Minor sixth")), state.suggestion)
         assertEquals(ExerciseSummary(ExerciseKind.INTERVALS, 7, 4), state.exercises.first { it.exercise == ExerciseKind.INTERVALS })
         assertEquals(0, state.exercises.first { it.exercise == ExerciseKind.CHORDS }.attempts)
-        assertEquals(30, state.dailyGoal)
+        assertEquals(2, state.dailyGoal)
+        // Seven answers are not a finished session.
+        assertEquals(0, state.sessionsToday)
 
-        viewModel.onDailyGoalSelected(50)
-        assertEquals(50, checkNotNull(viewModel.uiState.value).dailyGoal)
-        assertEquals(43, checkNotNull(viewModel.uiState.value).answersToGoal)
+        repeat(SESSION_LENGTH) { index -> history.record(answer(today * day + 20_000L + index, Interval.OCTAVE, correct = true, session = "full")) }
+        assertEquals(1, checkNotNull(viewModel.uiState.value).sessionsToday)
+        assertEquals(1, checkNotNull(viewModel.uiState.value).sessionsToGoal)
+
+        viewModel.onDailyGoalSelected(3)
+        assertEquals(3, checkNotNull(viewModel.uiState.value).dailyGoal)
+        assertEquals(2, checkNotNull(viewModel.uiState.value).sessionsToGoal)
         // Goals that are not offered are ignored.
-        viewModel.onDailyGoalSelected(37)
-        assertEquals(50, checkNotNull(viewModel.uiState.value).dailyGoal)
+        viewModel.onDailyGoalSelected(30)
+        assertEquals(3, checkNotNull(viewModel.uiState.value).dailyGoal)
     }
 }

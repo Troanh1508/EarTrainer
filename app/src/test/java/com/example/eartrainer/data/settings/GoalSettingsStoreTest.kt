@@ -11,21 +11,23 @@ class GoalSettingsStoreTest {
 
     @Test
     fun thirtyAnswersADayIsTheDefault() {
-        assertEquals(GoalSettings(30), GoalSettingsStore.decode(preferencesOf()))
+        assertEquals(GoalSettings(2), GoalSettingsStore.decode(preferencesOf()))
     }
 
     @Test
     fun everyOfferedGoalRoundTrips() {
-        GoalSettings.DAILY_ANSWER_OPTIONS.forEach { answers ->
+        GoalSettings.DAILY_SESSION_OPTIONS.forEach { sessions ->
             val preferences = mutablePreferencesOf()
-            GoalSettingsStore.encode(GoalSettings(answers), preferences)
-            assertEquals(GoalSettings(answers), GoalSettingsStore.decode(preferences))
+            GoalSettingsStore.encode(GoalSettings(sessions), preferences)
+            assertEquals(GoalSettings(sessions), GoalSettingsStore.decode(preferences))
         }
     }
 
     @Test
     fun goalsNotOnOfferFallBackToTheDefault() {
-        assertEquals(GoalSettings(), GoalSettingsStore.decode(preferencesOf(intPreferencesKey("goal.daily_answers") to 37)))
+        assertEquals(GoalSettings(), GoalSettingsStore.decode(preferencesOf(intPreferencesKey("goal.daily_sessions") to 7)))
+        // A goal saved as a number of answers, before goals counted sessions, is not read as sessions.
+        assertEquals(GoalSettings(), GoalSettingsStore.decode(preferencesOf(intPreferencesKey("goal.daily_answers") to 3)))
         assertThrows(IllegalArgumentException::class.java) { GoalSettings(0) }
     }
 }

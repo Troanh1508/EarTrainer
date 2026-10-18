@@ -11,6 +11,7 @@ import com.example.eartrainer.exercise.IntervalStyle
 import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.ProgressionAttempt
 import com.example.eartrainer.exercise.RhythmAttempt
+import com.example.eartrainer.exercise.SESSION_LENGTH
 import com.example.eartrainer.exercise.rhythmCellResults
 import com.example.eartrainer.exercise.rhythmCellPairs
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
@@ -135,6 +136,13 @@ interface PracticeHistory {
 
     /** Answers given on each local calendar day that had any, oldest first. */
     fun answersPerDay(): Flow<List<DayCount>>
+
+    /**
+     * Finished sessions (every question of a [SESSION_LENGTH]-question session answered) on each
+     * local calendar day that had any, oldest first, counted on the day of the last answer.
+     * Shorter runs, like retries of missed questions and comparison drill rounds, are not counted.
+     */
+    fun finishedSessionsPerDay(): Flow<List<DaySessions>>
 
     /*
      * The latest [limit] sessions of one exercise that include answers matching the given
@@ -268,6 +276,8 @@ class RoomPracticeHistory(
             .flowOn(Dispatchers.Default)
 
     override fun answersPerDay(): Flow<List<DayCount>> = database.sessionDao().answersPerDay()
+
+    override fun finishedSessionsPerDay(): Flow<List<DaySessions>> = database.sessionDao().finishedSessionsPerDay(SESSION_LENGTH)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun recentSessions(limit: Int, exercise: ExerciseKind?): Flow<List<SessionSummary>> =

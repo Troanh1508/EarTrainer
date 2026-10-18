@@ -62,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.eartrainer.R
 import com.example.eartrainer.data.settings.GoalSettings
 import com.example.eartrainer.exercise.ExerciseKind
+import com.example.eartrainer.exercise.SESSION_LENGTH
 import com.example.eartrainer.ui.progress.exerciseName
 import com.example.eartrainer.ui.progress.percent
 import com.example.eartrainer.ui.theme.EarTrainerTheme
@@ -174,13 +175,13 @@ private fun Ring(fraction: Float, track: Color, fill: Color, diameter: Dp, thick
 @Composable
 private fun TodayCard(state: HomeUiState, onDailyGoalSelected: (Int) -> Unit) {
     val onPrimary = MaterialTheme.colorScheme.onPrimary
-    val ringDescription = pluralStringResource(R.plurals.home_goal_ring, state.dailyGoal, state.answersToday, state.dailyGoal)
+    val ringDescription = pluralStringResource(R.plurals.home_goal_ring, state.dailyGoal, state.sessionsToday, state.dailyGoal)
     var choosingGoal by rememberSaveable { mutableStateOf(false) }
     if (choosingGoal) {
         DailyGoalDialog(
             current = state.dailyGoal,
-            onSelected = { answers ->
-                onDailyGoalSelected(answers)
+            onSelected = { sessions ->
+                onDailyGoalSelected(sessions)
                 choosingGoal = false
             },
             onDismiss = { choosingGoal = false },
@@ -196,7 +197,7 @@ private fun TodayCard(state: HomeUiState, onDailyGoalSelected: (Int) -> Unit) {
             Box(Modifier.clearAndSetSemantics { contentDescription = ringDescription }) {
                 Ring(state.goalProgress, onPrimary.copy(alpha = 0.25f), onPrimary, diameter = 104.dp, thickness = 12.dp) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${state.answersToday}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text("${state.sessionsToday}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         Text(
                             stringResource(R.string.home_goal_of, state.dailyGoal),
                             style = MaterialTheme.typography.labelMedium,
@@ -219,10 +220,10 @@ private fun TodayCard(state: HomeUiState, onDailyGoalSelected: (Int) -> Unit) {
                 }
                 Text(
                     when {
-                        state.answersToGoal == 0 -> stringResource(R.string.home_goal_done)
+                        state.sessionsToGoal == 0 -> stringResource(R.string.home_goal_done)
                         state.answersToday == 0 && state.currentStreak > 0 ->
                             pluralStringResource(R.plurals.home_goal_keep_streak, state.currentStreak, state.currentStreak)
-                        else -> pluralStringResource(R.plurals.home_goal_remaining, state.answersToGoal, state.answersToGoal)
+                        else -> pluralStringResource(R.plurals.home_goal_remaining, state.sessionsToGoal, state.sessionsToGoal)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -250,21 +251,21 @@ private fun DailyGoalDialog(current: Int, onSelected: (Int) -> Unit, onDismiss: 
         text = {
             Column(Modifier.selectableGroup()) {
                 Text(
-                    stringResource(R.string.home_goal_dialog_description),
+                    stringResource(R.string.home_goal_dialog_description, SESSION_LENGTH),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 8.dp),
                 )
-                GoalSettings.DAILY_ANSWER_OPTIONS.forEach { answers ->
+                GoalSettings.DAILY_SESSION_OPTIONS.forEach { sessions ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
-                            .selectable(selected = answers == current, role = Role.RadioButton, onClick = { onSelected(answers) }),
+                            .selectable(selected = sessions == current, role = Role.RadioButton, onClick = { onSelected(sessions) }),
                     ) {
-                        RadioButton(selected = answers == current, onClick = null)
+                        RadioButton(selected = sessions == current, onClick = null)
                         Spacer(Modifier.width(12.dp))
-                        Text(pluralStringResource(R.plurals.home_goal_option, answers, answers), style = MaterialTheme.typography.bodyLarge)
+                        Text(pluralStringResource(R.plurals.home_goal_option, sessions, sessions), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
@@ -364,8 +365,9 @@ private fun HomeScreenPreview() {
     EarTrainerTheme {
         HomeScreen(
             state = HomeUiState(
-                answersToday = 18,
-                dailyGoal = 30,
+                answersToday = 24,
+                sessionsToday = 1,
+                dailyGoal = 2,
                 currentStreak = 6,
                 exercises = ExerciseKind.entries.mapIndexed { index, exercise -> ExerciseSummary(exercise, if (index == 4) 0 else 40, 22 + index * 3) },
                 suggestion = Suggestion(ExerciseKind.INTERVALS, listOf("Minor sixth", "Tritone", "Major seventh")),

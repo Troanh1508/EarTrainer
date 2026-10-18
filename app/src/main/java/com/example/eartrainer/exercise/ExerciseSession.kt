@@ -1,5 +1,8 @@
 package com.example.eartrainer.exercise
 
+/** Questions in a normal practice session; a session with this many answers is finished. */
+const val SESSION_LENGTH = 20
+
 /** Where the current question is in its lifecycle. Playback status is tracked separately. */
 sealed interface ExercisePhase<out A> {
     /** A new question whose prompt has not been played yet; answers are not accepted. */

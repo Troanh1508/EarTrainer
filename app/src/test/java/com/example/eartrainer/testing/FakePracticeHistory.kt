@@ -3,6 +3,7 @@ package com.example.eartrainer.testing
 import com.example.eartrainer.data.history.AnswerAccuracy
 import com.example.eartrainer.data.history.Confusion
 import com.example.eartrainer.data.history.DayCount
+import com.example.eartrainer.data.history.DaySessions
 import com.example.eartrainer.data.history.countConfusions
 import com.example.eartrainer.data.history.dictationNotePairs
 import com.example.eartrainer.data.history.progressionChordPairs
@@ -23,6 +24,7 @@ import com.example.eartrainer.exercise.ProgressionAttempt
 import com.example.eartrainer.exercise.RhythmAttempt
 import com.example.eartrainer.exercise.rhythmCellResults
 import com.example.eartrainer.exercise.rhythmCellPairs
+import com.example.eartrainer.exercise.SESSION_LENGTH
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordQuality
@@ -181,6 +183,22 @@ class FakePracticeHistory : PracticeHistory {
         (earlier + rhythmList.map { it.answeredAtMillis })
             .groupingBy { localEpochDay(it) }.eachCount()
             .map { (day, answers) -> DayCount(day, answers) }
+            .sortedBy { it.day }
+    }
+
+    override fun finishedSessionsPerDay(): Flow<List<DaySessions>> = combine(
+        combine(intervals, chords, degrees, progressions, dictations) { a, b, c, d, e ->
+            a.map { it.sessionId to it.answeredAtMillis } + b.map { it.sessionId to it.answeredAtMillis } +
+                c.map { it.sessionId to it.answeredAtMillis } + d.map { it.sessionId to it.answeredAtMillis } +
+                e.map { it.sessionId to it.answeredAtMillis }
+        },
+        rhythms,
+    ) { earlier, rhythmList ->
+        (earlier + rhythmList.map { it.sessionId to it.answeredAtMillis })
+            .groupBy({ it.first }, { it.second })
+            .filterValues { it.size >= SESSION_LENGTH }
+            .values.groupingBy { localEpochDay(it.max()) }.eachCount()
+            .map { (day, sessions) -> DaySessions(day, sessions) }
             .sortedBy { it.day }
     }
 

@@ -39,19 +39,26 @@ class HomeViewModel(
     ) { parts -> parts.groupBy({ it.first }, { it.second }).mapValues { (_, lists) -> lists.flatten() } }
 
     val uiState: StateFlow<HomeUiState?> =
-        combine(history.answersPerDay(), history.recentSessions(limit = 1), accuracy, goalSettings.settings) { days, sessions, items, goal ->
+        combine(
+            history.answersPerDay(),
+            history.finishedSessionsPerDay(),
+            history.recentSessions(limit = 1),
+            accuracy,
+            goalSettings.settings,
+        ) { days, finished, sessions, items, goal ->
             HomeUiState.from(
                 days,
+                finished,
                 today = localEpochDay(clock(), timeZone()),
-                dailyGoal = goal.dailyAnswers,
+                dailyGoal = goal.dailySessions,
                 lastExercise = sessions.firstOrNull()?.exercise,
                 accuracy = items,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initialValue = null)
 
-    fun onDailyGoalSelected(answers: Int) {
-        if (answers !in GoalSettings.DAILY_ANSWER_OPTIONS) return
-        viewModelScope.launch { goalSettings.update { it.copy(dailyAnswers = answers) } }
+    fun onDailyGoalSelected(sessions: Int) {
+        if (sessions !in GoalSettings.DAILY_SESSION_OPTIONS) return
+        viewModelScope.launch { goalSettings.update { it.copy(dailySessions = sessions) } }
     }
 
     companion object {

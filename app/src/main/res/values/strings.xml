@@ -9,12 +9,12 @@
     <string name="home_goal_title">Today\'s goal</string>
     <string name="home_goal_of">of %1$d</string>
     <plurals name="home_goal_ring">
-        <item quantity="one">%1$d of %2$d answers today</item>
-        <item quantity="other">%1$d of %2$d answers today</item>
+        <item quantity="one">%1$d of %2$d session finished today</item>
+        <item quantity="other">%1$d of %2$d sessions finished today</item>
     </plurals>
     <plurals name="home_goal_remaining">
-        <item quantity="one">%d more answer to reach today\'s goal.</item>
-        <item quantity="other">%d more answers to reach today\'s goal.</item>
+        <item quantity="one">Finish %d more session to reach today\'s goal.</item>
+        <item quantity="other">Finish %d more sessions to reach today\'s goal.</item>
     </plurals>
     <plurals name="home_goal_keep_streak">
         <item quantity="one">Answer a question today to keep your %d-day streak going.</item>
@@ -22,11 +22,11 @@
     </plurals>
     <string name="home_goal_change">Change daily goal</string>
     <string name="home_goal_dialog_title">Daily goal</string>
-    <string name="home_goal_dialog_description">How many answers a day count as reaching your goal.</string>
+    <string name="home_goal_dialog_description">How many sessions a day count as reaching your goal. A session is finished once all %1$d of its questions are answered.</string>
     <string name="home_goal_dialog_close">Close</string>
     <plurals name="home_goal_option">
-        <item quantity="one">%d answer a day</item>
-        <item quantity="other">%d answers a day</item>
+        <item quantity="one">%d session a day</item>
+        <item quantity="other">%d sessions a day</item>
     </plurals>
     <string name="home_goal_done">Goal reached for today. Nice work.</string>
     <plurals name="home_streak">

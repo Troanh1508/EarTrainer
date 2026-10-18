@@ -11,6 +11,7 @@ import com.example.eartrainer.exercise.DictationAttempt
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.SESSION_LENGTH
 import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.KeyContext
 import com.example.eartrainer.exercise.ProgressionAttempt
@@ -235,6 +236,21 @@ class RoomPracticeHistoryTest {
             listOf(DayCount(localEpochDay(first), 2), DayCount(localEpochDay(first + 3 * day), 2)),
             history.answersPerDay().first(),
         )
+    }
+
+    @Test
+    fun sessionsWithEveryQuestionAnsweredAreCountedOnTheDayTheyFinished() = runBlocking {
+        val day = 86_400_000L
+        val first = 1_760_000_000_000
+        // A full session whose last answer is a day after its first, and one a question short.
+        val full = List(SESSION_LENGTH) { index ->
+            interval("full", if (index == SESSION_LENGTH - 1) first + day else first + index * 1_000L, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = true)
+        }
+        val short = List(SESSION_LENGTH - 1) { index -> interval("short", first + index * 1_000L, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = true) }
+        insertAll(*(full + short).toTypedArray())
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        assertEquals(listOf(DaySessions(localEpochDay(first + day), 1)), history.finishedSessionsPerDay().first())
     }
 
     @Test

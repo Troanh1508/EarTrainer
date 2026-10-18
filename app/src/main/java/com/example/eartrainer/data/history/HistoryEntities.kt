@@ -160,6 +160,9 @@ data class ConfusionRow(val asked: String, val answered: String, val count: Int)
 /** How many answers were given on one local calendar [day], counted in days since 1970-01-01. */
 data class DayCount(val day: Long, val answers: Int)
 
+/** Sessions finished on one local calendar day, as days since 1970-01-01. */
+data class DaySessions(val day: Long, val sessions: Int)
+
 /** Answer totals for one session. */
 data class SessionTotalsRow(val sessionId: String, val startedAtMillis: Long, val attempts: Int, val correct: Int)
 
@@ -501,6 +504,33 @@ interface SessionDao {
         """,
     )
     fun answersPerDay(): Flow<List<DayCount>>
+
+    /**
+     * Sessions with at least [minAnswers] answers per day, oldest day first, each counted on the
+     * local calendar day of its last answer.
+     */
+    @Query(
+        """
+        SELECT CAST(strftime('%s', finished_at / 1000, 'unixepoch', 'localtime', 'start of day') AS INTEGER) / 86400 AS day,
+               COUNT(*) AS sessions
+        FROM (
+            SELECT session_id, MAX(answered_at) AS finished_at
+            FROM (
+                SELECT session_id, answered_at FROM interval_attempts
+                UNION ALL SELECT session_id, answered_at FROM chord_attempts
+                UNION ALL SELECT session_id, answered_at FROM scale_degree_attempts
+                UNION ALL SELECT session_id, answered_at FROM progression_attempts
+                UNION ALL SELECT session_id, answered_at FROM dictation_attempts
+                UNION ALL SELECT session_id, answered_at FROM rhythm_attempts
+            )
+            GROUP BY session_id
+            HAVING COUNT(*) >= :minAnswers
+        )
+        GROUP BY day
+        ORDER BY day
+        """,
+    )
+    fun finishedSessionsPerDay(minAnswers: Int): Flow<List<DaySessions>>
 
     /**
      * Sessions newest first. A session belongs to one exercise only; [exercise] (an exercise
