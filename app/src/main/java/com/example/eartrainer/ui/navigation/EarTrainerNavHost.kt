@@ -13,7 +13,9 @@ import com.example.eartrainer.ui.compare.ComparisonDestination
 import com.example.eartrainer.ui.compare.ComparisonRequest
 import com.example.eartrainer.ui.degrees.ScaleDegreeTrainingRoute
 import com.example.eartrainer.ui.dictation.DictationTrainingRoute
-import com.example.eartrainer.ui.home.HomeScreen
+import com.example.eartrainer.exercise.ExerciseKind
+import com.example.eartrainer.ui.home.HomeRoute
+import com.example.eartrainer.ui.home.HomeViewModel
 import com.example.eartrainer.ui.intervals.IntervalTrainingRoute
 import com.example.eartrainer.ui.log.PracticeLogRoute
 import com.example.eartrainer.ui.log.PracticeLogViewModel
@@ -58,13 +60,21 @@ fun EarTrainerNavHost() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
-            HomeScreen(
-                onOpenIntervalTraining = { navController.navigate(Routes.INTERVAL_TRAINING) },
-                onOpenChordTraining = { navController.navigate(Routes.CHORD_TRAINING) },
-                onOpenScaleDegreeTraining = { navController.navigate(Routes.SCALE_DEGREE_TRAINING) },
-                onOpenProgressionTraining = { navController.navigate(Routes.PROGRESSION_TRAINING) },
-                onOpenDictationTraining = { navController.navigate(Routes.DICTATION_TRAINING) },
-                onOpenRhythmTraining = { navController.navigate(Routes.RHYTHM_TRAINING) },
+            val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
+            HomeRoute(
+                viewModel = viewModel,
+                onOpenExercise = { exercise ->
+                    navController.navigate(
+                        when (exercise) {
+                            ExerciseKind.INTERVALS -> Routes.INTERVAL_TRAINING
+                            ExerciseKind.CHORDS -> Routes.CHORD_TRAINING
+                            ExerciseKind.SCALE_DEGREES -> Routes.SCALE_DEGREE_TRAINING
+                            ExerciseKind.PROGRESSIONS -> Routes.PROGRESSION_TRAINING
+                            ExerciseKind.DICTATION -> Routes.DICTATION_TRAINING
+                            ExerciseKind.RHYTHM -> Routes.RHYTHM_TRAINING
+                        },
+                    )
+                },
                 onOpenProgress = { navController.navigate(Routes.PROGRESS) },
                 onOpenBackup = { navController.navigate(Routes.BACKUP) },
             )

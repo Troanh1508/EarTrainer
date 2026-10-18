@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
-import com.example.eartrainer.data.history.AnswerAccuracy
 import com.example.eartrainer.data.history.Confusion
 import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.SessionSummary
@@ -142,7 +141,7 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
     val uiState: StateFlow<ProgressUiState?> = filter
         .flatMapLatest { selected ->
             combine(
-                accuracyFor(selected),
+                history.accuracyFor(selected),
                 history.recentSessions(RECENT_SESSION_LIMIT),
                 trendFor(selected),
             ) { accuracy, sessions, trend ->
@@ -162,7 +161,7 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
             if (item == null) {
                 flowOf(null)
             } else {
-                combine(accuracyFor(selected), confusionsFor(selected)) { accuracy, confusions ->
+                combine(history.accuracyFor(selected), confusionsFor(selected)) { accuracy, confusions ->
                     MistakesUiState.from(selected, accuracy, confusions, item)
                 }
             }
@@ -187,21 +186,6 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
     fun onFilterSelected(selected: ProgressFilter) {
         filter.value = selected
         selectedItem.value = null
-    }
-
-    private fun accuracyFor(selected: ProgressFilter): Flow<List<AccuracyItem>> = when (selected) {
-        is ProgressFilter.IntervalStyleFilter ->
-            history.intervalAccuracy(selected.style).map { list -> list.map { it.toItem(it.item.displayName) } }
-        is ProgressFilter.ChordTargetFilter ->
-            history.chordAccuracy(selected.target).map { list -> list.map { it.toItem(it.item.displayName) } }
-        is ProgressFilter.ModeFilter ->
-            history.scaleDegreeAccuracy(selected.mode).map { list -> list.map { it.toItem(degreeLabel(it.item)) } }
-        is ProgressFilter.ProgressionModeFilter ->
-            history.progressionAccuracy(selected.mode).map { list -> list.map { it.toItem(it.item.numeral) } }
-        is ProgressFilter.DictationModeFilter ->
-            history.dictationAccuracy(selected.mode).map { list -> list.map { it.toItem(degreeLabel(it.item)) } }
-        ProgressFilter.RhythmFilter ->
-            history.rhythmAccuracy().map { list -> list.map { it.toItem(rhythmLabel(it.item)) } }
     }
 
     // The same answers as [accuracyFor], so the chart and the bars measure the same thing.
@@ -251,12 +235,6 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
         is ChordAnswer.Quality -> answer.quality.name
         is ChordAnswer.Inversion -> answer.inversion.name
     }
-
-    private fun degreeLabel(degree: ScaleDegree) = "${degree.label} · ${degree.solfege}"
-
-    private fun rhythmLabel(cell: RhythmCell) = cell.displayName.replaceFirstChar(Char::uppercase)
-
-    private fun AnswerAccuracy<*>.toItem(label: String) = AccuracyItem(label, attempts, correct)
 
     companion object {
         const val RECENT_SESSION_LIMIT = 10

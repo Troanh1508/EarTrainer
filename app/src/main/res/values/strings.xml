@@ -2,23 +2,46 @@
     <string name="app_name">Ear Trainer</string>
 
     <!-- Home -->
-    <string name="home_tagline">Train your ears to recognize what you hear.</string>
-    <string name="home_intervals_title">Interval Training</string>
-    <string name="home_intervals_description">Hear two notes and name the distance between them.</string>
-    <string name="home_chords_title">Chord Training</string>
-    <string name="home_chords_description">Hear a chord and name its quality or inversion.</string>
-    <string name="home_degrees_title">Scale Degrees</string>
-    <string name="home_degrees_description">Hear a key, then name a note by its role in it.</string>
-    <string name="home_progressions_title">Chord Progressions</string>
-    <string name="home_progressions_description">Hear a progression in a key and name its chords.</string>
-    <string name="home_dictation_title">Melodic Dictation</string>
-    <string name="home_dictation_description">Hear a short melody and write it down note by note.</string>
-    <string name="home_rhythm_title">Rhythm</string>
-    <string name="home_rhythm_description">Hear a rhythm and pick the matching notation.</string>
-    <string name="home_progress_title">Your Progress</string>
-    <string name="home_progress_description">See how accurately you recognize what you hear in each exercise.</string>
-    <string name="home_backup_title">Backup &amp; Restore</string>
-    <string name="home_backup_description">Keep your history and settings safe, or move them to another device.</string>
+    <string name="home_greeting_morning">Good morning</string>
+    <string name="home_greeting_afternoon">Good afternoon</string>
+    <string name="home_greeting_evening">Good evening</string>
+    <string name="home_open_backup">Backup and restore</string>
+    <string name="home_goal_title">Today\'s goal</string>
+    <string name="home_goal_of">of %1$d</string>
+    <plurals name="home_goal_ring">
+        <item quantity="one">%1$d of %2$d answers today</item>
+        <item quantity="other">%1$d of %2$d answers today</item>
+    </plurals>
+    <plurals name="home_goal_remaining">
+        <item quantity="one">%d more answer to reach today\'s goal.</item>
+        <item quantity="other">%d more answers to reach today\'s goal.</item>
+    </plurals>
+    <plurals name="home_goal_keep_streak">
+        <item quantity="one">Answer a question today to keep your %d-day streak going.</item>
+        <item quantity="other">Answer a question today to keep your %d-day streak going.</item>
+    </plurals>
+    <string name="home_goal_done">Goal reached for today. Nice work.</string>
+    <plurals name="home_streak">
+        <item quantity="one">%d-day streak</item>
+        <item quantity="other">%d-day streak</item>
+    </plurals>
+    <string name="home_suggest_title">Suggested for you</string>
+    <plurals name="home_suggest_text">
+        <item quantity="one">%1$s needs the most work in %2$s.</item>
+        <item quantity="other">%1$s need the most work in %2$s.</item>
+    </plurals>
+    <string name="home_join_two">%1$s and %2$s</string>
+    <string name="home_join_three">%1$s, %2$s and %3$s</string>
+    <string name="home_suggest_button">Practice %1$s</string>
+    <string name="home_exercises">Exercises</string>
+    <string name="home_see_progress">See progress</string>
+    <string name="home_new">New</string>
+    <string name="home_card_intervals">Two notes, name the distance</string>
+    <string name="home_card_chords">Quality or inversion</string>
+    <string name="home_card_degrees">A note in its key</string>
+    <string name="home_card_progressions">Chords in a key</string>
+    <string name="home_card_dictation">Write down a melody</string>
+    <string name="home_card_rhythm">Pick the notation</string>
     <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
     <string name="home_sound_credit">Sounds: Upright Piano KW and Spanish Classical Guitar from FreePats (CC0).</string>
 
