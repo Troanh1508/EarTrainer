@@ -83,3 +83,14 @@ fun EarTrainerTheme(
  */
 val ColorScheme.weakSpot: Color
     get() = if (surface.luminance() < 0.5f) Color(0xFFE8832F) else Color(0xFFB45309)
+
+/** Background for weak-spot callouts: pale orange in the light theme, deep brown in the dark one. */
+val ColorScheme.weakSpotContainer: Color
+    get() = if (surface.luminance() < 0.5f) Color(0xFF3B2414) else Color(0xFFFFF3E8)
+
+val ColorScheme.onWeakSpotContainer: Color
+    get() = if (surface.luminance() < 0.5f) Color(0xFFFFDCC4) else Color(0xFF4A2A0C)
+
+/** Text and icons on a [weakSpot] fill. */
+val ColorScheme.onWeakSpot: Color
+    get() = if (surface.luminance() < 0.5f) Color(0xFF2B1400) else Color.White

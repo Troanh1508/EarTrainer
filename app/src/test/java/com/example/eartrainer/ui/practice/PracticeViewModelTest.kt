@@ -121,6 +121,45 @@ class PracticeViewModelTest {
     }
 
     @Test
+    fun examplesPlayInTurnWithoutCountingAsHearingTheQuestion() = runTest {
+        advanceUntilIdle()
+        val examples = listOf(questions[3].prompt, questions[4].prompt)
+        viewModel.onPlayPrompts(examples)
+        advanceUntilIdle()
+        assertTrue(state.isPlaying)
+        assertEquals(examples.take(1), player.played)
+
+        player.finish()
+        advanceUntilIdle()
+        assertEquals(examples, player.played)
+        player.finish()
+        advanceUntilIdle()
+
+        assertFalse(state.isPlaying)
+        assertFalse(state.hasHeardPrompt)
+        viewModel.onAnswerSelected(state.question.correctAnswer)
+        assertNull(state.answer)
+    }
+
+    @Test
+    fun restartingStartsAFreshSessionWithTheSameSettings() = runTest {
+        advanceUntilIdle()
+        assertEquals(settings.value, viewModel.currentSettings.value)
+        playToEnd()
+        viewModel.onAnswerSelected(state.question.correctAnswer)
+        assertEquals(1, state.exercise.score.answered)
+
+        viewModel.onRestartClick()
+        assertEquals(SessionScore(), state.exercise.score)
+        assertEquals(1, state.exercise.questionNumber)
+        assertEquals(listOf(settings.value, settings.value), requestedSettings)
+
+        playToEnd()
+        viewModel.onAnswerSelected(state.question.correctAnswer)
+        assertEquals(listOf("session-1", "session-2"), history.recorded.map { it.sessionId })
+    }
+
+    @Test
     fun staysLoadingUntilSettingsArrive() = runTest {
         val pendingSettings = MutableSharedFlow<IntervalExerciseSettings>()
         val loading = createViewModel(pendingSettings)

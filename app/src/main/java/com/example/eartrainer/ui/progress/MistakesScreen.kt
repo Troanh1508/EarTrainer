@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -33,6 +36,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,14 +55,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.eartrainer.R
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.ui.theme.EarTrainerTheme
 import com.example.eartrainer.ui.theme.weakSpot
+import com.example.eartrainer.ui.theme.onWeakSpot
+import com.example.eartrainer.ui.theme.onWeakSpotContainer
+import com.example.eartrainer.ui.theme.weakSpotContainer
 import kotlin.math.roundToInt
 
 /** One slice of the answers pie and its legend row. */
@@ -69,6 +79,8 @@ private data class PieSlice(val label: String, val count: Int, val color: Color,
 fun MistakesScreen(
     state: MistakesUiState?,
     onItemSelected: (String) -> Unit,
+    /** Opens a drill on two items, by their labels. */
+    onCompare: (first: String, second: String) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     Scaffold(
@@ -105,8 +117,8 @@ fun MistakesScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize(),
         ) {
-            item { AnswersCard(state, onItemSelected, cardModifier) }
-            item { PairsCard(state, cardModifier) }
+            item { AnswersCard(state, onItemSelected, onCompare, cardModifier) }
+            item { PairsCard(state, onCompare, cardModifier) }
         }
     }
 }
@@ -123,7 +135,12 @@ private fun MistakesCard(modifier: Modifier = Modifier, content: @Composable Col
 }
 
 @Composable
-private fun AnswersCard(state: MistakesUiState, onItemSelected: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun AnswersCard(
+    state: MistakesUiState,
+    onItemSelected: (String) -> Unit,
+    onCompare: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val slices = pieSlices(state)
     val total = slices.sumOf { it.count }
     val pieDescription = stringResource(
@@ -151,7 +168,7 @@ private fun AnswersCard(state: MistakesUiState, onItemSelected: (String) -> Unit
             )
             slices.forEach { LegendRow(it, total) }
         }
-        MistakeTip(state)
+        MistakeTip(state, onCompare)
     }
 }
 
@@ -272,29 +289,72 @@ private fun LegendRow(slice: PieSlice, total: Int) {
 }
 
 @Composable
-private fun MistakeTip(state: MistakesUiState) {
+private fun MistakeTip(state: MistakesUiState, onCompare: (String, String) -> Unit) {
     val mistake = state.mostCommonMistake
-    val noMistakes = mistake == null
+    if (mistake == null) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                stringResource(R.string.mistakes_none),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+        }
+        return
+    }
+    val selected = state.selected.label
+    val mixedUpWith = mistake.label
+    val lead = mixedUpWith?.let { stringResource(R.string.mistakes_tip_lead, it) }
+    val apart = mixedUpWith?.let { state.semitonesBetween(selected, it) }
+    val advice = when {
+        mixedUpWith == null -> stringResource(R.string.mistakes_tip_something_else)
+        apart != null && apart > 0 -> pluralStringResource(R.plurals.mistakes_tip_apart, apart, apart)
+        else -> stringResource(R.string.mistakes_tip_general)
+    }
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = if (noMistakes) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
-        contentColor = if (noMistakes) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurface,
+        color = MaterialTheme.colorScheme.weakSpotContainer,
+        contentColor = MaterialTheme.colorScheme.onWeakSpotContainer,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(
-            when {
-                mistake == null -> stringResource(R.string.mistakes_none)
-                mistake.label == null -> stringResource(R.string.mistakes_tip_something_else)
-                else -> stringResource(R.string.mistakes_tip, mistake.label)
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-        )
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                buildAnnotatedString {
+                    if (lead != null) {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(lead) }
+                        append(" ")
+                    }
+                    append(advice)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (mixedUpWith != null && state.comparisonFor(selected, mixedUpWith) != null) {
+                // Short names fit the button; the full names are what a screen reader says.
+                val spoken = stringResource(R.string.mistakes_compare_pair, selected, mixedUpWith)
+                Button(
+                    onClick = { onCompare(selected, mixedUpWith) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.weakSpot,
+                        contentColor = MaterialTheme.colorScheme.onWeakSpot,
+                    ),
+                    modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = spoken },
+                ) {
+                    Text(
+                        stringResource(R.string.mistakes_compare_pair, state.shortLabelOf(selected), state.shortLabelOf(mixedUpWith)),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun PairsCard(state: MistakesUiState, modifier: Modifier = Modifier) {
+private fun PairsCard(state: MistakesUiState, onCompare: (String, String) -> Unit, modifier: Modifier = Modifier) {
     val most = state.confusedPairs.maxOfOrNull { it.count } ?: 0
     MistakesCard(modifier) {
         Text(stringResource(R.string.mistakes_pairs_title), style = MaterialTheme.typography.titleMedium)
@@ -306,12 +366,24 @@ private fun PairsCard(state: MistakesUiState, modifier: Modifier = Modifier) {
             )
         }
         state.confusedPairs.forEach { pair ->
-            Column(Modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    stringResource(R.string.mistakes_pair, pair.first, pair.second),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.mistakes_pair, pair.first, pair.second),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (state.comparisonFor(pair.first, pair.second) != null) {
+                        val label = stringResource(R.string.mistakes_compare_pair, pair.first, pair.second)
+                        TextButton(
+                            onClick = { onCompare(pair.first, pair.second) },
+                            modifier = Modifier.semantics { contentDescription = label },
+                        ) {
+                            Text(stringResource(R.string.mistakes_compare))
+                        }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(
                         Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(5.dp))
@@ -362,6 +434,7 @@ private fun MistakesPreview() {
                 ),
             ),
             onItemSelected = {},
+            onCompare = { _, _ -> },
             onNavigateUp = {},
         )
     }

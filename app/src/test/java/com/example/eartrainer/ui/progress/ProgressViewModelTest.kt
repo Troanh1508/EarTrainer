@@ -269,6 +269,10 @@ class ProgressViewModelTest {
             mistakes.answers,
         )
         assertEquals(listOf(ConfusedPair("Major third", "Octave", 2)), mistakes.confusedPairs)
+        // Intervals have short names for tight spaces, and a distance for the tip.
+        assertEquals("M3", mistakes.shortLabelOf("Major third"))
+        assertEquals("P8", mistakes.shortLabelOf("Octave"))
+        assertEquals(8, mistakes.semitonesBetween("Major third", "Octave"))
 
         viewModel.onMistakesClosed()
         assertNull(viewModel.mistakes.value)

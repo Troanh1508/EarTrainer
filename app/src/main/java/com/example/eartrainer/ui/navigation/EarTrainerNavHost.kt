@@ -1,6 +1,7 @@
 package com.example.eartrainer.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -8,6 +9,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.eartrainer.ui.backup.BackupRoute
 import com.example.eartrainer.ui.backup.BackupViewModel
 import com.example.eartrainer.ui.chords.ChordTrainingRoute
+import com.example.eartrainer.ui.compare.ComparisonDestination
+import com.example.eartrainer.ui.compare.ComparisonRequest
 import com.example.eartrainer.ui.degrees.ScaleDegreeTrainingRoute
 import com.example.eartrainer.ui.dictation.DictationTrainingRoute
 import com.example.eartrainer.ui.home.HomeScreen
@@ -125,7 +128,25 @@ fun EarTrainerNavHost() {
         }
         composable(Routes.PROGRESS) {
             val viewModel: ProgressViewModel = viewModel(factory = ProgressViewModel.Factory)
-            ProgressRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
+            ProgressRoute(
+                viewModel = viewModel,
+                onCompare = { navController.navigate(it.route) },
+                onNavigateUp = { navController.navigateUp() },
+            )
+        }
+        composable(ComparisonRequest.ROUTE_PATTERN) { entry ->
+            val arguments = entry.arguments
+            val request = ComparisonRequest.fromRoute(
+                arguments?.getString("exercise"),
+                arguments?.getString("scope"),
+                arguments?.getString("first"),
+                arguments?.getString("second"),
+            )
+            if (request == null) {
+                LaunchedEffect(Unit) { navController.navigateUp() }
+            } else {
+                ComparisonDestination(request, onNavigateUp = { navController.navigateUp() })
+            }
         }
         composable(Routes.BACKUP) {
             val viewModel: BackupViewModel = viewModel(factory = BackupViewModel.Factory)

@@ -61,19 +61,25 @@ import com.example.eartrainer.data.history.SessionSummary
 import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.music.Interval
+import com.example.eartrainer.ui.compare.ComparisonRequest
 import com.example.eartrainer.ui.theme.EarTrainerTheme
 import java.text.DateFormat
 import java.util.Date
 import kotlin.math.absoluteValue
 
 @Composable
-fun ProgressRoute(viewModel: ProgressViewModel, onNavigateUp: () -> Unit) {
+fun ProgressRoute(viewModel: ProgressViewModel, onCompare: (ComparisonRequest) -> Unit, onNavigateUp: () -> Unit) {
     val mistakesItem by viewModel.mistakesItem.collectAsStateWithLifecycle()
     if (mistakesItem != null) {
         val mistakes by viewModel.mistakes.collectAsStateWithLifecycle()
         // Back returns to the overview, which keeps its exercise, filter and scroll position.
         BackHandler(onBack = viewModel::onMistakesClosed)
-        MistakesScreen(mistakes, onItemSelected = viewModel::onItemSelected, onNavigateUp = viewModel::onMistakesClosed)
+        MistakesScreen(
+            mistakes,
+            onItemSelected = viewModel::onItemSelected,
+            onCompare = { first, second -> mistakes?.comparisonFor(first, second)?.let(onCompare) },
+            onNavigateUp = viewModel::onMistakesClosed,
+        )
     } else {
         val state by viewModel.uiState.collectAsStateWithLifecycle()
         ProgressScreen(

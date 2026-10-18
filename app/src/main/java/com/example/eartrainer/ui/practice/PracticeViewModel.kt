@@ -6,9 +6,11 @@ import com.example.eartrainer.audio.AudioPlayer
 import com.example.eartrainer.exercise.ExerciseEngine
 import com.example.eartrainer.exercise.ExerciseQuestion
 import com.example.eartrainer.exercise.ExerciseState
+import com.example.eartrainer.music.ListeningPrompt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +39,11 @@ class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
     /** Null until the saved settings have loaded and the first session has started. */
     private val _uiState = MutableStateFlow<PracticeUiState<A, Q>?>(null)
     val uiState: StateFlow<PracticeUiState<A, Q>?> = _uiState.asStateFlow()
+
+    private val _currentSettings = MutableStateFlow<S?>(null)
+
+    /** The settings the current session runs under; null until they have loaded. */
+    val currentSettings: StateFlow<S?> = _currentSettings.asStateFlow()
 
     private lateinit var engine: ExerciseEngine<A, Q>
     private var sessionId = ""
@@ -101,11 +108,43 @@ class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
         onPlayClick()
     }
 
+    /**
+     * Plays [prompts] one after another, e.g. reference examples before answering. Unlike
+     * [onPlayClick] this does not count as hearing the question.
+     */
+    fun onPlayPrompts(prompts: List<ListeningPrompt>) {
+        if (_uiState.value == null || prompts.isEmpty()) return
+        val previous = playbackJob
+        playbackJob = viewModelScope.launch {
+            previous?.cancelAndJoin()
+            val session = sessionId
+            _uiState.update { it?.copy(playback = PlaybackStatus.Playing) }
+            val outcome = try {
+                prompts.forEachIndexed { index, prompt ->
+                    if (index > 0) delay(PROMPT_GAP_MILLIS)
+                    audioPlayer.play(prompt)
+                }
+                PlaybackStatus.Idle
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                PlaybackStatus.Failed
+            }
+            _uiState.update { if (it != null && session == sessionId) it.copy(playback = outcome) else it }
+        }
+    }
+
+    /** Starts a fresh session with the same settings: new questions, a new score. */
+    fun onRestartClick() {
+        _currentSettings.value?.let(::startSession)
+    }
+
     /** Called when the screen leaves the foreground so audio never keeps playing in the background. */
     fun onScreenHidden() = stopPlayback()
 
     private fun startSession(settings: S) {
         stopPlayback()
+        _currentSettings.value = settings
         engine = ExerciseEngine(questionSource(settings))
         sessionId = newSessionId()
         _uiState.value = PracticeUiState(exercise = engine.start())
@@ -115,6 +154,11 @@ class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
         // Keep the job reference so the next play can join it and wait for its cleanup.
         playbackJob?.cancel()
         _uiState.update { if (it != null && it.isPlaying) it.copy(playback = PlaybackStatus.Idle) else it }
+    }
+
+    private companion object {
+        /** Pause between prompts played back to back, so each is heard as its own example. */
+        const val PROMPT_GAP_MILLIS = 600L
     }
 
     override fun onCleared() {

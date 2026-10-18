@@ -192,6 +192,8 @@ fun AnswerFeedback(
     notesAsPlayed: String?,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The button text; "Next" unless the next step is something else, like a result. */
+    nextLabel: String = stringResource(R.string.practice_next),
 ) {
     val accent = if (isCorrect) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -233,7 +235,7 @@ fun AnswerFeedback(
         }
         Spacer(Modifier.size(8.dp))
         Button(onClick = onNext, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-            Text(stringResource(R.string.practice_next), style = MaterialTheme.typography.titleMedium)
+            Text(nextLabel, style = MaterialTheme.typography.titleMedium)
         }
     }
 }

@@ -330,7 +330,12 @@
     <string name="mistakes_other">Other answers</string>
     <string name="mistakes_count">%1$d×</string>
     <string name="mistakes_pie_description">When it was %1$s, you answered: %2$s</string>
-    <string name="mistakes_tip">Most often mistaken for %1$s. Listen for what sets the two apart.</string>
+    <string name="mistakes_tip_lead">Often mistaken for %1$s.</string>
+    <plurals name="mistakes_tip_apart">
+        <item quantity="one">The two are a semitone apart; hearing them back to back helps.</item>
+        <item quantity="other">The two are %d semitones apart; hearing them back to back helps.</item>
+    </plurals>
+    <string name="mistakes_tip_general">Hearing the two back to back helps.</string>
     <string name="mistakes_tip_something_else">Most often answered with something that does not line up with it.</string>
     <string name="mistakes_none">No mistakes yet: every answer was right.</string>
     <string name="mistakes_pairs_title">Most confused pairs</string>
@@ -340,4 +345,30 @@
         <item quantity="one">%d mix-up</item>
         <item quantity="other">%d mix-ups</item>
     </plurals>
+    <!-- Comparison drill -->
+    <string name="compare_title">Compare</string>
+    <string name="compare_subtitle">%1$s or %2$s</string>
+    <string name="compare_listen_title">Hear the difference</string>
+    <string name="compare_hint_intervals">Both start from the same note, played the same way.</string>
+    <string name="compare_hint_chords">Both are played from the same bass note.</string>
+    <string name="compare_hint_degrees">Both are in the same key, after the same cadence.</string>
+    <string name="compare_play_example">Play %1$s</string>
+    <string name="compare_play_both">Play both</string>
+    <string name="compare_question">Question %1$d of %2$d</string>
+    <plurals name="compare_right_so_far">
+        <item quantity="one">%d right</item>
+        <item quantity="other">%d right</item>
+    </plurals>
+    <string name="compare_it_was">It was %1$s</string>
+    <string name="compare_see_result">See result</string>
+    <plurals name="compare_result">
+        <item quantity="one">%1$d of %2$d right</item>
+        <item quantity="other">%1$d of %2$d right</item>
+    </plurals>
+    <string name="compare_result_good">You can tell these two apart. Their answers now count toward your progress.</string>
+    <string name="compare_result_keep_going">Getting there. Play the two examples again, then try another round.</string>
+    <string name="compare_again">Another round</string>
+    <string name="compare_done">Done</string>
+    <string name="mistakes_compare_pair">Compare %1$s and %2$s</string>
+    <string name="mistakes_compare">Compare</string>
 </resources>

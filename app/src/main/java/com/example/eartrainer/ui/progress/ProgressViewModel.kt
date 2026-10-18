@@ -216,16 +216,41 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
 
     // Labeled exactly like [accuracyFor], so items and answers match the bars they came from.
     private fun confusionsFor(selected: ProgressFilter): Flow<List<LabeledConfusion>> = when (selected) {
-        is ProgressFilter.IntervalStyleFilter -> history.intervalConfusions(selected.style).map { it.labeled(Interval::displayName) }
-        is ProgressFilter.ChordTargetFilter -> history.chordConfusions(selected.target).map { it.labeled(ChordAnswer::displayName) }
-        is ProgressFilter.ModeFilter -> history.scaleDegreeConfusions(selected.mode).map { it.labeled(::degreeLabel) }
-        is ProgressFilter.ProgressionModeFilter -> history.progressionConfusions(selected.mode).map { it.labeled(DiatonicChord::numeral) }
-        is ProgressFilter.DictationModeFilter -> history.dictationConfusions(selected.mode).map { it.labeled(::degreeLabel) }
-        ProgressFilter.RhythmFilter -> history.rhythmConfusions().map { it.labeled(::rhythmLabel) }
+        is ProgressFilter.IntervalStyleFilter -> history.intervalConfusions(selected.style).map {
+            it.labeled(Interval::displayName, Interval::name, short = Interval::abbreviation, semitones = Interval::semitones)
+        }
+        is ProgressFilter.ChordTargetFilter -> history.chordConfusions(selected.target).map { it.labeled(ChordAnswer::displayName, ::chordAnswerKey) }
+        is ProgressFilter.ModeFilter -> history.scaleDegreeConfusions(selected.mode).map {
+            it.labeled(::degreeLabel, ScaleDegree::name, semitones = ScaleDegree::semitonesAboveTonic)
+        }
+        is ProgressFilter.ProgressionModeFilter ->
+            history.progressionConfusions(selected.mode).map { it.labeled(DiatonicChord::numeral, key = { chord -> chord.step.toString() }) }
+        is ProgressFilter.DictationModeFilter -> history.dictationConfusions(selected.mode).map {
+            it.labeled(::degreeLabel, ScaleDegree::name, semitones = ScaleDegree::semitonesAboveTonic)
+        }
+        ProgressFilter.RhythmFilter -> history.rhythmConfusions().map { it.labeled(::rhythmLabel, RhythmCell::name) }
     }
 
-    private fun <T> List<Confusion<T>>.labeled(label: (T) -> String) =
-        map { LabeledConfusion(label(it.asked), it.answered?.let(label), it.count) }
+    // [key] is a stable name for each value, so a label can be turned back into what it names;
+    // [short] is a compact form for tight spaces, and [semitones] a pitch for measuring distances.
+    private fun <T> List<Confusion<T>>.labeled(
+        label: (T) -> String,
+        key: (T) -> String,
+        short: (T) -> String = label,
+        semitones: ((T) -> Int)? = null,
+    ) = map {
+        LabeledConfusion(
+            label(it.asked), it.answered?.let(label), it.count,
+            askedKey = key(it.asked), answeredKey = it.answered?.let(key),
+            askedShort = short(it.asked), answeredShort = it.answered?.let(short),
+            askedSemitones = semitones?.invoke(it.asked), answeredSemitones = it.answered?.let { answered -> semitones?.invoke(answered) },
+        )
+    }
+
+    private fun chordAnswerKey(answer: ChordAnswer) = when (answer) {
+        is ChordAnswer.Quality -> answer.quality.name
+        is ChordAnswer.Inversion -> answer.inversion.name
+    }
 
     private fun degreeLabel(degree: ScaleDegree) = "${degree.label} · ${degree.solfege}"
 
