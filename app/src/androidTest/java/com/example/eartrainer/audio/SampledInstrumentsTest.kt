@@ -1,40 +1,43 @@
 package com.example.eartrainer.audio
 
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.eartrainer.music.ListeningPrompt
 import com.example.eartrainer.music.Pitch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import kotlin.math.abs
 import kotlin.math.ln
 
-/** Decodes the bundled piano with the device's real codecs and checks every recording. */
-@RunWith(AndroidJUnit4::class)
-class UprightPianoSamplesTest {
+/** Decodes each bundled instrument with the device's real codecs and checks every recording. */
+@RunWith(Parameterized::class)
+class SampledInstrumentsTest(private val instrument: Instrument) {
 
     companion object {
-        private lateinit var bank: SampleBank
-
-        @BeforeClass
         @JvmStatic
-        fun decodeOnce() {
-            val assets = InstrumentationRegistry.getInstrumentation().targetContext.assets
-            bank = runBlocking { AssetSampleLoader(assets).loadUprightPiano(maxSeconds = 3.0) }
-        }
+        @Parameterized.Parameters(name = "{0}")
+        fun instruments() = Instrument.entries.toList()
+
+        // Decoded once per instrument and shared by its tests.
+        private val banks = mutableMapOf<Instrument, SampleBank>()
     }
+
+    private val bank: SampleBank
+        get() = banks.getOrPut(instrument) {
+            val assets = InstrumentationRegistry.getInstrumentation().targetContext.assets
+            runBlocking { AssetSampleLoader(assets).load(instrument, maxSeconds = 3.0) }
+        }
 
     @Test
     fun everyRecordingDecodesAsAudibleMono44k() {
-        assertEquals(UprightPianoKw.recordings.values.sorted(), bank.rootPitches)
+        assertEquals(instrument.samples.recordings.values.sorted(), bank.rootPitches)
         for (root in bank.rootPitches) {
             val sample = bank.sampleFor(root)
             assertEquals(44_100, sample.sampleRate)
-            // At least 0.6 s each (the shortest recording), at most the 3 s cap.
+            // At least 0.6 s each (shorter would cut off held notes), at most the 3 s cap.
             assertTrue("$root has ${sample.pcm.size} frames", sample.pcm.size in 26_000..132_300)
             assertTrue("$root is nearly silent", sample.peak > 3_000)
         }

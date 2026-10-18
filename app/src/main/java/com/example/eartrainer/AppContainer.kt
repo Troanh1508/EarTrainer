@@ -7,6 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.example.eartrainer.audio.AssetSampleLoader
 import com.example.eartrainer.audio.AudioPlayer
 import com.example.eartrainer.audio.AudioTrackPlayer
+import com.example.eartrainer.audio.Instrument
 import com.example.eartrainer.audio.PcmRenderer
 import com.example.eartrainer.audio.SampledInstrumentRenderer
 import com.example.eartrainer.audio.ToneSynthesizer
@@ -24,12 +25,18 @@ import com.example.eartrainer.data.settings.IntervalSettingsStore
 import com.example.eartrainer.data.settings.ProgressionSettingsStore
 import com.example.eartrainer.data.settings.RhythmSettingsStore
 import com.example.eartrainer.data.settings.ScaleDegreeSettingsStore
+import com.example.eartrainer.data.settings.SoundSettingsStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 private val Context.settingsDataStore by preferencesDataStore(name = "settings")
 
@@ -64,33 +71,42 @@ class AppContainer(private val context: Context) {
 
     val documents: DocumentStreams by lazy { ContentResolverDocuments(context.contentResolver) }
 
+    val soundSettings by lazy { SoundSettingsStore(context.settingsDataStore) }
+
     /**
-     * The piano is decoded once per process, in the background, and shared by every player.
-     * If decoding fails the app still works, using the built-in synthesizer instead.
+     * Each instrument is decoded at most once per process, in the background, and shared by
+     * every player. Only instruments the user picks are decoded.
      */
-    private val instrument: Deferred<PcmRenderer> by lazy {
-        applicationScope.async {
-            try {
-                SampledInstrumentRenderer(AssetSampleLoader(context.assets).loadUprightPiano())
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Piano samples could not be loaded; using the synthesizer", e)
-                ToneSynthesizer()
+    private val instruments = ConcurrentHashMap<Instrument, Deferred<PcmRenderer>>()
+
+    private fun rendererFor(instrument: Instrument): Deferred<PcmRenderer> =
+        instruments.computeIfAbsent(instrument) {
+            applicationScope.async {
+                try {
+                    SampledInstrumentRenderer(AssetSampleLoader(context.assets).load(instrument))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // The app still works, using the built-in synthesizer instead.
+                    Log.w(TAG, "${instrument.displayName} samples could not be loaded; using the synthesizer", e)
+                    ToneSynthesizer()
+                }
             }
+        }
+
+    /**
+     * Decodes the chosen instrument at launch, and a newly chosen one as soon as it is picked,
+     * so it is ready before the next prompt plays.
+     */
+    fun preloadInstrument() {
+        applicationScope.launch {
+            soundSettings.settings.map { it.instrument }.distinctUntilChanged().collect { rendererFor(it) }
         }
     }
 
-    /** Starts decoding the piano so it is ready before the first exercise needs it. */
-    fun preloadInstrument() {
-        instrument.start()
-    }
-
-    /** Each exercise screen owns and releases its own player. */
-    fun createAudioPlayer(): AudioPlayer {
-        val instrument = instrument
-        return AudioTrackPlayer(context, renderer = { instrument.await() })
-    }
+    /** Each exercise screen owns and releases its own player; every prompt uses the current instrument. */
+    fun createAudioPlayer(): AudioPlayer =
+        AudioTrackPlayer(context, renderer = { rendererFor(soundSettings.settings.first().instrument).await() })
 
     private companion object {
         const val TAG = "AppContainer"

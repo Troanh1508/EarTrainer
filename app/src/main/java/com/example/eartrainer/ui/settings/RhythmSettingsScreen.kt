@@ -50,6 +50,7 @@ fun RhythmSettingsRoute(viewModel: RhythmSettingsViewModel, onNavigateUp: () -> 
         onRestoreDefaults = viewModel::onRestoreDefaults,
         onFocusOnWeakSpotsChanged = viewModel::onFocusOnWeakSpotsChanged,
         onNavigateUp = onNavigateUp,
+        instrumentSetting = { InstrumentSettingRoute() },
     )
 }
 
@@ -63,6 +64,8 @@ fun RhythmSettingsScreen(
     onRestoreDefaults: () -> Unit,
     onFocusOnWeakSpotsChanged: (Boolean) -> Unit,
     onNavigateUp: () -> Unit,
+    // App-wide, so the route supplies it; left out of previews.
+    instrumentSetting: @Composable () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -151,6 +154,10 @@ fun RhythmSettingsScreen(
                 ) {
                     Text(stringResource(R.string.settings_restore_defaults))
                 }
+
+                HorizontalDivider()
+
+                instrumentSetting()
             }
         }
     }

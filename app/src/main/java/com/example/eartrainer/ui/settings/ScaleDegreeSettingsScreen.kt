@@ -52,6 +52,7 @@ fun ScaleDegreeSettingsRoute(viewModel: ScaleDegreeSettingsViewModel, onNavigate
         onRestoreDefaults = viewModel::onRestoreDefaults,
         onFocusOnWeakSpotsChanged = viewModel::onFocusOnWeakSpotsChanged,
         onNavigateUp = onNavigateUp,
+        instrumentSetting = { InstrumentSettingRoute() },
     )
 }
 
@@ -66,6 +67,8 @@ fun ScaleDegreeSettingsScreen(
     onRestoreDefaults: () -> Unit,
     onFocusOnWeakSpotsChanged: (Boolean) -> Unit,
     onNavigateUp: () -> Unit,
+    // App-wide, so the route supplies it; left out of previews.
+    instrumentSetting: @Composable () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -157,6 +160,10 @@ fun ScaleDegreeSettingsScreen(
                 ) {
                     Text(stringResource(R.string.settings_restore_defaults))
                 }
+
+                HorizontalDivider()
+
+                instrumentSetting()
             }
         }
     }

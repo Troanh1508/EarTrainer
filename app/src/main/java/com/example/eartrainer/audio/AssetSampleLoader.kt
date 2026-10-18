@@ -12,36 +12,20 @@ import kotlinx.coroutines.coroutineScope
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/**
- * FreePats "Upright Piano KW" (small), CC0 public domain; see the README and license next to
- * the recordings in assets. Recorded roughly every minor third; the root pitches come from the
- * sound bank's SFZ map.
- */
-internal object UprightPianoKw {
-    const val ASSET_DIR = "instruments/upright-piano-kw"
-
-    val recordings: Map<String, Int> = mapOf(
-        "C1" to 24, "Fs1" to 30, "B1" to 35, "Ds2" to 39, "Fs2" to 42, "B2" to 47,
-        "Ds3" to 51, "Fs3" to 54, "A3" to 57, "C4" to 60, "Ds4" to 63, "Fs4" to 66,
-        "A4" to 69, "C5" to 72, "Ds5" to 75, "Fs5" to 78, "A5" to 81, "C6" to 84,
-        "Ds6" to 87, "Fs6" to 90, "A6" to 93, "C7" to 96, "Ds7" to 99, "Fs7" to 102,
-        "A7" to 105, "B7" to 107,
-    )
-}
-
 /** Decodes compressed recordings from assets into PCM with the platform's MediaCodec decoders. */
 class AssetSampleLoader(private val assets: AssetManager) {
 
     /**
-     * Decodes the bundled upright piano. Only the first [maxSeconds] of each recording are kept:
+     * Decodes the recordings of [instrument]. Only the first [maxSeconds] of each recording are kept:
      * prompts never hold a note that long, and it keeps the decoded bank to a few megabytes.
      */
-    suspend fun loadUprightPiano(maxSeconds: Double = 3.0): SampleBank = coroutineScope {
+    suspend fun load(instrument: Instrument, maxSeconds: Double = 3.0): SampleBank = coroutineScope {
         // Most of each decode is codec start-up rather than CPU work, so a few in parallel cut the
         // total load time several-fold.
         val decoding = Dispatchers.Default.limitedParallelism(PARALLEL_DECODES)
-        val samples = UprightPianoKw.recordings.map { (name, root) ->
-            async(decoding) { decode("${UprightPianoKw.ASSET_DIR}/$name.flac", root, maxSeconds) }
+        val set = instrument.samples
+        val samples = set.recordings.map { (name, root) ->
+            async(decoding) { decode("${set.assetDir}/$name.flac", root, maxSeconds) }
         }
         SampleBank(samples.awaitAll())
     }

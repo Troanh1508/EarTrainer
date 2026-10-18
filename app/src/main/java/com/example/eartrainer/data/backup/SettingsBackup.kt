@@ -14,6 +14,7 @@ import com.example.eartrainer.data.settings.IntervalSettingsStore
 import com.example.eartrainer.data.settings.ProgressionSettingsStore
 import com.example.eartrainer.data.settings.RhythmSettingsStore
 import com.example.eartrainer.data.settings.ScaleDegreeSettingsStore
+import com.example.eartrainer.data.settings.SoundSettingsStore
 
 /**
  * Converts the shared settings DataStore to and from backup values.
@@ -25,7 +26,7 @@ import com.example.eartrainer.data.settings.ScaleDegreeSettingsStore
  */
 internal object SettingsBackup {
 
-    /** Copies one exercise's settings, replacing anything missing or invalid with defaults. */
+    /** Copies one group of settings, replacing anything missing or invalid with defaults. */
     private val sections: List<(Preferences, MutablePreferences) -> Unit> = listOf(
         { from, to -> IntervalSettingsStore.encode(IntervalSettingsStore.decode(from), to) },
         { from, to -> ChordSettingsStore.encode(ChordSettingsStore.decode(from), to) },
@@ -33,6 +34,7 @@ internal object SettingsBackup {
         { from, to -> ProgressionSettingsStore.encode(ProgressionSettingsStore.decode(from), to) },
         { from, to -> DictationSettingsStore.encode(DictationSettingsStore.decode(from), to) },
         { from, to -> RhythmSettingsStore.encode(RhythmSettingsStore.decode(from), to) },
+        { from, to -> SoundSettingsStore.encode(SoundSettingsStore.decode(from), to) },
     )
 
     fun export(preferences: Preferences): Map<String, SettingValue> =
