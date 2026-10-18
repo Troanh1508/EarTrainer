@@ -1,6 +1,8 @@
 package com.example.eartrainer.data.settings
 
+import androidx.datastore.core.okio.OkioStorage
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.PreferencesSerializer
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.preferencesOf
@@ -14,6 +16,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import okio.FileSystem
+import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -73,7 +77,13 @@ class IntervalSettingsStoreTest {
     fun updatesPersistToDisk() = runBlocking {
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         try {
-            val dataStore = PreferenceDataStoreFactory.create(scope = scope) { File(tempFolder.root, "settings.preferences_pb") }
+            // Okio storage rather than the File-based default the app uses on Android: the default
+            // replaces the file with File.renameTo, which fails on Windows JDKs when the file
+            // already exists, so the second write here would fail on a Windows build machine.
+            val storage = OkioStorage(FileSystem.SYSTEM, PreferencesSerializer) {
+                File(tempFolder.root, "settings.preferences_pb").toOkioPath()
+            }
+            val dataStore = PreferenceDataStoreFactory.create(storage, scope = scope)
             val store = IntervalSettingsStore(dataStore)
             assertEquals(IntervalExerciseSettings(), store.settings.first())
 
