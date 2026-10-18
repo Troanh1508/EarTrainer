@@ -2,11 +2,15 @@ package com.example.eartrainer.exercise
 
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordQuality
+import com.example.eartrainer.music.ChordProgression
+import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Key
 import com.example.eartrainer.music.ListeningPrompt
 import com.example.eartrainer.music.Mode
 import com.example.eartrainer.music.Pitch
+import com.example.eartrainer.music.Rhythm
+import com.example.eartrainer.music.RhythmCell
 import com.example.eartrainer.music.ScaleDegree
 import kotlin.random.Random
 
@@ -150,5 +154,83 @@ class ScaleDegreeComparison(
          */
         fun modeFor(first: ScaleDegree, second: ScaleDegree): Mode =
             Mode.entries.firstOrNull { it.diatonicDegrees.containsAll(listOf(first, second)) } ?: Mode.MAJOR
+    }
+}
+
+/**
+ * Two chords of a key, each question being the tonic chord and then one of them, in a random key.
+ * Answers are recorded as two-chord progressions; progression scoring skips the opening tonic,
+ * so only the compared chord counts. When one of the two is the tonic itself, the question is
+ * whether the chord changes at all.
+ */
+class ProgressionChordComparison(
+    first: DiatonicChord,
+    second: DiatonicChord,
+    private val random: Random = Random.Default,
+) : Comparison<ChordProgression, ProgressionQuestion> {
+
+    init {
+        require(first != second) { "A comparison needs two different chords" }
+        require(first.mode == second.mode) { "Both chords must be in the same mode" }
+    }
+
+    private val mode = first.mode
+
+    override val answers: List<ChordProgression> =
+        listOf(first, second).sortedBy { it.step }.map { ChordProgression(listOf(DiatonicChord(mode, 1), it)) }
+
+    private fun randomKey() = Key(KeyChoice.RANDOM.pickTonic(random), mode)
+
+    override fun nextQuestion() = ProgressionQuestion(randomKey(), answers.random(random), answers)
+
+    override val examples: List<ListeningPrompt> = randomKey().let { key ->
+        answers.map { ProgressionQuestion(key, it, answers).prompt }
+    }
+}
+
+/**
+ * Two rhythm figures, as one bar that alternates them, against the same bar in the opposite
+ * order. Every figure in either rhythm is one of the two, so recording answers only ever scores
+ * the figures being compared.
+ */
+class RhythmCellComparison(
+    first: RhythmCell,
+    second: RhythmCell,
+    private val tempo: RhythmTempo = RhythmTempo.MEDIUM,
+    private val random: Random = Random.Default,
+) : Comparison<Rhythm, RhythmQuestion> {
+
+    init {
+        require(first != second) { "A comparison needs two different figures" }
+    }
+
+    /** The figure listed first in the rhythm settings leads the first rhythm. */
+    private val cells = listOf(first, second).sortedBy { it.ordinal }
+
+    override val answers: List<Rhythm> = listOf(alternating(cells[0], cells[1]), alternating(cells[1], cells[0]))
+
+    override fun nextQuestion() = RhythmQuestion(answers.random(random), tempo, answers)
+
+    override val examples: List<ListeningPrompt> = answers.map { RhythmQuestion(it, tempo, answers).prompt }
+
+    companion object {
+        /**
+         * One bar taking [lead] and [other] in turn. A two-beat figure must start on beat 1 or 3
+         * and fit before the barline; where it cannot, the other figure goes there instead.
+         */
+        fun alternating(lead: RhythmCell, other: RhythmCell): Rhythm {
+            val cells = mutableListOf<RhythmCell>()
+            var beat = 0
+            var next = lead
+            while (beat < Rhythm.BEATS_PER_BAR) {
+                val alternative = if (next == lead) other else lead
+                val fits = { cell: RhythmCell -> cell.beats == 1 || (beat % 2 == 0 && beat + cell.beats <= Rhythm.BEATS_PER_BAR) }
+                val cell = if (fits(next)) next else alternative.takeIf(fits) ?: RhythmCell.QUARTER
+                cells += cell
+                beat += cell.beats
+                next = if (cell == lead) other else lead
+            }
+            return Rhythm(cells)
+        }
     }
 }

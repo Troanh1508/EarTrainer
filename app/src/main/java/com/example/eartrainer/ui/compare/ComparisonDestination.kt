@@ -22,14 +22,21 @@ import com.example.eartrainer.exercise.ExerciseState
 import com.example.eartrainer.exercise.IntervalAttempt
 import com.example.eartrainer.exercise.IntervalComparison
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.exercise.ProgressionAttempt
+import com.example.eartrainer.exercise.ProgressionChordComparison
+import com.example.eartrainer.exercise.RhythmAttempt
+import com.example.eartrainer.exercise.RhythmCellComparison
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.exercise.ScaleDegreeComparison
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordQuality
+import com.example.eartrainer.music.DiatonicChord
 import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Mode
+import com.example.eartrainer.music.RhythmCell
 import com.example.eartrainer.music.ScaleDegree
 import com.example.eartrainer.ui.practice.PracticeViewModel
+import com.example.eartrainer.ui.rhythm.RhythmNotation
 import kotlinx.coroutines.flow.flowOf
 
 /**
@@ -69,7 +76,47 @@ fun ComparisonDestination(request: ComparisonRequest, onNavigateUp: () -> Unit) 
             }
             ComparisonRoute(viewModel, { "${it.label} · ${it.solfege}" }, stringResource(R.string.compare_hint_degrees), onNavigateUp)
         }
-        ExerciseKind.PROGRESSIONS, ExerciseKind.RHYTHM -> Invalid(onNavigateUp)
+        ExerciseKind.PROGRESSIONS -> {
+            // Progressions are always looked at one mode at a time, and the chords are scale steps.
+            val mode = request.scope?.let { enumOrNull<Mode>(it) }
+            val first = request.first.toIntOrNull()?.takeIf { it in 1..7 }
+            val second = request.second.toIntOrNull()?.takeIf { it in 1..7 }
+            if (mode == null || first == null || second == null) return Invalid(onNavigateUp)
+            val viewModel = comparisonViewModel(
+                request,
+                { ProgressionChordComparison(DiatonicChord(mode, first), DiatonicChord(mode, second)) },
+            ) { container, state, session ->
+                ProgressionAttempt.from(state, session)?.let(container.practiceHistory::record)
+            }
+            ComparisonRoute(viewModel, { it.chords.last().numeral }, stringResource(R.string.compare_hint_progressions), onNavigateUp)
+        }
+        ExerciseKind.RHYTHM -> {
+            val first = enumOrNull<RhythmCell>(request.first)
+            val second = enumOrNull<RhythmCell>(request.second)
+            if (first == null || second == null) return Invalid(onNavigateUp)
+            val viewModel = comparisonViewModel(request, { RhythmCellComparison(first, second) }) { container, state, session ->
+                RhythmAttempt.from(state, session)?.let(container.practiceHistory::record)
+            }
+            ComparisonRoute(
+                viewModel,
+                labelOf = { it.description.replaceFirstChar(Char::uppercase) },
+                examplesHint = stringResource(R.string.compare_hint_rhythm),
+                onNavigateUp = onNavigateUp,
+                subtitle = stringResource(
+                    R.string.compare_subtitle,
+                    first.displayName.replaceFirstChar(Char::uppercase),
+                    second.displayName,
+                ),
+                graphicOf = { rhythm -> RhythmNotation(rhythm) },
+                // Whole rhythms are long to read out; each example is named by how it starts.
+                answerSummary = stringResource(R.string.rhythm_summary),
+                exampleLabels = listOf(first, second).sortedBy { it.ordinal }.map { cell ->
+                    stringResource(R.string.compare_starts_with, cell.displayName)
+                },
+                // Notation needs the full width to stay legible.
+                columns = 1,
+            )
+        }
     }
 }
 

@@ -352,8 +352,11 @@
     <string name="compare_hint_intervals">Both start from the same note, played the same way.</string>
     <string name="compare_hint_chords">Both are played from the same bass note.</string>
     <string name="compare_hint_degrees">Both are in the same key, after the same cadence.</string>
+    <string name="compare_hint_progressions">Both follow the same tonic chord, in the same key.</string>
+    <string name="compare_hint_rhythm">The same two figures in opposite order, at the same tempo.</string>
     <string name="compare_play_example">Play %1$s</string>
     <string name="compare_play_both">Play both</string>
+    <string name="compare_starts_with">%1$s first</string>
     <string name="compare_question">Question %1$d of %2$d</string>
     <plurals name="compare_right_so_far">
         <item quantity="one">%d right</item>

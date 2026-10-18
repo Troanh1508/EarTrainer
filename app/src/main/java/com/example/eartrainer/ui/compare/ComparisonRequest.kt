@@ -19,8 +19,8 @@ data class ComparisonRequest(
         const val ROUTE_PATTERN = "compare/{exercise}/{scope}/{first}/{second}"
         private const val ALL = "ALL"
 
-        /** Exercises with a comparison drill; progressions and rhythm need their own kinds of question. */
-        val SUPPORTED = setOf(ExerciseKind.INTERVALS, ExerciseKind.CHORDS, ExerciseKind.SCALE_DEGREES, ExerciseKind.DICTATION)
+        /** Exercises with a comparison drill. */
+        val SUPPORTED: Set<ExerciseKind> = ExerciseKind.entries.toSet()
 
         /** Null if any part does not name a known value, so a bad route never builds a drill. */
         fun fromRoute(exercise: String?, scope: String?, first: String?, second: String?): ComparisonRequest? {

@@ -29,7 +29,6 @@ class ComparisonRequestTest {
 
     @Test
     fun routesThatCannotBuildADrillAreRejected() {
-        assertNull(ComparisonRequest.fromRoute("PROGRESSIONS", "MAJOR", "4", "2"))
         assertNull(ComparisonRequest.fromRoute("NOT_AN_EXERCISE", "ALL", "A", "B"))
         assertNull(ComparisonRequest.fromRoute("INTERVALS", "ALL", "OCTAVE", "OCTAVE"))
         assertNull(ComparisonRequest.fromRoute("INTERVALS", "ALL", null, "OCTAVE"))
@@ -65,8 +64,15 @@ class ComparisonRequestTest {
     }
 
     @Test
-    fun exercisesWithoutADrillOfferNone() {
-        val progressions = mistakes(ProgressFilter.ProgressionModeFilter(Mode.MAJOR), "IV" to "4", "ii" to "2")
-        assertNull(progressions.comparisonFor("IV", "ii"))
+    fun progressionsCarryTheirModeAndRhythmsNoScope() {
+        val progressions = mistakes(ProgressFilter.ProgressionModeFilter(Mode.MINOR), "iv" to "4", "ii°" to "2")
+        assertEquals(ComparisonRequest(ExerciseKind.PROGRESSIONS, "MINOR", "4", "2"), progressions.comparisonFor("iv", "ii°"))
+        assertEquals(progressions.comparisonFor("iv", "ii°"), progressions.comparisonFor("iv", "ii°")?.let { request ->
+            val parts = request.route.split("/")
+            ComparisonRequest.fromRoute(parts[1], parts[2], parts[3], parts[4])
+        })
+
+        val rhythms = mistakes(ProgressFilter.RhythmFilter, "Half" to "HALF", "Quarter" to "QUARTER")
+        assertEquals(ComparisonRequest(ExerciseKind.RHYTHM, null, "HALF", "QUARTER"), rhythms.comparisonFor("Half", "Quarter"))
     }
 }

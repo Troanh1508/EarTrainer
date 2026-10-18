@@ -70,7 +70,8 @@ data class MistakesUiState(
             is ProgressFilter.ChordTargetFilter -> filter.target.name
             is ProgressFilter.ModeFilter -> filter.mode?.name
             is ProgressFilter.DictationModeFilter -> filter.mode.name
-            is ProgressFilter.ProgressionModeFilter, ProgressFilter.RhythmFilter -> null
+            is ProgressFilter.ProgressionModeFilter -> filter.mode.name
+            ProgressFilter.RhythmFilter -> null
         }
         return ComparisonRequest(exercise, scope, firstKey, secondKey)
     }

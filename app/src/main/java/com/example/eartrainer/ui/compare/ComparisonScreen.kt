@@ -34,10 +34,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -72,6 +74,18 @@ fun <A, Q : ExerciseQuestion<A>> ComparisonRoute(
     /** How the two examples are made alike, e.g. "Both start from the same note." */
     examplesHint: String,
     onNavigateUp: () -> Unit,
+    /** What is being compared, under the title; by default the two answers' labels. */
+    subtitle: String? = null,
+    /** Draws each choice instead of writing it, e.g. rhythm notation; the label is still read aloud. */
+    graphicOf: (@Composable (A) -> Unit)? = null,
+    columns: Int = 2,
+    /** Shorter names for the example buttons, when the answers' labels are long. */
+    exampleLabels: List<String>? = null,
+    /**
+     * Feedback to show instead of naming both answers, for drawn choices whose marks already
+     * show what was chosen and what was right.
+     */
+    answerSummary: String? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val comparison by viewModel.currentSettings.collectAsStateWithLifecycle()
@@ -95,6 +109,11 @@ fun <A, Q : ExerciseQuestion<A>> ComparisonRoute(
         onNext = viewModel::onNextClick,
         onRestart = viewModel::onRestartClick,
         onNavigateUp = onNavigateUp,
+        subtitle = subtitle,
+        graphicOf = graphicOf,
+        columns = columns,
+        exampleLabels = exampleLabels,
+        answerSummary = answerSummary,
     )
 }
 
@@ -113,10 +132,26 @@ fun <A, Q : ExerciseQuestion<A>> ComparisonScreen(
     onNext: () -> Unit,
     onRestart: () -> Unit,
     onNavigateUp: () -> Unit,
+    subtitle: String? = null,
+    graphicOf: (@Composable (A) -> Unit)? = null,
+    columns: Int = 2,
+    exampleLabels: List<String>? = null,
+    answerSummary: String? = null,
 ) {
     val total = Comparison.QUESTIONS_PER_ROUND
     // Survives rotation; a new round (or a new question) always hides it again.
     var showResult by rememberSaveable { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    val answered = state.answer != null
+    LaunchedEffect(answered, state.exercise.questionNumber) {
+        if (answered) {
+            // The feedback panel appears in the same frame as the answer; wait until the page has
+            // been laid out above it, then show the end of the page so both choices stay in view.
+            withFrameNanos {}
+            withFrameNanos {}
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
+    }
     val roundFinished = state.exercise.questionNumber >= total && state.answer != null
     val first = labelOf(answers[0])
     val second = labelOf(answers[1])
@@ -128,7 +163,7 @@ fun <A, Q : ExerciseQuestion<A>> ComparisonScreen(
                     Column {
                         Text(stringResource(R.string.compare_title))
                         Text(
-                            stringResource(R.string.compare_subtitle, first, second),
+                            subtitle ?: stringResource(R.string.compare_subtitle, first, second),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -147,8 +182,8 @@ fun <A, Q : ExerciseQuestion<A>> ComparisonScreen(
                 Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
                     AnswerFeedback(
                         isCorrect = answer.isCorrect,
-                        selectedLabel = labelOf(answer.selectedAnswer),
-                        correctSummary = stringResource(R.string.compare_it_was, labelOf(state.question.correctAnswer)),
+                        selectedLabel = if (answerSummary == null) labelOf(answer.selectedAnswer) else null,
+                        correctSummary = answerSummary ?: stringResource(R.string.compare_it_was, labelOf(state.question.correctAnswer)),
                         notesAsPlayed = null,
                         onNext = if (roundFinished) ({ showResult = true }) else onNext,
                         nextLabel = stringResource(if (roundFinished) R.string.compare_see_result else R.string.practice_next),
@@ -160,7 +195,7 @@ fun <A, Q : ExerciseQuestion<A>> ComparisonScreen(
     ) { innerPadding ->
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxSize().padding(innerPadding).verticalScroll(scrollState),
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -177,7 +212,7 @@ fun <A, Q : ExerciseQuestion<A>> ComparisonScreen(
                         onDone = onNavigateUp,
                     )
                 } else {
-                    ExamplesCard(listOf(first, second), examplesHint, state.isPlaying, onPlayExample, onPlayBothExamples)
+                    ExamplesCard(exampleLabels ?: listOf(first, second), examplesHint, state.isPlaying, onPlayExample, onPlayBothExamples)
                     RoundProgress(state.exercise.questionNumber, total, state.exercise.score.correct)
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                         PlaybackButton(
@@ -193,6 +228,8 @@ fun <A, Q : ExerciseQuestion<A>> ComparisonScreen(
                         labelOf = { ChoiceLabel(labelOf(it)) },
                         appearanceOf = state::appearanceOf,
                         onChoiceSelected = onAnswerSelected,
+                        columns = columns,
+                        graphicOf = graphicOf,
                     )
                 }
             }
