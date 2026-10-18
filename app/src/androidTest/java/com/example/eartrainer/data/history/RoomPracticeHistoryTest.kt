@@ -29,6 +29,7 @@ import com.example.eartrainer.music.Pitch
 import com.example.eartrainer.music.Rhythm
 import com.example.eartrainer.music.RhythmCell
 import com.example.eartrainer.music.ScaleDegree
+import com.example.eartrainer.ui.log.localEpochDay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -215,6 +216,25 @@ class RoomPracticeHistoryTest {
         )
         assertEquals(listOf("mixed"), history.intervalSessions(style = null, limit = 1).first().map { it.sessionId })
         assertEquals(listOf(SessionSummary("c", ExerciseKind.CHORDS, 4_500, 1, 0)), history.chordSessions(ChordTarget.INVERSION, 10).first())
+    }
+
+    @Test
+    fun answersAreCountedPerLocalDayAcrossExercises() = runBlocking {
+        val day = 86_400_000L
+        val first = 1_760_000_000_000
+        insertAll(
+            interval("s", first, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = true),
+            interval("s", first + 60_000, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = false),
+            interval("t", first + 3 * day, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = true),
+        )
+        insertChords(chord("c", first + 3 * day + 60_000, ChordQuality.MAJOR, ChordInversion.ROOT_POSITION, ChordTarget.QUALITY, correct = true))
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        // SQLite's local dates must match the app's own day arithmetic in this device's time zone.
+        assertEquals(
+            listOf(DayCount(localEpochDay(first), 2), DayCount(localEpochDay(first + 3 * day), 2)),
+            history.answersPerDay().first(),
+        )
     }
 
     @Test

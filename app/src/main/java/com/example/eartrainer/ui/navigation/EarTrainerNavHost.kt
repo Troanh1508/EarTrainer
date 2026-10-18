@@ -15,6 +15,8 @@ import com.example.eartrainer.ui.degrees.ScaleDegreeTrainingRoute
 import com.example.eartrainer.ui.dictation.DictationTrainingRoute
 import com.example.eartrainer.ui.home.HomeScreen
 import com.example.eartrainer.ui.intervals.IntervalTrainingRoute
+import com.example.eartrainer.ui.log.PracticeLogRoute
+import com.example.eartrainer.ui.log.PracticeLogViewModel
 import com.example.eartrainer.ui.progress.ProgressRoute
 import com.example.eartrainer.ui.progress.ProgressViewModel
 import com.example.eartrainer.ui.progressions.ProgressionTrainingRoute
@@ -47,6 +49,7 @@ private object Routes {
     const val RHYTHM_TRAINING = "rhythm-training"
     const val RHYTHM_SETTINGS = "rhythm-settings"
     const val PROGRESS = "progress"
+    const val PRACTICE_LOG = "practice-log"
     const val BACKUP = "backup"
 }
 
@@ -131,8 +134,13 @@ fun EarTrainerNavHost() {
             ProgressRoute(
                 viewModel = viewModel,
                 onCompare = { navController.navigate(it.route) },
+                onOpenPracticeLog = { navController.navigate(Routes.PRACTICE_LOG) },
                 onNavigateUp = { navController.navigateUp() },
             )
+        }
+        composable(Routes.PRACTICE_LOG) {
+            val viewModel: PracticeLogViewModel = viewModel(factory = PracticeLogViewModel.Factory)
+            PracticeLogRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
         }
         composable(ComparisonRequest.ROUTE_PATTERN) { entry ->
             val arguments = entry.arguments

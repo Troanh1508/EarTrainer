@@ -2,6 +2,7 @@ package com.example.eartrainer.testing
 
 import com.example.eartrainer.data.history.AnswerAccuracy
 import com.example.eartrainer.data.history.Confusion
+import com.example.eartrainer.data.history.DayCount
 import com.example.eartrainer.data.history.countConfusions
 import com.example.eartrainer.data.history.dictationNotePairs
 import com.example.eartrainer.data.history.progressionChordPairs
@@ -30,6 +31,7 @@ import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Mode
 import com.example.eartrainer.music.RhythmCell
 import com.example.eartrainer.music.ScaleDegree
+import com.example.eartrainer.ui.log.localEpochDay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -168,6 +170,19 @@ class FakePracticeHistory : PracticeHistory {
 
     override fun rhythmConfusions(): Flow<List<Confusion<RhythmCell>>> =
         rhythms.map { all -> all.flatMap { rhythmCellPairs(it.rhythm, it.answer) }.countConfusions() }
+
+    override fun answersPerDay(): Flow<List<DayCount>> = combine(
+        combine(intervals, chords, degrees, progressions, dictations) { a, b, c, d, e ->
+            a.map { it.answeredAtMillis } + b.map { it.answeredAtMillis } + c.map { it.answeredAtMillis } +
+                d.map { it.answeredAtMillis } + e.map { it.answeredAtMillis }
+        },
+        rhythms,
+    ) { earlier, rhythmList ->
+        (earlier + rhythmList.map { it.answeredAtMillis })
+            .groupingBy { localEpochDay(it) }.eachCount()
+            .map { (day, answers) -> DayCount(day, answers) }
+            .sortedBy { it.day }
+    }
 
     // combine() takes at most five flows, so the sixth exercise is merged in a second step.
     override fun recentSessions(limit: Int, exercise: ExerciseKind?): Flow<List<SessionSummary>> = combine(

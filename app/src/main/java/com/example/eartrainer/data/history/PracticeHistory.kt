@@ -133,6 +133,9 @@ interface PracticeHistory {
      */
     fun recentSessions(limit: Int, exercise: ExerciseKind? = null): Flow<List<SessionSummary>>
 
+    /** Answers given on each local calendar day that had any, oldest first. */
+    fun answersPerDay(): Flow<List<DayCount>>
+
     /*
      * The latest [limit] sessions of one exercise that include answers matching the given
      * filter, newest first, counting only those answers and scoring them as the accuracy
@@ -263,6 +266,8 @@ class RoomPracticeHistory(
                 }.countConfusions()
             }
             .flowOn(Dispatchers.Default)
+
+    override fun answersPerDay(): Flow<List<DayCount>> = database.sessionDao().answersPerDay()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun recentSessions(limit: Int, exercise: ExerciseKind?): Flow<List<SessionSummary>> =

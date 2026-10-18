@@ -157,6 +157,9 @@ data class ProgressionResultRow(val mode: String, val progression: String, val a
 /** How often [asked] (a stored name) was answered as [answered]. */
 data class ConfusionRow(val asked: String, val answered: String, val count: Int)
 
+/** How many answers were given on one local calendar [day], counted in days since 1970-01-01. */
+data class DayCount(val day: Long, val answers: Int)
+
 /** Answer totals for one session. */
 data class SessionTotalsRow(val sessionId: String, val startedAtMillis: Long, val attempts: Int, val correct: Int)
 
@@ -477,6 +480,28 @@ interface RhythmAttemptDao {
 
 @Dao
 interface SessionDao {
+    /**
+     * Answers per day, oldest day first, over every exercise. A day is the local calendar date the
+     * answer was given on, as days since 1970-01-01 (the device's time zone, as SQLite sees it).
+     */
+    @Query(
+        """
+        SELECT CAST(strftime('%s', answered_at / 1000, 'unixepoch', 'localtime', 'start of day') AS INTEGER) / 86400 AS day,
+               COUNT(*) AS answers
+        FROM (
+            SELECT answered_at FROM interval_attempts
+            UNION ALL SELECT answered_at FROM chord_attempts
+            UNION ALL SELECT answered_at FROM scale_degree_attempts
+            UNION ALL SELECT answered_at FROM progression_attempts
+            UNION ALL SELECT answered_at FROM dictation_attempts
+            UNION ALL SELECT answered_at FROM rhythm_attempts
+        )
+        GROUP BY day
+        ORDER BY day
+        """,
+    )
+    fun answersPerDay(): Flow<List<DayCount>>
+
     /**
      * Sessions newest first. A session belongs to one exercise only; [exercise] (an exercise
      * kind's name) limits them to that exercise, and null includes every exercise.

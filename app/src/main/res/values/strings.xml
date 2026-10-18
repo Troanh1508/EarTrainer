@@ -374,4 +374,30 @@
     <string name="compare_done">Done</string>
     <string name="mistakes_compare_pair">Compare %1$s and %2$s</string>
     <string name="mistakes_compare">Compare</string>
+    <!-- Practice log -->
+    <string name="log_title">Practice log</string>
+    <string name="log_open">Practice log</string>
+    <string name="log_current_streak">current streak</string>
+    <string name="log_longest_streak">longest streak</string>
+    <plurals name="log_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="log_calendar_title">
+        <item quantity="one">Last week</item>
+        <item quantity="other">Last %d weeks</item>
+    </plurals>
+    <string name="log_answers_per_day">Answers per day</string>
+    <plurals name="log_calendar_description">
+        <item quantity="one">Practiced on %1$d of the last %2$d days</item>
+        <item quantity="other">Practiced on %1$d of the last %2$d days</item>
+    </plurals>
+    <string name="log_less">Less</string>
+    <string name="log_more">More</string>
+    <string name="log_this_week">This week</string>
+    <plurals name="log_answers">
+        <item quantity="one">%d answer</item>
+        <item quantity="other">%d answers</item>
+    </plurals>
+    <string name="log_recent_sessions">Recent sessions</string>
 </resources>

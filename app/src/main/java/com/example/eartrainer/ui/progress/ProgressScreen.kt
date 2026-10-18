@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.ButtonDefaults
@@ -68,7 +69,12 @@ import java.util.Date
 import kotlin.math.absoluteValue
 
 @Composable
-fun ProgressRoute(viewModel: ProgressViewModel, onCompare: (ComparisonRequest) -> Unit, onNavigateUp: () -> Unit) {
+fun ProgressRoute(
+    viewModel: ProgressViewModel,
+    onCompare: (ComparisonRequest) -> Unit,
+    onOpenPracticeLog: () -> Unit,
+    onNavigateUp: () -> Unit,
+) {
     val mistakesItem by viewModel.mistakesItem.collectAsStateWithLifecycle()
     if (mistakesItem != null) {
         val mistakes by viewModel.mistakes.collectAsStateWithLifecycle()
@@ -87,6 +93,7 @@ fun ProgressRoute(viewModel: ProgressViewModel, onCompare: (ComparisonRequest) -
             onExerciseSelected = viewModel::onExerciseSelected,
             onFilterSelected = viewModel::onFilterSelected,
             onItemSelected = viewModel::onItemSelected,
+            onOpenPracticeLog = onOpenPracticeLog,
             onNavigateUp = onNavigateUp,
         )
     }
@@ -99,6 +106,7 @@ fun ProgressScreen(
     onExerciseSelected: (ExerciseKind) -> Unit,
     onFilterSelected: (ProgressFilter) -> Unit,
     onItemSelected: (String) -> Unit,
+    onOpenPracticeLog: () -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     Scaffold(
@@ -110,13 +118,18 @@ fun ProgressScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.navigate_back))
                     }
                 },
+                actions = {
+                    IconButton(onClick = onOpenPracticeLog) {
+                        Icon(Icons.Filled.DateRange, stringResource(R.string.log_open))
+                    }
+                },
             )
         },
     ) { innerPadding ->
         when {
             state == null -> Surface(Modifier.padding(innerPadding).fillMaxSize()) {}
             !state.hasHistory -> EmptyProgress(Modifier.padding(innerPadding))
-            else -> ProgressContent(state, onExerciseSelected, onFilterSelected, onItemSelected, innerPadding)
+            else -> ProgressContent(state, onExerciseSelected, onFilterSelected, onItemSelected, onOpenPracticeLog, innerPadding)
         }
     }
 }
@@ -139,6 +152,7 @@ private fun ProgressContent(
     onExerciseSelected: (ExerciseKind) -> Unit,
     onFilterSelected: (ProgressFilter) -> Unit,
     onItemSelected: (String) -> Unit,
+    onOpenPracticeLog: () -> Unit,
     innerPadding: PaddingValues,
 ) {
     val cardModifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = 16.dp)
@@ -158,7 +172,12 @@ private fun ProgressContent(
             item { OverviewCard(state, cardModifier) }
             item { TrendCard(state, cardModifier) }
             item { AccuracyCard(state, onItemSelected, cardModifier) }
-            item { SectionTitle(stringResource(R.string.progress_recent_sessions), itemModifier.padding(top = 12.dp)) }
+            item {
+                Row(itemModifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    SectionTitle(stringResource(R.string.progress_recent_sessions), Modifier.weight(1f))
+                    TextButton(onClick = onOpenPracticeLog) { Text(stringResource(R.string.log_open)) }
+                }
+            }
             items(state.recentSessions, key = { it.sessionId }) { SessionRow(it, itemModifier) }
         }
     }
@@ -232,7 +251,7 @@ private fun FilterRow(state: ProgressUiState, onSelected: (ProgressFilter) -> Un
 }
 
 /** How one exercise's numbers are labeled: what each chart counts, and how a session is scored. */
-private class ScoringLabels(
+internal class ScoringLabels(
     @StringRes val donutCaption: Int,
     @PluralsRes val unit: Int,
     @PluralsRes val overall: Int,
@@ -242,7 +261,7 @@ private class ScoringLabels(
     @StringRes val explanation: Int,
 )
 
-private fun scoringLabels(exercise: ExerciseKind) = when (exercise) {
+internal fun scoringLabels(exercise: ExerciseKind) = when (exercise) {
     ExerciseKind.INTERVALS, ExerciseKind.SCALE_DEGREES, ExerciseKind.CHORDS -> ScoringLabels(
         R.string.progress_donut_answers, R.plurals.progress_unit_answers, R.plurals.progress_overall,
         R.plurals.progress_session_answers, fullyRight = null,
@@ -448,6 +467,7 @@ private fun ProgressPreview() {
             onExerciseSelected = {},
             onFilterSelected = {},
             onItemSelected = {},
+            onOpenPracticeLog = {},
             onNavigateUp = {},
         )
     }
