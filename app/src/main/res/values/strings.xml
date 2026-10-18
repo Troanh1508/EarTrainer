@@ -309,4 +309,35 @@
     <string name="backup_not_a_backup">That file is not an Ear Trainer backup.</string>
     <string name="backup_newer_version">That backup was made by a newer version of Ear Trainer. Update the app, then try again.</string>
     <string name="backup_too_large">That file is too large to be an Ear Trainer backup.</string>
+    <!-- Mistakes -->
+    <string name="progress_show_mistakes">show mistakes</string>
+    <string name="mistakes_title">Mistakes</string>
+    <string name="mistakes_scope">%1$s · %2$s</string>
+    <string name="mistakes_when_interval">When the interval was</string>
+    <string name="mistakes_when_answer">When the right answer was</string>
+    <string name="mistakes_when_note">When the note was</string>
+    <string name="mistakes_when_chord">When the chord was</string>
+    <string name="mistakes_when_figure">When the rhythm figure was</string>
+    <string name="mistakes_choose_item">Choose another</string>
+    <string name="mistakes_item_option">%1$s · %2$s</string>
+    <plurals name="mistakes_times_heard">
+        <item quantity="one">time heard</item>
+        <item quantity="other">times heard</item>
+    </plurals>
+    <string name="mistakes_you_answered">You answered</string>
+    <string name="mistakes_right_answer">%1$s (right)</string>
+    <string name="mistakes_something_else">Something else</string>
+    <string name="mistakes_other">Other answers</string>
+    <string name="mistakes_count">%1$d×</string>
+    <string name="mistakes_pie_description">When it was %1$s, you answered: %2$s</string>
+    <string name="mistakes_tip">Most often mistaken for %1$s. Listen for what sets the two apart.</string>
+    <string name="mistakes_tip_something_else">Most often answered with something that does not line up with it.</string>
+    <string name="mistakes_none">No mistakes yet: every answer was right.</string>
+    <string name="mistakes_pairs_title">Most confused pairs</string>
+    <string name="mistakes_pairs_none">No mix-ups yet.</string>
+    <string name="mistakes_pair">%1$s and %2$s</string>
+    <plurals name="mistakes_pair_count">
+        <item quantity="one">%d mix-up</item>
+        <item quantity="other">%d mix-ups</item>
+    </plurals>
 </resources>

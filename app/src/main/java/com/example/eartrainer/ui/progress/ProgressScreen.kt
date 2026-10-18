@@ -1,5 +1,6 @@
 package com.example.eartrainer.ui.progress
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.horizontalScroll
@@ -67,13 +68,22 @@ import kotlin.math.absoluteValue
 
 @Composable
 fun ProgressRoute(viewModel: ProgressViewModel, onNavigateUp: () -> Unit) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ProgressScreen(
-        state = state,
-        onExerciseSelected = viewModel::onExerciseSelected,
-        onFilterSelected = viewModel::onFilterSelected,
-        onNavigateUp = onNavigateUp,
-    )
+    val mistakesItem by viewModel.mistakesItem.collectAsStateWithLifecycle()
+    if (mistakesItem != null) {
+        val mistakes by viewModel.mistakes.collectAsStateWithLifecycle()
+        // Back returns to the overview, which keeps its exercise, filter and scroll position.
+        BackHandler(onBack = viewModel::onMistakesClosed)
+        MistakesScreen(mistakes, onItemSelected = viewModel::onItemSelected, onNavigateUp = viewModel::onMistakesClosed)
+    } else {
+        val state by viewModel.uiState.collectAsStateWithLifecycle()
+        ProgressScreen(
+            state = state,
+            onExerciseSelected = viewModel::onExerciseSelected,
+            onFilterSelected = viewModel::onFilterSelected,
+            onItemSelected = viewModel::onItemSelected,
+            onNavigateUp = onNavigateUp,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,6 +92,7 @@ fun ProgressScreen(
     state: ProgressUiState?,
     onExerciseSelected: (ExerciseKind) -> Unit,
     onFilterSelected: (ProgressFilter) -> Unit,
+    onItemSelected: (String) -> Unit,
     onNavigateUp: () -> Unit,
 ) {
     Scaffold(
@@ -99,7 +110,7 @@ fun ProgressScreen(
         when {
             state == null -> Surface(Modifier.padding(innerPadding).fillMaxSize()) {}
             !state.hasHistory -> EmptyProgress(Modifier.padding(innerPadding))
-            else -> ProgressContent(state, onExerciseSelected, onFilterSelected, innerPadding)
+            else -> ProgressContent(state, onExerciseSelected, onFilterSelected, onItemSelected, innerPadding)
         }
     }
 }
@@ -121,6 +132,7 @@ private fun ProgressContent(
     state: ProgressUiState,
     onExerciseSelected: (ExerciseKind) -> Unit,
     onFilterSelected: (ProgressFilter) -> Unit,
+    onItemSelected: (String) -> Unit,
     innerPadding: PaddingValues,
 ) {
     val cardModifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = 16.dp)
@@ -139,7 +151,7 @@ private fun ProgressContent(
             }
             item { OverviewCard(state, cardModifier) }
             item { TrendCard(state, cardModifier) }
-            item { AccuracyCard(state, cardModifier) }
+            item { AccuracyCard(state, onItemSelected, cardModifier) }
             item { SectionTitle(stringResource(R.string.progress_recent_sessions), itemModifier.padding(top = 12.dp)) }
             items(state.recentSessions, key = { it.sessionId }) { SessionRow(it, itemModifier) }
         }
@@ -161,7 +173,7 @@ private fun ExerciseTabs(selected: ExerciseKind, onSelected: (ExerciseKind) -> U
 }
 
 @Composable
-private fun exerciseName(exercise: ExerciseKind) = stringResource(
+internal fun exerciseName(exercise: ExerciseKind) = stringResource(
     when (exercise) {
         ExerciseKind.INTERVALS -> R.string.progress_exercise_intervals
         ExerciseKind.CHORDS -> R.string.progress_exercise_chords
@@ -173,7 +185,7 @@ private fun exerciseName(exercise: ExerciseKind) = stringResource(
 )
 
 @Composable
-private fun filterLabel(filter: ProgressFilter): String = when (filter) {
+internal fun filterLabel(filter: ProgressFilter): String = when (filter) {
     is ProgressFilter.IntervalStyleFilter -> filter.style?.displayName ?: stringResource(R.string.progress_filter_all)
     is ProgressFilter.ChordTargetFilter -> filter.target.displayName
     is ProgressFilter.ModeFilter -> filter.mode?.displayName ?: stringResource(R.string.progress_filter_all_modes)
@@ -366,10 +378,10 @@ private fun TrendCard(state: ProgressUiState, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun AccuracyCard(state: ProgressUiState, modifier: Modifier = Modifier) {
+private fun AccuracyCard(state: ProgressUiState, onItemSelected: (String) -> Unit, modifier: Modifier = Modifier) {
     ChartCard(modifier) {
         CardHeader(accuracyTitle(state.filter), stringResource(R.string.progress_weakest_first))
-        state.weakestFirst.forEach { AccuracyBarRow(it) }
+        state.weakestFirst.forEach { item -> AccuracyBarRow(item, onClick = { onItemSelected(item.label) }) }
         if (state.totalAttempts > 0) AccuracyLegend()
     }
 }
@@ -429,6 +441,7 @@ private fun ProgressPreview() {
             ),
             onExerciseSelected = {},
             onFilterSelected = {},
+            onItemSelected = {},
             onNavigateUp = {},
         )
     }

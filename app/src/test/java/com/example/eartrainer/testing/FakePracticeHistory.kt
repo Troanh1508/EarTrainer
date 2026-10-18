@@ -1,6 +1,10 @@
 package com.example.eartrainer.testing
 
 import com.example.eartrainer.data.history.AnswerAccuracy
+import com.example.eartrainer.data.history.Confusion
+import com.example.eartrainer.data.history.countConfusions
+import com.example.eartrainer.data.history.dictationNotePairs
+import com.example.eartrainer.data.history.progressionChordPairs
 import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.SessionSummary
 import com.example.eartrainer.data.history.dictationNoteResults
@@ -17,6 +21,7 @@ import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.ProgressionAttempt
 import com.example.eartrainer.exercise.RhythmAttempt
 import com.example.eartrainer.exercise.rhythmCellResults
+import com.example.eartrainer.exercise.rhythmCellPairs
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordQuality
@@ -132,6 +137,37 @@ class FakePracticeHistory : PracticeHistory {
 
     override fun recentRhythmResults(limit: Int): Flow<List<ItemResult<RhythmCell>>> =
         rhythms.map { all -> all.asReversed().take(limit).flatMap { rhythmCellResults(it.rhythm, it.answer) } }
+
+    override fun intervalConfusions(style: IntervalStyle?): Flow<List<Confusion<Interval>>> = intervals.map { all ->
+        all.filter { style == null || it.style == style }.map { it.interval to it.answer }.countConfusions()
+    }
+
+    override fun chordConfusions(target: ChordTarget): Flow<List<Confusion<ChordAnswer>>> = chords.map { all ->
+        all.filter { it.target == target }.map { attempt ->
+            val asked: ChordAnswer = when (target) {
+                ChordTarget.QUALITY -> ChordAnswer.Quality(attempt.quality)
+                ChordTarget.INVERSION -> ChordAnswer.Inversion(attempt.inversion)
+            }
+            asked to attempt.answer
+        }.countConfusions()
+    }
+
+    override fun scaleDegreeConfusions(mode: Mode?): Flow<List<Confusion<ScaleDegree>>> = degrees.map { all ->
+        all.filter { mode == null || it.key.mode == mode }.map { it.degree to it.answer }.countConfusions()
+    }
+
+    override fun progressionConfusions(mode: Mode): Flow<List<Confusion<DiatonicChord>>> = progressions.map { all ->
+        all.filter { it.key.mode == mode }
+            .flatMap { progressionChordPairs(mode, it.progression.chords.map { chord -> chord.step }, it.answer.chords.map { chord -> chord.step }) }
+            .countConfusions()
+    }
+
+    override fun dictationConfusions(mode: Mode): Flow<List<Confusion<ScaleDegree>>> = dictations.map { all ->
+        all.filter { it.key.mode == mode }.flatMap { dictationNotePairs(it.melody.degrees, it.answer.degrees) }.countConfusions()
+    }
+
+    override fun rhythmConfusions(): Flow<List<Confusion<RhythmCell>>> =
+        rhythms.map { all -> all.flatMap { rhythmCellPairs(it.rhythm, it.answer) }.countConfusions() }
 
     // combine() takes at most five flows, so the sixth exercise is merged in a second step.
     override fun recentSessions(limit: Int, exercise: ExerciseKind?): Flow<List<SessionSummary>> = combine(

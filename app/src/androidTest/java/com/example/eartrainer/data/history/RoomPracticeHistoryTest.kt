@@ -218,6 +218,39 @@ class RoomPracticeHistoryTest {
     }
 
     @Test
+    fun confusionsCountWhatEachItemWasAnsweredAs() = runBlocking {
+        // The interval helper records wrong answers as a tritone.
+        insertAll(
+            interval("s", 1_000, Interval.MAJOR_SIXTH, IntervalStyle.HARMONIC, correct = false),
+            interval("s", 2_000, Interval.MAJOR_SIXTH, IntervalStyle.HARMONIC, correct = false),
+            interval("s", 3_000, Interval.MAJOR_SIXTH, IntervalStyle.MELODIC_ASCENDING, correct = true),
+        )
+        insertChords(
+            chord("c", 4_000, ChordQuality.MINOR, ChordInversion.FIRST, ChordTarget.QUALITY, correct = true),
+            chord("c", 5_000, ChordQuality.MINOR, ChordInversion.FIRST, ChordTarget.INVERSION, correct = true),
+        )
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        assertEquals(
+            setOf(Confusion(Interval.MAJOR_SIXTH, Interval.TRITONE, 2), Confusion(Interval.MAJOR_SIXTH, Interval.MAJOR_SIXTH, 1)),
+            history.intervalConfusions(style = null).first().toSet(),
+        )
+        assertEquals(
+            listOf(Confusion(Interval.MAJOR_SIXTH, Interval.MAJOR_SIXTH, 1)),
+            history.intervalConfusions(IntervalStyle.MELODIC_ASCENDING).first(),
+        )
+        // Each chord question counts under what it asked for.
+        assertEquals(
+            listOf(Confusion<ChordAnswer>(ChordAnswer.Inversion(ChordInversion.FIRST), ChordAnswer.Inversion(ChordInversion.FIRST), 1)),
+            history.chordConfusions(ChordTarget.INVERSION).first(),
+        )
+        assertEquals(
+            listOf(Confusion<ChordAnswer>(ChordAnswer.Quality(ChordQuality.MINOR), ChordAnswer.Quality(ChordQuality.MINOR), 1)),
+            history.chordConfusions(ChordTarget.QUALITY).first(),
+        )
+    }
+
+    @Test
     fun progressionSessionsAreScoredChordByChordInTheirMode() = runBlocking {
         fun progression(mode: Mode, vararg steps: Int) = ChordProgression(steps.map { DiatonicChord(mode, it) })
         val major = Key(Pitch(60), Mode.MAJOR)

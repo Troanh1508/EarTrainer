@@ -252,6 +252,34 @@ class ProgressViewModelTest {
     }
 
     @Test
+    fun mistakesShowWhatTheSelectedItemWasAnsweredAsUnderTheFilter() = runTest {
+        // Wrong answers are recorded as an octave by the helper.
+        history.record(interval("a", 1_000, Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = false))
+        history.record(interval("a", 2_000, Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = true))
+        history.record(interval("a", 3_000, Interval.MAJOR_THIRD, IntervalStyle.MELODIC_ASCENDING, correct = false))
+        val viewModel = ProgressViewModel(history).also { collected(it) }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.mistakes.collect {} }
+
+        assertNull(viewModel.mistakes.value)
+        viewModel.onItemSelected("Major third")
+        val mistakes = checkNotNull(viewModel.mistakes.value)
+        assertEquals("Major third", viewModel.mistakesItem.value)
+        assertEquals(
+            listOf(AnswerShare("Major third", 1, isRight = true), AnswerShare("Octave", 2, isRight = false)),
+            mistakes.answers,
+        )
+        assertEquals(listOf(ConfusedPair("Major third", "Octave", 2)), mistakes.confusedPairs)
+
+        viewModel.onMistakesClosed()
+        assertNull(viewModel.mistakes.value)
+
+        // Changing the filter returns to the overview.
+        viewModel.onItemSelected("Major third")
+        viewModel.onFilterSelected(ProgressFilter.IntervalStyleFilter(IntervalStyle.HARMONIC))
+        assertNull(viewModel.mistakesItem.value)
+    }
+
+    @Test
     fun trendChangeComparesTheNewerHalfWithTheOlderHalf() {
         fun state(vararg correctOutOfTen: Int) = ProgressUiState(
             filter = ProgressFilter.IntervalStyleFilter(null),

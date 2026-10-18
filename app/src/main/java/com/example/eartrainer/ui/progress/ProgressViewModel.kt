@@ -8,19 +8,27 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.data.history.AnswerAccuracy
+import com.example.eartrainer.data.history.Confusion
 import com.example.eartrainer.data.history.PracticeHistory
 import com.example.eartrainer.data.history.SessionSummary
+import com.example.eartrainer.exercise.ChordAnswer
 import com.example.eartrainer.exercise.ChordTarget
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.exercise.IntervalStyle
+import com.example.eartrainer.music.DiatonicChord
+import com.example.eartrainer.music.Interval
 import com.example.eartrainer.music.Mode
+import com.example.eartrainer.music.RhythmCell
+import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlin.math.roundToInt
@@ -143,12 +151,42 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initialValue = null)
 
+    private val selectedItem = MutableStateFlow<String?>(null)
+
+    /** The item whose mistakes are shown, by its label; null while the overview is shown. */
+    val mistakesItem: StateFlow<String?> = selectedItem.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val mistakes: StateFlow<MistakesUiState?> = combine(filter, selectedItem) { selected, item -> selected to item }
+        .flatMapLatest { (selected, item) ->
+            if (item == null) {
+                flowOf(null)
+            } else {
+                combine(accuracyFor(selected), confusionsFor(selected)) { accuracy, confusions ->
+                    MistakesUiState.from(selected, accuracy, confusions, item)
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initialValue = null)
+
+    fun onItemSelected(label: String) {
+        selectedItem.value = label
+    }
+
+    fun onMistakesClosed() {
+        selectedItem.value = null
+    }
+
     fun onExerciseSelected(exercise: ExerciseKind) {
-        if (filter.value.exercise != exercise) filter.value = ProgressFilter.optionsFor(exercise).first()
+        if (filter.value.exercise != exercise) {
+            filter.value = ProgressFilter.optionsFor(exercise).first()
+            selectedItem.value = null
+        }
     }
 
     fun onFilterSelected(selected: ProgressFilter) {
         filter.value = selected
+        selectedItem.value = null
     }
 
     private fun accuracyFor(selected: ProgressFilter): Flow<List<AccuracyItem>> = when (selected) {
@@ -157,13 +195,13 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
         is ProgressFilter.ChordTargetFilter ->
             history.chordAccuracy(selected.target).map { list -> list.map { it.toItem(it.item.displayName) } }
         is ProgressFilter.ModeFilter ->
-            history.scaleDegreeAccuracy(selected.mode).map { list -> list.map { it.toItem("${it.item.label} · ${it.item.solfege}") } }
+            history.scaleDegreeAccuracy(selected.mode).map { list -> list.map { it.toItem(degreeLabel(it.item)) } }
         is ProgressFilter.ProgressionModeFilter ->
             history.progressionAccuracy(selected.mode).map { list -> list.map { it.toItem(it.item.numeral) } }
         is ProgressFilter.DictationModeFilter ->
-            history.dictationAccuracy(selected.mode).map { list -> list.map { it.toItem("${it.item.label} · ${it.item.solfege}") } }
+            history.dictationAccuracy(selected.mode).map { list -> list.map { it.toItem(degreeLabel(it.item)) } }
         ProgressFilter.RhythmFilter ->
-            history.rhythmAccuracy().map { list -> list.map { it.toItem(it.item.displayName.replaceFirstChar(Char::uppercase)) } }
+            history.rhythmAccuracy().map { list -> list.map { it.toItem(rhythmLabel(it.item)) } }
     }
 
     // The same answers as [accuracyFor], so the chart and the bars measure the same thing.
@@ -175,6 +213,23 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
         is ProgressFilter.DictationModeFilter -> history.dictationSessions(selected.mode, TREND_SESSION_LIMIT)
         ProgressFilter.RhythmFilter -> history.rhythmSessions(TREND_SESSION_LIMIT)
     }
+
+    // Labeled exactly like [accuracyFor], so items and answers match the bars they came from.
+    private fun confusionsFor(selected: ProgressFilter): Flow<List<LabeledConfusion>> = when (selected) {
+        is ProgressFilter.IntervalStyleFilter -> history.intervalConfusions(selected.style).map { it.labeled(Interval::displayName) }
+        is ProgressFilter.ChordTargetFilter -> history.chordConfusions(selected.target).map { it.labeled(ChordAnswer::displayName) }
+        is ProgressFilter.ModeFilter -> history.scaleDegreeConfusions(selected.mode).map { it.labeled(::degreeLabel) }
+        is ProgressFilter.ProgressionModeFilter -> history.progressionConfusions(selected.mode).map { it.labeled(DiatonicChord::numeral) }
+        is ProgressFilter.DictationModeFilter -> history.dictationConfusions(selected.mode).map { it.labeled(::degreeLabel) }
+        ProgressFilter.RhythmFilter -> history.rhythmConfusions().map { it.labeled(::rhythmLabel) }
+    }
+
+    private fun <T> List<Confusion<T>>.labeled(label: (T) -> String) =
+        map { LabeledConfusion(label(it.asked), it.answered?.let(label), it.count) }
+
+    private fun degreeLabel(degree: ScaleDegree) = "${degree.label} · ${degree.solfege}"
+
+    private fun rhythmLabel(cell: RhythmCell) = cell.displayName.replaceFirstChar(Char::uppercase)
 
     private fun AnswerAccuracy<*>.toItem(label: String) = AccuracyItem(label, attempts, correct)
 

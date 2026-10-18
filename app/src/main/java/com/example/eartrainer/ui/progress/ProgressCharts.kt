@@ -2,6 +2,7 @@ package com.example.eartrainer.ui.progress
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,12 +10,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +38,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -152,12 +158,24 @@ internal fun AccuracyTrendChart(sessions: List<SessionSummary>, modifier: Modifi
     }
 }
 
-/** One item's accuracy as a bar, orange when it needs work; unpracticed items get no bar. */
+/**
+ * One item's accuracy as a bar, orange when it needs work; unpracticed items get no bar. With
+ * [onClick], a practiced row opens more detail and shows a chevron.
+ */
 @Composable
-internal fun AccuracyBarRow(item: AccuracyItem, modifier: Modifier = Modifier) {
+internal fun AccuracyBarRow(item: AccuracyItem, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     val accuracy = item.accuracy
     val barColor = if (item.needsWork) MaterialTheme.colorScheme.weakSpot else MaterialTheme.colorScheme.primary
-    Row(modifier.semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
+    val clickLabel = stringResource(R.string.progress_show_mistakes)
+    val clickable = if (onClick != null && accuracy != null) {
+        Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClickLabel = clickLabel, role = Role.Button, onClick = onClick)
+    } else {
+        Modifier
+    }
+    Row(
+        modifier.then(clickable).semantics(mergeDescendants = true) {}.heightIn(min = 48.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Column(Modifier.width(132.dp).padding(end = 12.dp)) {
             Text(item.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             if (accuracy != null) {
@@ -191,6 +209,18 @@ internal fun AccuracyBarRow(item: AccuracyItem, modifier: Modifier = Modifier) {
                 textAlign = TextAlign.End,
                 modifier = Modifier.width(48.dp),
             )
+        }
+        if (onClick != null) {
+            // Unpracticed rows get the same space, so every bar ends at the same place.
+            Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                if (accuracy != null) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }

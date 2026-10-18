@@ -154,6 +154,9 @@ data class ChordResultRow(val target: String, val quality: String, val inversion
 
 data class ProgressionResultRow(val mode: String, val progression: String, val answer: String)
 
+/** How often [asked] (a stored name) was answered as [answered]. */
+data class ConfusionRow(val asked: String, val answered: String, val count: Int)
+
 /** Answer totals for one session. */
 data class SessionTotalsRow(val sessionId: String, val startedAtMillis: Long, val attempts: Int, val correct: Int)
 
@@ -192,6 +195,17 @@ interface IntervalAttemptDao {
     /** Every stored answer, oldest first, for backups. */
     @Query("SELECT * FROM interval_attempts ORDER BY answered_at, id")
     suspend fun all(): List<IntervalAttemptEntity>
+
+    /** How often each interval was answered as each interval, in [style] (null means every style). */
+    @Query(
+        """
+        SELECT interval AS asked, answer AS answered, COUNT(*) AS count
+        FROM interval_attempts
+        WHERE :style IS NULL OR style = :style
+        GROUP BY interval, answer
+        """,
+    )
+    fun confusions(style: String?): Flow<List<ConfusionRow>>
 
     /** Per-session totals of the answers in [style] (null means every style), newest session first. */
     @Query(
@@ -232,6 +246,17 @@ interface ChordAttemptDao {
     /** Every stored answer, oldest first, for backups. */
     @Query("SELECT * FROM chord_attempts ORDER BY answered_at, id")
     suspend fun all(): List<ChordAttemptEntity>
+
+    /** How often each quality (or inversion, per [target]) was answered as each one. */
+    @Query(
+        """
+        SELECT CASE target WHEN 'QUALITY' THEN quality ELSE inversion END AS asked, answer AS answered, COUNT(*) AS count
+        FROM chord_attempts
+        WHERE target = :target
+        GROUP BY asked, answered
+        """,
+    )
+    fun confusions(target: String): Flow<List<ConfusionRow>>
 
     /** Per-session totals of the questions that asked for [target], newest session first. */
     @Query(
@@ -288,6 +313,17 @@ interface ScaleDegreeAttemptDao {
     /** Every stored answer, oldest first, for backups. */
     @Query("SELECT * FROM scale_degree_attempts ORDER BY answered_at, id")
     suspend fun all(): List<ScaleDegreeAttemptEntity>
+
+    /** How often each degree was answered as each degree, in [mode] (null means every mode). */
+    @Query(
+        """
+        SELECT degree AS asked, answer AS answered, COUNT(*) AS count
+        FROM scale_degree_attempts
+        WHERE :mode IS NULL OR mode = :mode
+        GROUP BY degree, answer
+        """,
+    )
+    fun confusions(mode: String?): Flow<List<ConfusionRow>>
 
     /** Per-session totals of the answers in [mode] (null means every mode), newest session first. */
     @Query(

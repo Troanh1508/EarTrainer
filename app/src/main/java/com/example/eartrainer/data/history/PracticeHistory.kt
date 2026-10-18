@@ -12,6 +12,7 @@ import com.example.eartrainer.exercise.ItemResult
 import com.example.eartrainer.exercise.ProgressionAttempt
 import com.example.eartrainer.exercise.RhythmAttempt
 import com.example.eartrainer.exercise.rhythmCellResults
+import com.example.eartrainer.exercise.rhythmCellPairs
 import com.example.eartrainer.exercise.ScaleDegreeAttempt
 import com.example.eartrainer.music.ChordInversion
 import com.example.eartrainer.music.ChordProgression
@@ -34,6 +35,12 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+
+/**
+ * How often [asked] was answered as [answered]. [answered] equals [asked] for right answers, and
+ * is null when the answer had nothing in that place (a blank note, a rhythm split differently).
+ */
+data class Confusion<T>(val asked: T, val answered: T?, val count: Int)
 
 /** How often one answer value (an interval, a chord quality, ...) was identified correctly. */
 data class AnswerAccuracy<T>(val item: T, val attempts: Int, val correct: Int) {
@@ -102,6 +109,23 @@ interface PracticeHistory {
 
     /** How often each rhythm cell was heard correctly, counted per cell of every rhythm asked. */
     fun rhythmAccuracy(): Flow<List<AnswerAccuracy<RhythmCell>>>
+
+    /*
+     * What each item was answered as, counting the same answers as the matching accuracy
+     * function: one per answer, or one per chord, note or rhythm figure.
+     */
+
+    fun intervalConfusions(style: IntervalStyle?): Flow<List<Confusion<Interval>>>
+
+    fun chordConfusions(target: ChordTarget): Flow<List<Confusion<ChordAnswer>>>
+
+    fun scaleDegreeConfusions(mode: Mode?): Flow<List<Confusion<ScaleDegree>>>
+
+    fun progressionConfusions(mode: Mode): Flow<List<Confusion<DiatonicChord>>>
+
+    fun dictationConfusions(mode: Mode): Flow<List<Confusion<ScaleDegree>>>
+
+    fun rhythmConfusions(): Flow<List<Confusion<RhythmCell>>>
 
     /**
      * Most recent sessions first, of every exercise or only [exercise]. Sessions without answers
@@ -202,6 +226,41 @@ class RoomPracticeHistory(
                     val forCell = results.filter { it.item == cell }
                     AnswerAccuracy(cell, attempts = forCell.size, correct = forCell.count { it.isCorrect })
                 }
+            }
+            .flowOn(Dispatchers.Default)
+
+    override fun intervalConfusions(style: IntervalStyle?): Flow<List<Confusion<Interval>>> =
+        database.intervalAttemptDao().confusions(style?.name).map { rows -> rows.toConfusions(Interval.entries) }
+
+    override fun chordConfusions(target: ChordTarget): Flow<List<Confusion<ChordAnswer>>> =
+        database.chordAttemptDao().confusions(target.name).map { rows ->
+            when (target) {
+                ChordTarget.QUALITY -> rows.toConfusions(ChordQuality.entries).map { it.mapItems(ChordAnswer::Quality) }
+                ChordTarget.INVERSION -> rows.toConfusions(ChordInversion.entries).map { it.mapItems(ChordAnswer::Inversion) }
+            }
+        }
+
+    override fun scaleDegreeConfusions(mode: Mode?): Flow<List<Confusion<ScaleDegree>>> =
+        database.scaleDegreeAttemptDao().confusions(mode?.name).map { rows -> rows.toConfusions(ScaleDegree.entries) }
+
+    override fun progressionConfusions(mode: Mode): Flow<List<Confusion<DiatonicChord>>> =
+        database.progressionAttemptDao().answersInMode(mode.name)
+            .map { rows -> rows.flatMap { progressionChordPairs(mode, it.progression.toSteps(), it.answer.toSteps()) }.countConfusions() }
+            .flowOn(Dispatchers.Default)
+
+    override fun dictationConfusions(mode: Mode): Flow<List<Confusion<ScaleDegree>>> =
+        database.dictationAttemptDao().answersInMode(mode.name)
+            .map { rows -> rows.flatMap { dictationNotePairs(it.melody.toDegrees(), it.answer.toDegrees()) }.countConfusions() }
+            .flowOn(Dispatchers.Default)
+
+    override fun rhythmConfusions(): Flow<List<Confusion<RhythmCell>>> =
+        database.rhythmAttemptDao().allAnswers()
+            .map { rows ->
+                rows.flatMap { row ->
+                    val played = row.rhythm.toRhythmOrNull() ?: return@flatMap emptyList()
+                    val chosen = row.answer.toRhythmOrNull() ?: return@flatMap emptyList()
+                    rhythmCellPairs(played, chosen)
+                }.countConfusions()
             }
             .flowOn(Dispatchers.Default)
 
@@ -312,6 +371,37 @@ class RoomPracticeHistory(
     }
 }
 
+/** Confusions for rows whose asked name still matches a value in [all]; an unknown answer becomes null. */
+private fun <T : Enum<T>> List<ConfusionRow>.toConfusions(all: List<T>): List<Confusion<T>> {
+    val byName = all.associateBy { it.name }
+    return mapNotNull { row -> byName[row.asked]?.let { Confusion(it, byName[row.answered], row.count) } }
+        .groupBy { it.asked to it.answered }
+        .map { (pair, rows) -> Confusion(pair.first, pair.second, rows.sumOf { it.count }) }
+}
+
+private fun <T, R> Confusion<T>.mapItems(transform: (T) -> R) = Confusion(transform(asked), answered?.let(transform), count)
+
+/** Counts identical (asked, answered) pairs. */
+internal fun <T> List<Pair<T, T?>>.countConfusions(): List<Confusion<T>> =
+    groupingBy { it }.eachCount().map { (pair, count) -> Confusion(pair.first, pair.second, count) }
+
+/**
+ * Pairs every chord after the opening tonic with the chord chosen in its place, or null when the
+ * chosen progression has no valid chord there.
+ */
+internal fun progressionChordPairs(mode: Mode, asked: List<Int>, chosen: List<Int>): List<Pair<DiatonicChord, DiatonicChord?>> =
+    (1 until asked.size).mapNotNull { position ->
+        val step = asked[position].takeIf { it in 1..7 } ?: return@mapNotNull null
+        DiatonicChord(mode, step) to chosen.getOrNull(position)?.takeIf { it in 1..7 }?.let { DiatonicChord(mode, it) }
+    }
+
+/** Pairs every note after the opening tonic with the note written in its place, or null if none. */
+internal fun dictationNotePairs(melody: List<ScaleDegree?>, answer: List<ScaleDegree?>): List<Pair<ScaleDegree, ScaleDegree?>> =
+    (1 until melody.size).mapNotNull { position ->
+        val played = melody[position] ?: return@mapNotNull null
+        played to answer.getOrNull(position)
+    }
+
 private fun List<SessionTotalsRow>.toSessions(exercise: ExerciseKind) =
     map { SessionSummary(it.sessionId, exercise, it.startedAtMillis, it.attempts, it.correct) }
 
@@ -410,10 +500,7 @@ private fun String.toSteps(): List<Int> = split(",").mapNotNull { it.trim().toIn
  * result for the chord asked there, correct when the chosen progression has the same chord.
  */
 internal fun progressionChordResults(mode: Mode, asked: List<Int>, chosen: List<Int>): List<ItemResult<DiatonicChord>> =
-    (1 until asked.size).mapNotNull { position ->
-        val step = asked[position].takeIf { it in 1..7 } ?: return@mapNotNull null
-        ItemResult(DiatonicChord(mode, step), chosen.getOrNull(position) == step)
-    }
+    progressionChordPairs(mode, asked, chosen).map { (chord, answer) -> ItemResult(chord, answer == chord) }
 
 /** Per-chord accuracy over many (asked, chosen) step lists; see [progressionChordResults]. */
 internal fun progressionChordAccuracy(mode: Mode, answers: List<Pair<List<Int>, List<Int>>>): List<AnswerAccuracy<DiatonicChord>> {
@@ -445,10 +532,7 @@ private fun String.toDegrees(): List<ScaleDegree?> = split(",").map { name -> Sc
  * the degree played there, correct when the written melody has the same degree in that place.
  */
 internal fun dictationNoteResults(melody: List<ScaleDegree?>, answer: List<ScaleDegree?>): List<ItemResult<ScaleDegree>> =
-    (1 until melody.size).mapNotNull { position ->
-        val played = melody[position] ?: return@mapNotNull null
-        ItemResult(played, answer.getOrNull(position) == played)
-    }
+    dictationNotePairs(melody, answer).map { (played, written) -> ItemResult(played, written == played) }
 
 internal fun RhythmAttempt.toEntity() = RhythmAttemptEntity(
     sessionId = sessionId,

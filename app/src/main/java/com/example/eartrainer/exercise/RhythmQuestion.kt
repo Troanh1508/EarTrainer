@@ -203,7 +203,14 @@ data class RhythmAttempt(
  * Scores a rhythm answer cell by cell: each cell of the played rhythm is one result, correct when
  * the chosen rhythm has the same cell starting on the same beat.
  */
-fun rhythmCellResults(played: Rhythm, chosen: Rhythm): List<ItemResult<RhythmCell>> {
+fun rhythmCellResults(played: Rhythm, chosen: Rhythm): List<ItemResult<RhythmCell>> =
+    rhythmCellPairs(played, chosen).map { (cell, answer) -> ItemResult(cell, answer == cell) }
+
+/**
+ * Pairs each cell of the played rhythm with the chosen rhythm's cell starting on the same beat,
+ * or null when no chosen cell starts there (the beat was split differently).
+ */
+fun rhythmCellPairs(played: Rhythm, chosen: Rhythm): List<Pair<RhythmCell, RhythmCell?>> {
     val chosenByBeat = chosen.startBeats.zip(chosen.cells).toMap()
-    return played.startBeats.zip(played.cells).map { (beat, cell) -> ItemResult(cell, chosenByBeat[beat] == cell) }
+    return played.startBeats.zip(played.cells).map { (beat, cell) -> cell to chosenByBeat[beat] }
 }
