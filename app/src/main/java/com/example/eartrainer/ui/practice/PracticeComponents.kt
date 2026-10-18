@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -194,46 +195,46 @@ fun AnswerFeedback(
     modifier: Modifier = Modifier,
     /** The button text; "Next" unless the next step is something else, like a result. */
     nextLabel: String = stringResource(R.string.practice_next),
+    /** From first hearing the question to answering, shown with the notes when known. */
+    responseMillis: Long? = null,
 ) {
     val accent = if (isCorrect) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+    val badge = if (isCorrect) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.errorContainer
+    val onBadge = if (isCorrect) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onErrorContainer
+    val details = listOfNotNull(
+        notesAsPlayed,
+        responseMillis?.let { stringResource(R.string.practice_response_time, it / 1000.0) },
+    ).joinToString(" · ").takeIf { it.isNotEmpty() }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (isCorrect) Icons.Filled.Check else Icons.Filled.Close,
-                    contentDescription = null,
-                    tint = accent,
-                )
-                Spacer(Modifier.width(8.dp))
+            Surface(shape = CircleShape, color = badge, contentColor = onBadge, modifier = Modifier.size(44.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(if (isCorrect) Icons.Filled.Check else Icons.Filled.Close, contentDescription = null)
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     stringResource(if (isCorrect) R.string.practice_feedback_correct else R.string.practice_feedback_incorrect),
                     style = MaterialTheme.typography.titleLarge,
                     color = accent,
                 )
-            }
-            if (!isCorrect && selectedLabel != null) {
-                Text(
-                    stringResource(R.string.practice_feedback_your_answer, selectedLabel),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(
-                correctSummary,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            notesAsPlayed?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text(correctSummary, style = MaterialTheme.typography.titleMedium)
+                if (!isCorrect && selectedLabel != null) {
+                    Text(
+                        stringResource(R.string.practice_feedback_your_answer, selectedLabel),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                details?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
-        Spacer(Modifier.size(8.dp))
         Button(onClick = onNext, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
             Text(nextLabel, style = MaterialTheme.typography.titleMedium)
         }

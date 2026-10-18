@@ -21,6 +21,7 @@ import com.example.eartrainer.data.history.RoomPracticeHistory
 import com.example.eartrainer.data.history.WeakSpots
 import com.example.eartrainer.data.settings.ChordSettingsStore
 import com.example.eartrainer.data.settings.DictationSettingsStore
+import com.example.eartrainer.data.settings.GoalSettingsStore
 import com.example.eartrainer.data.settings.IntervalSettingsStore
 import com.example.eartrainer.data.settings.ProgressionSettingsStore
 import com.example.eartrainer.data.settings.RhythmSettingsStore
@@ -72,6 +73,8 @@ class AppContainer(private val context: Context) {
     val documents: DocumentStreams by lazy { ContentResolverDocuments(context.contentResolver) }
 
     val soundSettings by lazy { SoundSettingsStore(context.settingsDataStore) }
+
+    val goalSettings by lazy { GoalSettingsStore(context.settingsDataStore) }
 
     /**
      * Each instrument is decoded at most once per process, in the background, and shared by

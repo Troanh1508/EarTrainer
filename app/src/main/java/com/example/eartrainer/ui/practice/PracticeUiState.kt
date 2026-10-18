@@ -13,6 +13,8 @@ enum class ChoiceAppearance { Available, Disabled, SelectedCorrect, SelectedInco
 data class PracticeUiState<A, Q : ExerciseQuestion<A>>(
     val exercise: ExerciseState<A, Q>,
     val playback: PlaybackStatus = PlaybackStatus.Idle,
+    /** This session's answers in order, true where right; feeds the session strip. */
+    val results: List<Boolean> = emptyList(),
 ) {
     val question: Q get() = exercise.question
     val isPlaying: Boolean get() = playback == PlaybackStatus.Playing
@@ -22,6 +24,10 @@ data class PracticeUiState<A, Q : ExerciseQuestion<A>>(
     @Suppress("UNCHECKED_CAST") // Answered<A> is the only Answered type an ExerciseState<A, Q> holds.
     val answer: ExercisePhase.Answered<A>? get() = exercise.phase as? ExercisePhase.Answered<A>
     val canAdvance: Boolean get() = answer != null
+
+    /** From first hearing the question to answering it, once answered. */
+    val responseMillis: Long?
+        get() = answer?.let { answered -> exercise.firstPlayedAtMillis?.let { answered.answeredAtMillis - it } }
 
     fun appearanceOf(choice: A): ChoiceAppearance {
         val answer = answer ?: return if (canAnswer) ChoiceAppearance.Available else ChoiceAppearance.Disabled

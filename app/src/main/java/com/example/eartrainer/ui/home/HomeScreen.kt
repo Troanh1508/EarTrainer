@@ -15,23 +15,32 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -43,6 +52,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -50,6 +60,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.eartrainer.R
+import com.example.eartrainer.data.settings.GoalSettings
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.ui.progress.exerciseName
 import com.example.eartrainer.ui.progress.percent
@@ -68,7 +79,7 @@ fun HomeRoute(
     onOpenBackup: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    HomeScreen(state, onOpenExercise, onOpenProgress, onOpenBackup)
+    HomeScreen(state, onOpenExercise, onOpenProgress, onOpenBackup, onDailyGoalSelected = viewModel::onDailyGoalSelected)
 }
 
 @Composable
@@ -77,6 +88,7 @@ fun HomeScreen(
     onOpenExercise: (ExerciseKind) -> Unit,
     onOpenProgress: () -> Unit,
     onOpenBackup: () -> Unit,
+    onDailyGoalSelected: (Int) -> Unit,
 ) {
     Surface(Modifier.fillMaxSize()) {
         Column(
@@ -91,7 +103,7 @@ fun HomeScreen(
             ) {
                 Header(onOpenBackup)
                 if (state != null) {
-                    TodayCard(state)
+                    TodayCard(state, onDailyGoalSelected)
                     state.suggestion?.let { SuggestionCard(it, onOpenExercise) }
                 }
                 Row(Modifier.padding(start = 4.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -160,9 +172,20 @@ private fun Ring(fraction: Float, track: Color, fill: Color, diameter: Dp, thick
 }
 
 @Composable
-private fun TodayCard(state: HomeUiState) {
+private fun TodayCard(state: HomeUiState, onDailyGoalSelected: (Int) -> Unit) {
     val onPrimary = MaterialTheme.colorScheme.onPrimary
-    val ringDescription = pluralStringResource(R.plurals.home_goal_ring, HomeUiState.DAILY_GOAL, state.answersToday, HomeUiState.DAILY_GOAL)
+    val ringDescription = pluralStringResource(R.plurals.home_goal_ring, state.dailyGoal, state.answersToday, state.dailyGoal)
+    var choosingGoal by rememberSaveable { mutableStateOf(false) }
+    if (choosingGoal) {
+        DailyGoalDialog(
+            current = state.dailyGoal,
+            onSelected = { answers ->
+                onDailyGoalSelected(answers)
+                choosingGoal = false
+            },
+            onDismiss = { choosingGoal = false },
+        )
+    }
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.primary,
@@ -175,7 +198,7 @@ private fun TodayCard(state: HomeUiState) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("${state.answersToday}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         Text(
-                            stringResource(R.string.home_goal_of, HomeUiState.DAILY_GOAL),
+                            stringResource(R.string.home_goal_of, state.dailyGoal),
                             style = MaterialTheme.typography.labelMedium,
                             color = onPrimary.copy(alpha = 0.85f),
                         )
@@ -183,7 +206,17 @@ private fun TodayCard(state: HomeUiState) {
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.home_goal_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.home_goal_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = { choosingGoal = true }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Outlined.Edit, contentDescription = stringResource(R.string.home_goal_change), modifier = Modifier.size(20.dp))
+                    }
+                }
                 Text(
                     when {
                         state.answersToGoal == 0 -> stringResource(R.string.home_goal_done)
@@ -206,6 +239,40 @@ private fun TodayCard(state: HomeUiState) {
             }
         }
     }
+}
+
+/** The daily goals on offer, each a radio button; picking one saves it and closes the dialog. */
+@Composable
+private fun DailyGoalDialog(current: Int, onSelected: (Int) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.home_goal_dialog_title)) },
+        text = {
+            Column(Modifier.selectableGroup()) {
+                Text(
+                    stringResource(R.string.home_goal_dialog_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                GoalSettings.DAILY_ANSWER_OPTIONS.forEach { answers ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .selectable(selected = answers == current, role = Role.RadioButton, onClick = { onSelected(answers) }),
+                    ) {
+                        RadioButton(selected = answers == current, onClick = null)
+                        Spacer(Modifier.width(12.dp))
+                        Text(pluralStringResource(R.plurals.home_goal_option, answers, answers), style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.home_goal_dialog_close)) }
+        },
+    )
 }
 
 @Composable
@@ -298,6 +365,7 @@ private fun HomeScreenPreview() {
         HomeScreen(
             state = HomeUiState(
                 answersToday = 18,
+                dailyGoal = 30,
                 currentStreak = 6,
                 exercises = ExerciseKind.entries.mapIndexed { index, exercise -> ExerciseSummary(exercise, if (index == 4) 0 else 40, 22 + index * 3) },
                 suggestion = Suggestion(ExerciseKind.INTERVALS, listOf("Minor sixth", "Tritone", "Major seventh")),
@@ -305,6 +373,7 @@ private fun HomeScreenPreview() {
             onOpenExercise = {},
             onOpenProgress = {},
             onOpenBackup = {},
+            onDailyGoalSelected = {},
         )
     }
 }

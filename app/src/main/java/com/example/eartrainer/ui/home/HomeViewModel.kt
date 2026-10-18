@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.eartrainer.EarTrainerApplication
 import com.example.eartrainer.data.history.PracticeHistory
+import com.example.eartrainer.data.settings.GoalSettings
+import com.example.eartrainer.data.settings.GoalSettingsStore
 import com.example.eartrainer.exercise.ExerciseKind
 import com.example.eartrainer.ui.log.localEpochDay
 import com.example.eartrainer.ui.progress.AccuracyItem
@@ -19,10 +21,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.util.TimeZone
 
 class HomeViewModel(
     history: PracticeHistory,
+    private val goalSettings: GoalSettingsStore,
     private val clock: () -> Long = System::currentTimeMillis,
     private val timeZone: () -> TimeZone = TimeZone::getDefault,
 ) : ViewModel() {
@@ -35,15 +39,26 @@ class HomeViewModel(
     ) { parts -> parts.groupBy({ it.first }, { it.second }).mapValues { (_, lists) -> lists.flatten() } }
 
     val uiState: StateFlow<HomeUiState?> =
-        combine(history.answersPerDay(), history.recentSessions(limit = 1), accuracy) { days, sessions, items ->
-            HomeUiState.from(days, today = localEpochDay(clock(), timeZone()), lastExercise = sessions.firstOrNull()?.exercise, accuracy = items)
+        combine(history.answersPerDay(), history.recentSessions(limit = 1), accuracy, goalSettings.settings) { days, sessions, items, goal ->
+            HomeUiState.from(
+                days,
+                today = localEpochDay(clock(), timeZone()),
+                dailyGoal = goal.dailyAnswers,
+                lastExercise = sessions.firstOrNull()?.exercise,
+                accuracy = items,
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initialValue = null)
+
+    fun onDailyGoalSelected(answers: Int) {
+        if (answers !in GoalSettings.DAILY_ANSWER_OPTIONS) return
+        viewModelScope.launch { goalSettings.update { it.copy(dailyAnswers = answers) } }
+    }
 
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val container = (this[APPLICATION_KEY] as EarTrainerApplication).container
-                HomeViewModel(container.practiceHistory)
+                HomeViewModel(container.practiceHistory, container.goalSettings)
             }
         }
     }

@@ -33,7 +33,7 @@ class SettingsBackupTest {
     @Test
     fun exportWritesEverySettingEvenWhenNothingWasChanged() {
         val exported = SettingsBackup.export(preferencesOf())
-        assertTrue(exported.keys.containsAll(listOf("interval_training.styles", "chord_training.target", "scale_degrees.modes", "progressions.length", "dictation.length", "rhythm.tempo", "sound.instrument")))
+        assertTrue(exported.keys.containsAll(listOf("interval_training.styles", "chord_training.target", "scale_degrees.modes", "progressions.length", "dictation.length", "rhythm.tempo", "sound.instrument", "goal.daily_answers")))
         assertEquals(SettingValue(int = RhythmSettings().bars), exported["rhythm.bars"])
         assertTrue(exported.values.all { listOfNotNull(it.string, it.int, it.boolean, it.stringSet).size == 1 })
     }

@@ -151,6 +151,7 @@ class PracticeViewModelTest {
 
         viewModel.onRestartClick()
         assertEquals(SessionScore(), state.exercise.score)
+        assertEquals(emptyList<Boolean>(), state.results)
         assertEquals(1, state.exercise.questionNumber)
         assertEquals(listOf(settings.value, settings.value), requestedSettings)
 
@@ -219,6 +220,9 @@ class PracticeViewModelTest {
         viewModel.onAnswerSelected(Interval.PERFECT_FIFTH)
 
         assertEquals(SessionScore(answered = 1, correct = 1), state.exercise.score)
+        // Repeated taps add one result, timed from when the question was first played.
+        assertEquals(listOf(true), state.results)
+        assertEquals(2_500L, state.responseMillis)
         assertEquals(ChoiceAppearance.SelectedCorrect, state.appearanceOf(Interval.MAJOR_THIRD))
         assertEquals(
             listOf(
@@ -245,6 +249,7 @@ class PracticeViewModelTest {
         viewModel.onAnswerSelected(Interval.PERFECT_FIFTH)
 
         assertEquals(SessionScore(answered = 1, correct = 0), state.exercise.score)
+        assertEquals(listOf(false), state.results)
         assertEquals(ChoiceAppearance.SelectedIncorrect, state.appearanceOf(Interval.PERFECT_FIFTH))
         assertEquals(ChoiceAppearance.RevealedCorrect, state.appearanceOf(Interval.MAJOR_THIRD))
         assertEquals(ChoiceAppearance.Dimmed, state.appearanceOf(Interval.PERFECT_FOURTH))
@@ -321,6 +326,8 @@ class PracticeViewModelTest {
         assertEquals(PlaybackStatus.Playing, state.playback)
         assertEquals(ExercisePhase.AwaitingAnswer, state.exercise.phase)
         assertEquals(SessionScore(answered = 1, correct = 1), state.exercise.score)
+        assertEquals(listOf(true), state.results)
+        assertNull(state.responseMillis)
 
         player.finish()
         advanceUntilIdle()

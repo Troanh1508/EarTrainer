@@ -16,18 +16,17 @@ data class Suggestion(val exercise: ExerciseKind, val items: List<String>)
 
 data class HomeUiState(
     val answersToday: Int,
+    /** Answers a day that count as reaching today's goal. */
+    val dailyGoal: Int,
     val currentStreak: Int,
     /** Every exercise, in menu order. */
     val exercises: List<ExerciseSummary>,
     val suggestion: Suggestion?,
 ) {
-    val goalProgress: Float get() = (answersToday.toFloat() / DAILY_GOAL).coerceAtMost(1f)
-    val answersToGoal: Int get() = (DAILY_GOAL - answersToday).coerceAtLeast(0)
+    val goalProgress: Float get() = (answersToday.toFloat() / dailyGoal).coerceAtMost(1f)
+    val answersToGoal: Int get() = (dailyGoal - answersToday).coerceAtLeast(0)
 
     companion object {
-        /** Answers a day; enough for a focused ten minutes or so. */
-        const val DAILY_GOAL = 30
-
         /** Fewer answers than this say too little about an item to call it weak. */
         const val MIN_ANSWERS_FOR_SUGGESTION = 3
         const val SUGGESTED_ITEMS = 3
@@ -35,6 +34,7 @@ data class HomeUiState(
         fun from(
             days: List<DayCount>,
             today: Long,
+            dailyGoal: Int,
             lastExercise: ExerciseKind?,
             accuracy: Map<ExerciseKind, List<AccuracyItem>>,
         ): HomeUiState {
@@ -50,6 +50,7 @@ data class HomeUiState(
             }
             return HomeUiState(
                 answersToday = days.firstOrNull { it.day == today }?.answers ?: 0,
+                dailyGoal = dailyGoal,
                 currentStreak = PracticeLogUiState.from(days, sessions = emptyList(), today = today).currentStreak,
                 exercises = ExerciseKind.entries.map { exercise ->
                     val items = accuracy[exercise].orEmpty()

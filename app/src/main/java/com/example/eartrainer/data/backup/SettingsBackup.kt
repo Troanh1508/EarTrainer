@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.eartrainer.data.settings.ChordSettingsStore
 import com.example.eartrainer.data.settings.DictationSettingsStore
+import com.example.eartrainer.data.settings.GoalSettingsStore
 import com.example.eartrainer.data.settings.IntervalSettingsStore
 import com.example.eartrainer.data.settings.ProgressionSettingsStore
 import com.example.eartrainer.data.settings.RhythmSettingsStore
@@ -35,6 +36,7 @@ internal object SettingsBackup {
         { from, to -> DictationSettingsStore.encode(DictationSettingsStore.decode(from), to) },
         { from, to -> RhythmSettingsStore.encode(RhythmSettingsStore.decode(from), to) },
         { from, to -> SoundSettingsStore.encode(SoundSettingsStore.decode(from), to) },
+        { from, to -> GoalSettingsStore.encode(GoalSettingsStore.decode(from), to) },
     )
 
     fun export(preferences: Preferences): Map<String, SettingValue> =

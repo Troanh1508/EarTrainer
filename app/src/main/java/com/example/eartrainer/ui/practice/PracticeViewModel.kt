@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.eartrainer.audio.AudioPlayer
 import com.example.eartrainer.exercise.ExerciseEngine
+import com.example.eartrainer.exercise.ExercisePhase
 import com.example.eartrainer.exercise.ExerciseQuestion
 import com.example.eartrainer.exercise.ExerciseState
 import com.example.eartrainer.music.ListeningPrompt
@@ -96,7 +97,8 @@ class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
         val next = current.exercise.submitAnswer(answer, clock())
         // Invalid submissions (duplicate taps, not yet heard) return the same state.
         if (next === current.exercise) return
-        _uiState.value = current.copy(exercise = next)
+        val isCorrect = (next.phase as? ExercisePhase.Answered<*>)?.isCorrect ?: false
+        _uiState.value = current.copy(exercise = next, results = current.results + isCorrect)
         recordAttempt(next, sessionId)
     }
 

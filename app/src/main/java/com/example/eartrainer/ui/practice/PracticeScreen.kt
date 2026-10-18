@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,7 +23,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -135,6 +138,18 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScaffold(
     onNavigateUp: () -> Unit,
     answerArea: @Composable () -> Unit,
 ) {
+    val scroll = rememberScrollState()
+    // Once answered, bring the choices (and the revealed right one) into view above the feedback panel.
+    // The next question starts back at the top.
+    val answered = state.answer != null
+    LaunchedEffect(answered) {
+        if (answered) {
+            withFrameNanos {}
+            scroll.animateScrollTo(scroll.maxValue)
+        } else {
+            scroll.animateScrollTo(0)
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -154,12 +169,17 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScaffold(
         bottomBar = {
             // Feedback lives in a fixed bottom panel so "Next" stays reachable without scrolling.
             state.answer?.let { answer ->
-                Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                    shadowElevation = 8.dp,
+                ) {
                     AnswerFeedback(
                         isCorrect = answer.isCorrect,
                         selectedLabel = if (texts.showSelectedInFeedback) texts.choiceLabel(answer.selectedAnswer).title else null,
                         correctSummary = texts.correctSummary(state.question),
                         notesAsPlayed = if (texts.showNotesAsPlayed) state.notesAsPlayed { texts.noteName(state.question, it) } else null,
+                        responseMillis = state.responseMillis,
                         onNext = onNext,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -175,7 +195,7 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScaffold(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scroll),
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -184,69 +204,12 @@ fun <A, Q : ExerciseQuestion<A>> PracticeScaffold(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 16.dp),
             ) {
-                SessionHeader(state, texts)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    PlaybackButton(
-                        isPlaying = state.isPlaying,
-                        hasHeardPrompt = state.hasHeardPrompt,
-                        onPlay = onPlay,
-                        onStop = onStop,
-                        modifier = Modifier.widthIn(min = 200.dp),
-                    )
-                    PlaybackHint(state)
-                }
+                SessionStrip(state)
+                Text(texts.instruction(state.question), style = MaterialTheme.typography.bodyLarge)
+                PromptPlayer(state, texts.questionDetail(state.question), onPlay, onStop, Modifier.fillMaxWidth())
                 answerArea()
             }
         }
     }
 }
 
-@Composable
-private fun <A, Q : ExerciseQuestion<A>> SessionHeader(state: PracticeUiState<A, Q>, texts: PracticeTexts<A, Q>) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(texts.instruction(state.question), style = MaterialTheme.typography.bodyLarge)
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                stringResource(R.string.practice_question_number, state.exercise.questionNumber, texts.questionDetail(state.question)),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            val score = state.exercise.score
-            Text(
-                if (score.answered == 0) {
-                    stringResource(R.string.practice_score_empty)
-                } else {
-                    stringResource(R.string.practice_score, score.correct, score.answered)
-                },
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-    }
-}
-
-@Composable
-private fun PlaybackHint(state: PracticeUiState<*, *>) {
-    val hint = when {
-        state.playback == PlaybackStatus.Failed -> stringResource(R.string.practice_playback_failed)
-        !state.hasHeardPrompt -> stringResource(R.string.practice_listen_first)
-        else -> return
-    }
-    Text(
-        hint,
-        style = MaterialTheme.typography.bodyMedium,
-        textAlign = TextAlign.Center,
-        color = if (state.playback == PlaybackStatus.Failed) {
-            MaterialTheme.colorScheme.error
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        },
-    )
-}
