@@ -25,8 +25,12 @@ import com.example.eartrainer.music.RhythmCell
 import com.example.eartrainer.music.ScaleDegree
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -37,12 +41,19 @@ data class AnswerAccuracy<T>(val item: T, val attempts: Int, val correct: Int) {
     val accuracy: Float? get() = if (attempts == 0) null else correct.toFloat() / attempts
 }
 
+/**
+ * One practice session. [attempts] and [correct] count whole questions; [items] and
+ * [itemsCorrect] count what the progress charts score: one per answer for intervals, chords and
+ * scale degrees, but one per chord, note or rhythm figure for progressions, dictation and rhythm.
+ */
 data class SessionSummary(
     val sessionId: String,
     val exercise: ExerciseKind,
     val startedAtMillis: Long,
     val attempts: Int,
     val correct: Int,
+    val items: Int = attempts,
+    val itemsCorrect: Int = correct,
 )
 
 /** Local record of every answered question, used for progress views and weak-spot practice. */
@@ -97,6 +108,24 @@ interface PracticeHistory {
      * are not recorded.
      */
     fun recentSessions(limit: Int, exercise: ExerciseKind? = null): Flow<List<SessionSummary>>
+
+    /*
+     * The latest [limit] sessions of one exercise that include answers matching the given
+     * filter, newest first, counting only those answers and scoring them as the accuracy
+     * charts do (see SessionSummary).
+     */
+
+    fun intervalSessions(style: IntervalStyle?, limit: Int): Flow<List<SessionSummary>>
+
+    fun chordSessions(target: ChordTarget, limit: Int): Flow<List<SessionSummary>>
+
+    fun scaleDegreeSessions(mode: Mode?, limit: Int): Flow<List<SessionSummary>>
+
+    fun progressionSessions(mode: Mode, limit: Int): Flow<List<SessionSummary>>
+
+    fun dictationSessions(mode: Mode, limit: Int): Flow<List<SessionSummary>>
+
+    fun rhythmSessions(limit: Int): Flow<List<SessionSummary>>
 
     /** The latest [limit] interval answers, newest first, for weighting practice. */
     fun recentIntervalResults(limit: Int): Flow<List<ItemResult<Interval>>>
@@ -176,13 +205,60 @@ class RoomPracticeHistory(
             }
             .flowOn(Dispatchers.Default)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun recentSessions(limit: Int, exercise: ExerciseKind?): Flow<List<SessionSummary>> =
-        database.sessionDao().recentSessions(limit, exercise?.name).map { rows ->
-            rows.mapNotNull { row ->
-                val exercise = ExerciseKind.entries.find { it.name == row.exercise } ?: return@mapNotNull null
-                SessionSummary(row.sessionId, exercise, row.startedAtMillis, row.attempts, row.correct)
+        database.sessionDao().recentSessions(limit, exercise?.name)
+            .map { rows ->
+                rows.mapNotNull { row ->
+                    val kind = ExerciseKind.entries.find { it.name == row.exercise } ?: return@mapNotNull null
+                    SessionSummary(row.sessionId, kind, row.startedAtMillis, row.attempts, row.correct)
+                }
             }
-        }
+            .flatMapLatest { sessions ->
+                // Exercises scored item by item need their answers to count the items.
+                fun idsOf(kind: ExerciseKind) = sessions.filter { it.exercise == kind }.map { it.sessionId }
+                fun answers(ids: List<String>, query: (List<String>) -> Flow<List<SessionAnswerRow>>) =
+                    if (ids.isEmpty()) flowOf(emptyList()) else query(ids)
+                combine(
+                    answers(idsOf(ExerciseKind.PROGRESSIONS), database.progressionAttemptDao()::answersInSessions),
+                    answers(idsOf(ExerciseKind.DICTATION), database.dictationAttemptDao()::answersInSessions),
+                    answers(idsOf(ExerciseKind.RHYTHM), database.rhythmAttemptDao()::answersInSessions),
+                ) { progressions, dictations, rhythms ->
+                    val itemized = (
+                        progressions.toSessions(ExerciseKind.PROGRESSIONS, ::progressionItems) +
+                            dictations.toSessions(ExerciseKind.DICTATION, ::dictationItems) +
+                            rhythms.toSessions(ExerciseKind.RHYTHM, ::rhythmItems)
+                        ).associateBy { it.sessionId }
+                    sessions.map { session ->
+                        itemized[session.sessionId]?.let { session.copy(items = it.items, itemsCorrect = it.itemsCorrect) } ?: session
+                    }
+                }
+            }
+            .flowOn(Dispatchers.Default)
+
+    override fun intervalSessions(style: IntervalStyle?, limit: Int): Flow<List<SessionSummary>> =
+        database.intervalAttemptDao().sessionTotals(style?.name, limit).map { it.toSessions(ExerciseKind.INTERVALS) }
+
+    override fun chordSessions(target: ChordTarget, limit: Int): Flow<List<SessionSummary>> =
+        database.chordAttemptDao().sessionTotals(target.name, limit).map { it.toSessions(ExerciseKind.CHORDS) }
+
+    override fun scaleDegreeSessions(mode: Mode?, limit: Int): Flow<List<SessionSummary>> =
+        database.scaleDegreeAttemptDao().sessionTotals(mode?.name, limit).map { it.toSessions(ExerciseKind.SCALE_DEGREES) }
+
+    override fun progressionSessions(mode: Mode, limit: Int): Flow<List<SessionSummary>> =
+        database.progressionAttemptDao().sessionAnswers(mode.name, limit)
+            .map { it.toSessions(ExerciseKind.PROGRESSIONS, ::progressionItems) }
+            .flowOn(Dispatchers.Default)
+
+    override fun dictationSessions(mode: Mode, limit: Int): Flow<List<SessionSummary>> =
+        database.dictationAttemptDao().sessionAnswers(mode.name, limit)
+            .map { it.toSessions(ExerciseKind.DICTATION, ::dictationItems) }
+            .flowOn(Dispatchers.Default)
+
+    override fun rhythmSessions(limit: Int): Flow<List<SessionSummary>> =
+        database.rhythmAttemptDao().sessionAnswers(limit)
+            .map { it.toSessions(ExerciseKind.RHYTHM, ::rhythmItems) }
+            .flowOn(Dispatchers.Default)
 
     override fun recentIntervalResults(limit: Int): Flow<List<ItemResult<Interval>>> =
         database.intervalAttemptDao().recentResults(limit).map { rows -> rows.toResults(Interval.entries) }
@@ -235,6 +311,43 @@ class RoomPracticeHistory(
         const val TAG = "PracticeHistory"
     }
 }
+
+private fun List<SessionTotalsRow>.toSessions(exercise: ExerciseKind) =
+    map { SessionSummary(it.sessionId, exercise, it.startedAtMillis, it.attempts, it.correct) }
+
+/**
+ * Groups answers into sessions, newest first, each scored item by item with [itemsOf]. A
+ * session whose answers no longer parse is left out rather than shown as having no items.
+ */
+internal fun List<SessionAnswerRow>.toSessions(
+    exercise: ExerciseKind,
+    itemsOf: (SessionAnswerRow) -> List<ItemResult<*>>,
+): List<SessionSummary> =
+    groupBy { it.sessionId }
+        .mapNotNull { (id, answers) ->
+            val items = answers.flatMap(itemsOf)
+            if (items.isEmpty()) return@mapNotNull null
+            SessionSummary(
+                sessionId = id,
+                exercise = exercise,
+                startedAtMillis = answers.minOf { it.answeredAtMillis },
+                attempts = answers.size,
+                correct = answers.count { it.isCorrect },
+                items = items.size,
+                itemsCorrect = items.count { it.isCorrect },
+            )
+        }
+        .sortedByDescending { it.startedAtMillis }
+
+private fun progressionItems(row: SessionAnswerRow): List<ItemResult<*>> {
+    val mode = Mode.entries.find { it.name == row.mode } ?: return emptyList()
+    return progressionChordResults(mode, row.asked.toSteps(), row.chosen.toSteps())
+}
+
+private fun dictationItems(row: SessionAnswerRow): List<ItemResult<*>> =
+    dictationNoteResults(row.asked.toDegrees(), row.chosen.toDegrees())
+
+private fun rhythmItems(row: SessionAnswerRow): List<ItemResult<*>> = RhythmAnswerRow(row.asked, row.chosen).toCellResults()
 
 /** Results for rows whose stored name still matches a value in [all]; others are skipped. */
 private fun <T : Enum<T>> List<ItemResultRow>.toResults(all: List<T>): List<ItemResult<T>> {

@@ -193,6 +193,55 @@ class RoomPracticeHistoryTest {
     }
 
     @Test
+    fun sessionTrendsCountOnlyMatchingAnswers() = runBlocking {
+        insertAll(
+            interval("up", 1_000, Interval.MINOR_SECOND, IntervalStyle.MELODIC_ASCENDING, correct = true),
+            interval("mixed", 2_000, Interval.MINOR_SECOND, IntervalStyle.MELODIC_ASCENDING, correct = true),
+            interval("mixed", 3_000, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = false),
+        )
+        insertChords(
+            chord("c", 4_000, ChordQuality.MAJOR, ChordInversion.ROOT_POSITION, ChordTarget.QUALITY, correct = true),
+            chord("c", 4_500, ChordQuality.MINOR, ChordInversion.FIRST, ChordTarget.INVERSION, correct = false),
+        )
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        assertEquals(
+            listOf(SessionSummary("mixed", ExerciseKind.INTERVALS, 2_000, 2, 1), SessionSummary("up", ExerciseKind.INTERVALS, 1_000, 1, 1)),
+            history.intervalSessions(style = null, limit = 10).first(),
+        )
+        assertEquals(
+            listOf(SessionSummary("mixed", ExerciseKind.INTERVALS, 3_000, 1, 0)),
+            history.intervalSessions(IntervalStyle.HARMONIC, limit = 10).first(),
+        )
+        assertEquals(listOf("mixed"), history.intervalSessions(style = null, limit = 1).first().map { it.sessionId })
+        assertEquals(listOf(SessionSummary("c", ExerciseKind.CHORDS, 4_500, 1, 0)), history.chordSessions(ChordTarget.INVERSION, 10).first())
+    }
+
+    @Test
+    fun progressionSessionsAreScoredChordByChordInTheirMode() = runBlocking {
+        fun progression(mode: Mode, vararg steps: Int) = ChordProgression(steps.map { DiatonicChord(mode, it) })
+        val major = Key(Pitch(60), Mode.MAJOR)
+        val minor = Key(Pitch(57), Mode.MINOR)
+        listOf(
+            // Session p: one wrong chord of three, then all three right.
+            ProgressionAttempt("p", 1_000, major, progression(Mode.MAJOR, 1, 6, 4, 5), progression(Mode.MAJOR, 1, 6, 2, 5), false, 1, 5_000),
+            ProgressionAttempt("p", 2_000, major, progression(Mode.MAJOR, 1, 4, 5, 1), progression(Mode.MAJOR, 1, 4, 5, 1), true, 1, 4_000),
+            ProgressionAttempt("q", 3_000, minor, progression(Mode.MINOR, 1, 4, 5), progression(Mode.MINOR, 1, 4, 5), true, 2, 3_000),
+            ProgressionAttempt("r", 4_000, major, progression(Mode.MAJOR, 1, 5), progression(Mode.MAJOR, 1, 4), false, 1, 2_000),
+        ).forEach { database.progressionAttemptDao().insert(it.toEntity()) }
+        val history = RoomPracticeHistory(database, unusedScope)
+
+        val p = SessionSummary("p", ExerciseKind.PROGRESSIONS, 1_000, attempts = 2, correct = 1, items = 6, itemsCorrect = 5)
+        val r = SessionSummary("r", ExerciseKind.PROGRESSIONS, 4_000, attempts = 1, correct = 0, items = 1, itemsCorrect = 0)
+        assertEquals(listOf(r, p), history.progressionSessions(Mode.MAJOR, limit = 10).first())
+        // The limit counts sessions, not answers.
+        assertEquals(listOf(r), history.progressionSessions(Mode.MAJOR, limit = 1).first())
+        assertEquals(listOf("q"), history.progressionSessions(Mode.MINOR, limit = 10).first().map { it.sessionId })
+        // The session list scores progression sessions the same way.
+        assertEquals(p, history.recentSessions(10).first().single { it.sessionId == "p" })
+    }
+
+    @Test
     fun recentResultsAreNewestFirstLimitedAndScoredByWhatWasAsked() = runBlocking {
         insertAll(
             interval("s", 1_000, Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = true),

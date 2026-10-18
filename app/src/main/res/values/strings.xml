@@ -164,20 +164,20 @@
     <string name="progress_filter_all_modes">All modes</string>
     <string name="progress_filter_all_rhythms">All rhythms</string>
     <plurals name="progress_overall">
-        <item quantity="one">%1$d of %2$d answer correct</item>
-        <item quantity="other">%1$d of %2$d answers correct</item>
+        <item quantity="one">%1$d of %2$d answer right</item>
+        <item quantity="other">%1$d of %2$d answers right</item>
     </plurals>
     <plurals name="progress_overall_chords">
-        <item quantity="one">%1$d of %2$d chord correct</item>
-        <item quantity="other">%1$d of %2$d chords correct</item>
+        <item quantity="one">%1$d of %2$d chord right</item>
+        <item quantity="other">%1$d of %2$d chords right</item>
     </plurals>
     <plurals name="progress_overall_notes">
-        <item quantity="one">%1$d of %2$d note correct</item>
-        <item quantity="other">%1$d of %2$d notes correct</item>
+        <item quantity="one">%1$d of %2$d note right</item>
+        <item quantity="other">%1$d of %2$d notes right</item>
     </plurals>
     <plurals name="progress_overall_figures">
-        <item quantity="one">%1$d of %2$d figure correct</item>
-        <item quantity="other">%1$d of %2$d figures correct</item>
+        <item quantity="one">%1$d of %2$d figure right</item>
+        <item quantity="other">%1$d of %2$d figures right</item>
     </plurals>
     <string name="progress_no_answers_for_filter">No answers here yet</string>
     <string name="progress_by_interval">By interval</string>
@@ -188,23 +188,66 @@
     <string name="progress_by_note">By note, after the opening tonic</string>
     <string name="progress_by_rhythm">By rhythm figure</string>
     <string name="progress_not_practiced">Not practiced yet</string>
-    <string name="progress_correct_label">correct</string>
+    <string name="progress_donut_answers">of answers right</string>
+    <string name="progress_donut_chords">of chords right</string>
+    <string name="progress_donut_notes">of notes right</string>
+    <string name="progress_donut_figures">of figures right</string>
+    <plurals name="progress_session_answers">
+        <item quantity="one">%1$d of %2$d right</item>
+        <item quantity="other">%1$d of %2$d right</item>
+    </plurals>
+    <plurals name="progress_session_chords">
+        <item quantity="one">%1$d of %2$d chord right</item>
+        <item quantity="other">%1$d of %2$d chords right</item>
+    </plurals>
+    <plurals name="progress_session_notes">
+        <item quantity="one">%1$d of %2$d note right</item>
+        <item quantity="other">%1$d of %2$d notes right</item>
+    </plurals>
+    <plurals name="progress_session_figures">
+        <item quantity="one">%1$d of %2$d figure right</item>
+        <item quantity="other">%1$d of %2$d figures right</item>
+    </plurals>
+    <plurals name="progress_fully_right_progressions">
+        <item quantity="one">%1$d of %2$d progression fully right</item>
+        <item quantity="other">%1$d of %2$d progressions fully right</item>
+    </plurals>
+    <plurals name="progress_fully_right_melodies">
+        <item quantity="one">%1$d of %2$d melody fully right</item>
+        <item quantity="other">%1$d of %2$d melodies fully right</item>
+    </plurals>
+    <plurals name="progress_fully_right_rhythms">
+        <item quantity="one">%1$d of %2$d rhythm fully right</item>
+        <item quantity="other">%1$d of %2$d rhythms fully right</item>
+    </plurals>
+    <string name="progress_scoring_title">How scoring works</string>
+    <string name="progress_scoring_shown">Explanation shown</string>
+    <string name="progress_scoring_hidden">Explanation hidden</string>
+    <string name="progress_scoring_answers">Each answer counts once, right or wrong.</string>
+    <string name="progress_scoring_chords">Each answer counts once, right or wrong. Questions about chord quality and about inversion are counted separately; choose which above.</string>
+    <string name="progress_scoring_progressions">Each chord after the opening tonic counts on its own, so one wrong chord costs one point rather than the whole progression. Each session also shows how many progressions were fully right.</string>
+    <string name="progress_scoring_dictation">Each note after the opening tonic counts on its own, so one wrong note costs one point rather than the whole melody. Each session also shows how many melodies were fully right.</string>
+    <string name="progress_scoring_rhythm">Each rhythm figure counts on its own, on the beat where it was played, so one wrong figure costs one point rather than the whole rhythm. Each session also shows how many rhythms were fully right.</string>
+    <plurals name="progress_trend_window_filtered">
+        <item quantity="one">%1$s · last session</item>
+        <item quantity="other">%1$s · last %2$d sessions</item>
+    </plurals>
     <string name="progress_item_score">%1$d of %2$d</string>
     <plurals name="progress_unit_answers">
         <item quantity="one">answer</item>
         <item quantity="other">answers</item>
     </plurals>
     <plurals name="progress_unit_chords">
-        <item quantity="one">chord scored</item>
-        <item quantity="other">chords scored</item>
+        <item quantity="one">chord</item>
+        <item quantity="other">chords</item>
     </plurals>
     <plurals name="progress_unit_notes">
-        <item quantity="one">note scored</item>
-        <item quantity="other">notes scored</item>
+        <item quantity="one">note</item>
+        <item quantity="other">notes</item>
     </plurals>
     <plurals name="progress_unit_figures">
-        <item quantity="one">figure scored</item>
-        <item quantity="other">figures scored</item>
+        <item quantity="one">figure</item>
+        <item quantity="other">figures</item>
     </plurals>
     <plurals name="progress_change_up">
         <item quantity="one">Up %d point recently</item>
@@ -222,7 +265,10 @@
     </plurals>
     <string name="progress_trend_needs_more">Practice a couple of sessions of this exercise to see how your accuracy changes.</string>
     <string name="progress_trend_latest">Latest</string>
-    <string name="progress_trend_description">Accuracy in your last %1$d sessions, oldest first: %2$s</string>
+    <plurals name="progress_trend_description">
+        <item quantity="one">Accuracy in your last session: %2$s</item>
+        <item quantity="other">Accuracy in your last %1$d sessions, oldest first: %2$s</item>
+    </plurals>
     <string name="progress_weakest_first">Weakest first</string>
     <string name="progress_legend_needs_work">Below %1$d%%: needs work</string>
     <string name="progress_legend_on_track">On track</string>

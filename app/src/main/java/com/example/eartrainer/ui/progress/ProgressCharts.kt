@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +29,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -50,6 +52,8 @@ internal fun percent(fraction: Float) = "${(fraction * 100).roundToInt()}%"
 @Composable
 internal fun AccuracyDonut(
     accuracy: Float?,
+    /** What the percentage counts, shown under it, e.g. "of chords right". */
+    caption: String,
     description: String,
     modifier: Modifier = Modifier,
     diameter: Dp = 136.dp,
@@ -76,10 +80,13 @@ internal fun AccuracyDonut(
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
+            // Narrower than the hole, so a long caption wraps instead of touching the ring.
             Text(
-                stringResource(R.string.progress_correct_label),
+                caption,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(max = diameter - thickness * 2 - 24.dp),
             )
         }
     }
@@ -92,7 +99,7 @@ internal fun AccuracyDonut(
  */
 @Composable
 internal fun AccuracyTrendChart(sessions: List<SessionSummary>, modifier: Modifier = Modifier) {
-    val values = sessions.map { it.correct.toFloat() / it.attempts }
+    val values = sessions.map { it.itemsCorrect.toFloat() / it.items }
     val low = if (values.min() >= 0.5f) 0.5f else 0f
     val line = MaterialTheme.colorScheme.primary
     val grid = MaterialTheme.colorScheme.outlineVariant
@@ -100,7 +107,7 @@ internal fun AccuracyTrendChart(sessions: List<SessionSummary>, modifier: Modifi
     val labelStyle = MaterialTheme.typography.labelSmall
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val dateFormat = remember { SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMd"), Locale.getDefault()) }
-    val description = stringResource(R.string.progress_trend_description, sessions.size, values.joinToString(", ") { percent(it) })
+    val description = pluralStringResource(R.plurals.progress_trend_description, sessions.size, sessions.size, values.joinToString(", ") { percent(it) })
 
     Column(modifier.clearAndSetSemantics { contentDescription = description }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

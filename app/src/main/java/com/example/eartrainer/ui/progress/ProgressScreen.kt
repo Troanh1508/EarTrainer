@@ -1,5 +1,7 @@
 package com.example.eartrainer.ui.progress
 
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -7,9 +9,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,7 +22,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -29,15 +36,20 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -126,7 +138,7 @@ private fun ProgressContent(
                 item { FilterRow(state, onFilterSelected, Modifier.widthIn(max = 560.dp).fillMaxWidth()) }
             }
             item { OverviewCard(state, cardModifier) }
-            item { TrendCard(state.trend, cardModifier) }
+            item { TrendCard(state, cardModifier) }
             item { AccuracyCard(state, cardModifier) }
             item { SectionTitle(stringResource(R.string.progress_recent_sessions), itemModifier.padding(top = 12.dp)) }
             items(state.recentSessions, key = { it.sessionId }) { SessionRow(it, itemModifier) }
@@ -201,6 +213,37 @@ private fun FilterRow(state: ProgressUiState, onSelected: (ProgressFilter) -> Un
     }
 }
 
+/** How one exercise's numbers are labeled: what each chart counts, and how a session is scored. */
+private class ScoringLabels(
+    @StringRes val donutCaption: Int,
+    @PluralsRes val unit: Int,
+    @PluralsRes val overall: Int,
+    @PluralsRes val sessionScore: Int,
+    /** Whole questions answered fully right, for exercises scored item by item. */
+    @PluralsRes val fullyRight: Int?,
+    @StringRes val explanation: Int,
+)
+
+private fun scoringLabels(exercise: ExerciseKind) = when (exercise) {
+    ExerciseKind.INTERVALS, ExerciseKind.SCALE_DEGREES, ExerciseKind.CHORDS -> ScoringLabels(
+        R.string.progress_donut_answers, R.plurals.progress_unit_answers, R.plurals.progress_overall,
+        R.plurals.progress_session_answers, fullyRight = null,
+        if (exercise == ExerciseKind.CHORDS) R.string.progress_scoring_chords else R.string.progress_scoring_answers,
+    )
+    ExerciseKind.PROGRESSIONS -> ScoringLabels(
+        R.string.progress_donut_chords, R.plurals.progress_unit_chords, R.plurals.progress_overall_chords,
+        R.plurals.progress_session_chords, R.plurals.progress_fully_right_progressions, R.string.progress_scoring_progressions,
+    )
+    ExerciseKind.DICTATION -> ScoringLabels(
+        R.string.progress_donut_notes, R.plurals.progress_unit_notes, R.plurals.progress_overall_notes,
+        R.plurals.progress_session_notes, R.plurals.progress_fully_right_melodies, R.string.progress_scoring_dictation,
+    )
+    ExerciseKind.RHYTHM -> ScoringLabels(
+        R.string.progress_donut_figures, R.plurals.progress_unit_figures, R.plurals.progress_overall_figures,
+        R.plurals.progress_session_figures, R.plurals.progress_fully_right_rhythms, R.string.progress_scoring_rhythm,
+    )
+}
+
 @Composable
 private fun ChartCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Card(
@@ -230,29 +273,26 @@ private fun CardHeader(title: String, note: String?) {
 
 @Composable
 private fun OverviewCard(state: ProgressUiState, modifier: Modifier = Modifier) {
-    // Progressions, dictations and rhythms are scored chord by chord, note by note or figure by figure.
-    val (summary, unit) = when (state.exercise) {
-        ExerciseKind.PROGRESSIONS -> R.plurals.progress_overall_chords to R.plurals.progress_unit_chords
-        ExerciseKind.DICTATION -> R.plurals.progress_overall_notes to R.plurals.progress_unit_notes
-        ExerciseKind.RHYTHM -> R.plurals.progress_overall_figures to R.plurals.progress_unit_figures
-        else -> R.plurals.progress_overall to R.plurals.progress_unit_answers
-    }
+    val labels = scoringLabels(state.exercise)
     val description = if (state.totalAttempts == 0) {
         stringResource(R.string.progress_no_answers_for_filter)
     } else {
-        pluralStringResource(summary, state.totalAttempts, state.totalCorrect, state.totalAttempts)
+        pluralStringResource(labels.overall, state.totalAttempts, state.totalCorrect, state.totalAttempts)
     }
+    var showScoring by rememberSaveable { mutableStateOf(false) }
+    val expanded = stringResource(R.string.progress_scoring_shown)
+    val collapsed = stringResource(R.string.progress_scoring_hidden)
     ChartCard(modifier) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            AccuracyDonut(state.overallAccuracy, description)
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            AccuracyDonut(state.overallAccuracy, stringResource(labels.donutCaption), description)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (state.totalAttempts == 0) {
                     Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     Column(Modifier.semantics(mergeDescendants = true) {}) {
                         Text("${state.totalAttempts}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         Text(
-                            pluralStringResource(unit, state.totalAttempts),
+                            pluralStringResource(labels.unit, state.totalAttempts),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -260,6 +300,22 @@ private fun OverviewCard(state: ProgressUiState, modifier: Modifier = Modifier) 
                 }
                 state.trendChange?.let { TrendChangePill(it) }
             }
+        }
+        TextButton(
+            onClick = { showScoring = !showScoring },
+            contentPadding = ButtonDefaults.TextButtonWithIconContentPadding,
+            modifier = Modifier.semantics { stateDescription = if (showScoring) expanded else collapsed },
+        ) {
+            Icon(Icons.Outlined.Info, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(stringResource(R.string.progress_scoring_title))
+        }
+        if (showScoring) {
+            Text(
+                stringResource(labels.explanation),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -286,12 +342,17 @@ private fun TrendChangePill(change: Int) {
 }
 
 @Composable
-private fun TrendCard(trend: List<SessionSummary>, modifier: Modifier = Modifier) {
+private fun TrendCard(state: ProgressUiState, modifier: Modifier = Modifier) {
+    val trend = state.trend
+    // Name the filter too, so it is clear which answers each point counts.
+    val window = when {
+        trend.isEmpty() -> null
+        state.filterOptions.size > 1 ->
+            pluralStringResource(R.plurals.progress_trend_window_filtered, trend.size, filterLabel(state.filter), trend.size)
+        else -> pluralStringResource(R.plurals.progress_trend_window, trend.size, trend.size)
+    }
     ChartCard(modifier) {
-        CardHeader(
-            stringResource(R.string.progress_trend_title),
-            if (trend.isEmpty()) null else pluralStringResource(R.plurals.progress_trend_window, trend.size, trend.size),
-        )
+        CardHeader(stringResource(R.string.progress_trend_title), window)
         if (trend.size >= 2) {
             AccuracyTrendChart(trend)
         } else {
@@ -321,6 +382,7 @@ private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 @Composable
 private fun SessionRow(session: SessionSummary, modifier: Modifier = Modifier) {
     val formatter = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
+    val labels = scoringLabels(session.exercise)
     Row(modifier.semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(formatter.format(Date(session.startedAtMillis)), style = MaterialTheme.typography.bodyLarge)
@@ -330,11 +392,19 @@ private fun SessionRow(session: SessionSummary, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(
-            stringResource(R.string.practice_score, session.correct, session.attempts),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                pluralStringResource(labels.sessionScore, session.items, session.itemsCorrect, session.items),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            labels.fullyRight?.let { fullyRight ->
+                Text(
+                    pluralStringResource(fullyRight, session.attempts, session.correct, session.attempts),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

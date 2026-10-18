@@ -87,7 +87,10 @@ data class ProgressUiState(
     val filter: ProgressFilter,
     val accuracy: List<AccuracyItem>,
     val recentSessions: List<SessionSummary>,
-    /** The selected exercise's latest sessions, oldest first, for the accuracy-over-time chart. */
+    /**
+     * The latest sessions with answers matching [filter], oldest first, for the accuracy-over-time
+     * chart; each counts only those answers, scored like [accuracy].
+     */
     val trend: List<SessionSummary> = emptyList(),
 ) {
     val exercise: ExerciseKind get() = filter.exercise
@@ -114,7 +117,7 @@ data class ProgressUiState(
         get() {
             if (trend.size < MIN_SESSIONS_FOR_CHANGE) return null
             val half = trend.size / 2
-            fun List<SessionSummary>.pooled() = sumOf { it.correct }.toFloat() / sumOf { it.attempts }
+            fun List<SessionSummary>.pooled() = sumOf { it.itemsCorrect }.toFloat() / sumOf { it.items }
             return ((trend.takeLast(half).pooled() - trend.take(half).pooled()) * 100).roundToInt()
         }
 
@@ -133,7 +136,7 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
             combine(
                 accuracyFor(selected),
                 history.recentSessions(RECENT_SESSION_LIMIT),
-                history.recentSessions(TREND_SESSION_LIMIT, selected.exercise),
+                trendFor(selected),
             ) { accuracy, sessions, trend ->
                 ProgressUiState(selected, accuracy, sessions, trend = trend.asReversed())
             }
@@ -161,6 +164,16 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
             history.dictationAccuracy(selected.mode).map { list -> list.map { it.toItem("${it.item.label} · ${it.item.solfege}") } }
         ProgressFilter.RhythmFilter ->
             history.rhythmAccuracy().map { list -> list.map { it.toItem(it.item.displayName.replaceFirstChar(Char::uppercase)) } }
+    }
+
+    // The same answers as [accuracyFor], so the chart and the bars measure the same thing.
+    private fun trendFor(selected: ProgressFilter): Flow<List<SessionSummary>> = when (selected) {
+        is ProgressFilter.IntervalStyleFilter -> history.intervalSessions(selected.style, TREND_SESSION_LIMIT)
+        is ProgressFilter.ChordTargetFilter -> history.chordSessions(selected.target, TREND_SESSION_LIMIT)
+        is ProgressFilter.ModeFilter -> history.scaleDegreeSessions(selected.mode, TREND_SESSION_LIMIT)
+        is ProgressFilter.ProgressionModeFilter -> history.progressionSessions(selected.mode, TREND_SESSION_LIMIT)
+        is ProgressFilter.DictationModeFilter -> history.dictationSessions(selected.mode, TREND_SESSION_LIMIT)
+        ProgressFilter.RhythmFilter -> history.rhythmSessions(TREND_SESSION_LIMIT)
     }
 
     private fun AnswerAccuracy<*>.toItem(label: String) = AccuracyItem(label, attempts, correct)

@@ -136,27 +136,80 @@ class FakePracticeHistory : PracticeHistory {
     // combine() takes at most five flows, so the sixth exercise is merged in a second step.
     override fun recentSessions(limit: Int, exercise: ExerciseKind?): Flow<List<SessionSummary>> = combine(
         combine(intervals, chords, degrees, progressions, dictations) { intervalList, chordList, degreeList, progressionList, dictationList ->
-            intervalList.map { Triple(it.sessionId, ExerciseKind.INTERVALS, it.answeredAtMillis to it.isCorrect) } +
-                chordList.map { Triple(it.sessionId, ExerciseKind.CHORDS, it.answeredAtMillis to it.isCorrect) } +
-                degreeList.map { Triple(it.sessionId, ExerciseKind.SCALE_DEGREES, it.answeredAtMillis to it.isCorrect) } +
-                progressionList.map { Triple(it.sessionId, ExerciseKind.PROGRESSIONS, it.answeredAtMillis to it.isCorrect) } +
-                dictationList.map { Triple(it.sessionId, ExerciseKind.DICTATION, it.answeredAtMillis to it.isCorrect) }
+            intervalList.toSessions() + chordList.toSessions() + degreeList.toSessions() +
+                progressionList.toSessions() + dictationList.toSessions()
         },
         rhythms,
     ) { earlier, rhythmList ->
-        val rows = earlier + rhythmList.map { Triple(it.sessionId, ExerciseKind.RHYTHM, it.answeredAtMillis to it.isCorrect) }
-        rows.groupBy { it.first }
-            .map { (id, session) ->
-                SessionSummary(
-                    sessionId = id,
-                    exercise = session.first().second,
-                    startedAtMillis = session.minOf { it.third.first },
-                    attempts = session.size,
-                    correct = session.count { it.third.second },
-                )
-            }
+        (earlier + rhythmList.toSessions())
             .sortedByDescending { it.startedAtMillis }
             .filter { exercise == null || it.exercise == exercise }
             .take(limit)
     }
+
+    override fun intervalSessions(style: IntervalStyle?, limit: Int): Flow<List<SessionSummary>> =
+        intervals.map { all -> all.filter { style == null || it.style == style }.toSessions().take(limit) }
+
+    override fun chordSessions(target: ChordTarget, limit: Int): Flow<List<SessionSummary>> =
+        chords.map { all -> all.filter { it.target == target }.toSessions().take(limit) }
+
+    override fun scaleDegreeSessions(mode: Mode?, limit: Int): Flow<List<SessionSummary>> =
+        degrees.map { all -> all.filter { mode == null || it.key.mode == mode }.toSessions().take(limit) }
+
+    override fun progressionSessions(mode: Mode, limit: Int): Flow<List<SessionSummary>> =
+        progressions.map { all -> all.filter { it.key.mode == mode }.toSessions().take(limit) }
+
+    override fun dictationSessions(mode: Mode, limit: Int): Flow<List<SessionSummary>> =
+        dictations.map { all -> all.filter { it.key.mode == mode }.toSessions().take(limit) }
+
+    override fun rhythmSessions(limit: Int): Flow<List<SessionSummary>> = rhythms.map { all -> all.toSessions().take(limit) }
+
+    @JvmName("intervalSessionsOf")
+    private fun List<IntervalAttempt>.toSessions() =
+        sessions(ExerciseKind.INTERVALS, { it.sessionId }, { it.answeredAtMillis }, { it.isCorrect }) { listOf(it.isCorrect) }
+
+    @JvmName("chordSessionsOf")
+    private fun List<ChordAttempt>.toSessions() =
+        sessions(ExerciseKind.CHORDS, { it.sessionId }, { it.answeredAtMillis }, { it.isCorrect }) { listOf(it.isCorrect) }
+
+    @JvmName("degreeSessionsOf")
+    private fun List<ScaleDegreeAttempt>.toSessions() =
+        sessions(ExerciseKind.SCALE_DEGREES, { it.sessionId }, { it.answeredAtMillis }, { it.isCorrect }) { listOf(it.isCorrect) }
+
+    @JvmName("progressionSessionsOf")
+    private fun List<ProgressionAttempt>.toSessions() =
+        sessions(ExerciseKind.PROGRESSIONS, { it.sessionId }, { it.answeredAtMillis }, { it.isCorrect }) { attempt ->
+            progressionChordResults(attempt.key.mode, attempt.progression.chords.map { it.step }, attempt.answer.chords.map { it.step })
+                .map { it.isCorrect }
+        }
+
+    @JvmName("dictationSessionsOf")
+    private fun List<DictationAttempt>.toSessions() =
+        sessions(ExerciseKind.DICTATION, { it.sessionId }, { it.answeredAtMillis }, { it.isCorrect }) { attempt ->
+            dictationNoteResults(attempt.melody.degrees, attempt.answer.degrees).map { it.isCorrect }
+        }
+
+    @JvmName("rhythmSessionsOf")
+    private fun List<RhythmAttempt>.toSessions() =
+        sessions(ExerciseKind.RHYTHM, { it.sessionId }, { it.answeredAtMillis }, { it.isCorrect }) { attempt ->
+            rhythmCellResults(attempt.rhythm, attempt.answer).map { it.isCorrect }
+        }
+
+    /** Groups answers into sessions, newest first, with [itemsOf] giving each answer's scored items. */
+    private fun <A> List<A>.sessions(
+        exercise: ExerciseKind,
+        sessionOf: (A) -> String,
+        answeredAt: (A) -> Long,
+        isCorrect: (A) -> Boolean,
+        itemsOf: (A) -> List<Boolean>,
+    ): List<SessionSummary> = groupBy(sessionOf)
+        .map { (id, answers) ->
+            val items = answers.flatMap(itemsOf)
+            SessionSummary(
+                id, exercise, answers.minOf(answeredAt), answers.size, answers.count(isCorrect),
+                items = items.size, itemsCorrect = items.count { it },
+            )
+        }
+        .filter { it.items > 0 }
+        .sortedByDescending { it.startedAtMillis }
 }

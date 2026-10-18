@@ -165,9 +165,15 @@ class ProgressViewModelTest {
         // Only the closing tonic counts; the opening one is given.
         assertEquals(AccuracyItem("I", attempts = 1, correct = 1), state.accuracy.single { it.label == "I" })
         assertEquals(6, state.totalAttempts)
+        // The trend point and the session list score the session the same way: 5 of 6 chords,
+        // while 1 of its 2 progressions was fully right.
+        val session = SessionSummary("p", ExerciseKind.PROGRESSIONS, 1_000, attempts = 2, correct = 1, items = 6, itemsCorrect = 5)
+        assertEquals(listOf(session), state.trend)
+        assertEquals(listOf(session), state.recentSessions)
 
         viewModel.onFilterSelected(ProgressFilter.ProgressionModeFilter(Mode.MINOR))
         assertEquals(0, viewModel.state.totalAttempts)
+        assertEquals(emptyList<SessionSummary>(), viewModel.state.trend)
     }
 
     @Test
@@ -226,6 +232,23 @@ class ProgressViewModelTest {
 
         viewModel.onExerciseSelected(ExerciseKind.CHORDS)
         assertEquals(listOf("c"), viewModel.state.trend.map { it.sessionId })
+    }
+
+    @Test
+    fun trendCountsOnlyAnswersMatchingTheFilter() = runTest {
+        // "up" has only ascending answers; "mixed" has one of each style.
+        history.record(interval("up", 1_000, Interval.MAJOR_THIRD, IntervalStyle.MELODIC_ASCENDING, correct = true))
+        history.record(interval("mixed", 2_000, Interval.MAJOR_THIRD, IntervalStyle.MELODIC_ASCENDING, correct = true))
+        history.record(interval("mixed", 3_000, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = false))
+        val viewModel = ProgressViewModel(history).also { collected(it) }
+
+        assertEquals(listOf("up" to 1, "mixed" to 2), viewModel.state.trend.map { it.sessionId to it.items })
+
+        viewModel.onFilterSelected(ProgressFilter.IntervalStyleFilter(IntervalStyle.HARMONIC))
+        assertEquals(
+            listOf(SessionSummary("mixed", ExerciseKind.INTERVALS, 3_000, attempts = 1, correct = 0)),
+            viewModel.state.trend,
+        )
     }
 
     @Test

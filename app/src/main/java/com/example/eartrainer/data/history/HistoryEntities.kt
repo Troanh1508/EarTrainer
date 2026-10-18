@@ -154,6 +154,22 @@ data class ChordResultRow(val target: String, val quality: String, val inversion
 
 data class ProgressionResultRow(val mode: String, val progression: String, val answer: String)
 
+/** Answer totals for one session. */
+data class SessionTotalsRow(val sessionId: String, val startedAtMillis: Long, val attempts: Int, val correct: Int)
+
+/**
+ * One stored answer with its session, for scoring item by item: [asked] and [chosen] hold the
+ * progression, melody or rhythm as stored; [mode] is null for rhythms.
+ */
+data class SessionAnswerRow(
+    val sessionId: String,
+    val answeredAtMillis: Long,
+    val mode: String?,
+    val asked: String,
+    val chosen: String,
+    val isCorrect: Boolean,
+)
+
 /** Totals for one answer value, e.g. an interval or a chord quality, stored by name. */
 data class AccuracyRow(val item: String, val attempts: Int, val correct: Int)
 
@@ -176,6 +192,19 @@ interface IntervalAttemptDao {
     /** Every stored answer, oldest first, for backups. */
     @Query("SELECT * FROM interval_attempts ORDER BY answered_at, id")
     suspend fun all(): List<IntervalAttemptEntity>
+
+    /** Per-session totals of the answers in [style] (null means every style), newest session first. */
+    @Query(
+        """
+        SELECT session_id AS sessionId, MIN(answered_at) AS startedAtMillis, COUNT(*) AS attempts, SUM(is_correct) AS correct
+        FROM interval_attempts
+        WHERE :style IS NULL OR style = :style
+        GROUP BY session_id
+        ORDER BY startedAtMillis DESC
+        LIMIT :limit
+        """,
+    )
+    fun sessionTotals(style: String?, limit: Int): Flow<List<SessionTotalsRow>>
 
     /** Totals per interval, optionally limited to one style (null means all styles). */
     @Query(
@@ -203,6 +232,19 @@ interface ChordAttemptDao {
     /** Every stored answer, oldest first, for backups. */
     @Query("SELECT * FROM chord_attempts ORDER BY answered_at, id")
     suspend fun all(): List<ChordAttemptEntity>
+
+    /** Per-session totals of the questions that asked for [target], newest session first. */
+    @Query(
+        """
+        SELECT session_id AS sessionId, MIN(answered_at) AS startedAtMillis, COUNT(*) AS attempts, SUM(is_correct) AS correct
+        FROM chord_attempts
+        WHERE target = :target
+        GROUP BY session_id
+        ORDER BY startedAtMillis DESC
+        LIMIT :limit
+        """,
+    )
+    fun sessionTotals(target: String, limit: Int): Flow<List<SessionTotalsRow>>
 
     /** Totals per chord quality, for questions that asked for the quality. */
     @Query(
@@ -247,6 +289,19 @@ interface ScaleDegreeAttemptDao {
     @Query("SELECT * FROM scale_degree_attempts ORDER BY answered_at, id")
     suspend fun all(): List<ScaleDegreeAttemptEntity>
 
+    /** Per-session totals of the answers in [mode] (null means every mode), newest session first. */
+    @Query(
+        """
+        SELECT session_id AS sessionId, MIN(answered_at) AS startedAtMillis, COUNT(*) AS attempts, SUM(is_correct) AS correct
+        FROM scale_degree_attempts
+        WHERE :mode IS NULL OR mode = :mode
+        GROUP BY session_id
+        ORDER BY startedAtMillis DESC
+        LIMIT :limit
+        """,
+    )
+    fun sessionTotals(mode: String?, limit: Int): Flow<List<SessionTotalsRow>>
+
     /** Totals per scale degree, optionally limited to one mode (null means all modes). */
     @Query(
         """
@@ -274,6 +329,27 @@ interface ProgressionAttemptDao {
     @Query("SELECT * FROM progression_attempts ORDER BY answered_at, id")
     suspend fun all(): List<ProgressionAttemptEntity>
 
+    /** Every answer in [mode] from the latest [limit] sessions that have answers in it. */
+    @Query(
+        """
+        SELECT session_id AS sessionId, answered_at AS answeredAtMillis, mode, progression AS asked, answer AS chosen, is_correct AS isCorrect
+        FROM progression_attempts
+        WHERE mode = :mode AND session_id IN (
+            SELECT session_id FROM progression_attempts WHERE mode = :mode
+            GROUP BY session_id ORDER BY MIN(answered_at) DESC LIMIT :limit
+        )
+        """,
+    )
+    fun sessionAnswers(mode: String, limit: Int): Flow<List<SessionAnswerRow>>
+
+    @Query(
+        """
+        SELECT session_id AS sessionId, answered_at AS answeredAtMillis, mode, progression AS asked, answer AS chosen, is_correct AS isCorrect
+        FROM progression_attempts WHERE session_id IN (:sessionIds)
+        """,
+    )
+    fun answersInSessions(sessionIds: List<String>): Flow<List<SessionAnswerRow>>
+
     /** Every answered progression in [mode]; per-chord totals are worked out from these. */
     @Query("SELECT progression, answer FROM progression_attempts WHERE mode = :mode")
     fun answersInMode(mode: String): Flow<List<ProgressionAnswerRow>>
@@ -294,6 +370,27 @@ interface DictationAttemptDao {
     @Query("SELECT * FROM dictation_attempts ORDER BY answered_at, id")
     suspend fun all(): List<DictationAttemptEntity>
 
+    /** Every answer in [mode] from the latest [limit] sessions that have answers in it. */
+    @Query(
+        """
+        SELECT session_id AS sessionId, answered_at AS answeredAtMillis, mode, melody AS asked, answer AS chosen, is_correct AS isCorrect
+        FROM dictation_attempts
+        WHERE mode = :mode AND session_id IN (
+            SELECT session_id FROM dictation_attempts WHERE mode = :mode
+            GROUP BY session_id ORDER BY MIN(answered_at) DESC LIMIT :limit
+        )
+        """,
+    )
+    fun sessionAnswers(mode: String, limit: Int): Flow<List<SessionAnswerRow>>
+
+    @Query(
+        """
+        SELECT session_id AS sessionId, answered_at AS answeredAtMillis, mode, melody AS asked, answer AS chosen, is_correct AS isCorrect
+        FROM dictation_attempts WHERE session_id IN (:sessionIds)
+        """,
+    )
+    fun answersInSessions(sessionIds: List<String>): Flow<List<SessionAnswerRow>>
+
     /** Every dictation in [mode]; per-degree totals are worked out from these. */
     @Query("SELECT melody, answer FROM dictation_attempts WHERE mode = :mode")
     fun answersInMode(mode: String): Flow<List<MelodyAnswerRow>>
@@ -313,6 +410,26 @@ interface RhythmAttemptDao {
     /** Every stored answer, oldest first, for backups. */
     @Query("SELECT * FROM rhythm_attempts ORDER BY answered_at, id")
     suspend fun all(): List<RhythmAttemptEntity>
+
+    /** Every answer from the latest [limit] rhythm sessions. */
+    @Query(
+        """
+        SELECT session_id AS sessionId, answered_at AS answeredAtMillis, NULL AS mode, rhythm AS asked, answer AS chosen, is_correct AS isCorrect
+        FROM rhythm_attempts
+        WHERE session_id IN (
+            SELECT session_id FROM rhythm_attempts GROUP BY session_id ORDER BY MIN(answered_at) DESC LIMIT :limit
+        )
+        """,
+    )
+    fun sessionAnswers(limit: Int): Flow<List<SessionAnswerRow>>
+
+    @Query(
+        """
+        SELECT session_id AS sessionId, answered_at AS answeredAtMillis, NULL AS mode, rhythm AS asked, answer AS chosen, is_correct AS isCorrect
+        FROM rhythm_attempts WHERE session_id IN (:sessionIds)
+        """,
+    )
+    fun answersInSessions(sessionIds: List<String>): Flow<List<SessionAnswerRow>>
 
     /** Every rhythm answer; per-cell totals are worked out from these. */
     @Query("SELECT rhythm, answer FROM rhythm_attempts")
