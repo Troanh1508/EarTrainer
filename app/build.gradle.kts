@@ -37,6 +37,12 @@ android {
     buildFeatures {
         compose = true
     }
+    sourceSets {
+        getByName("main") {
+            // The instrument recordings live outside the app so the iOS project can bundle the same files.
+            assets.directories.add(rootProject.file("shared/assets").path)
+        }
+    }
     androidResources {
         // Instrument recordings are decoded with MediaExtractor straight from the APK, which needs them stored uncompressed.
         noCompress += "flac"
