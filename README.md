@@ -6,6 +6,21 @@ is 20 questions and ends with a summary. Practice concentrates on the items you 
 also tracks progress and mistakes, with side-by-side comparison drills, and keeps a practice log
 and a daily goal.
 
+<p align="center">
+  <img src="docs/screenshots/home.png" width="200" alt="Home: today's goal and accuracy for each exercise">
+  <img src="docs/screenshots/intervals.png" width="200" alt="Interval training, showing the right answer after a mistake">
+  <img src="docs/screenshots/rhythm.png" width="200" alt="Rhythm: choosing the notation that matches what was played">
+  <img src="docs/screenshots/dictation.png" width="200" alt="Melodic dictation: writing the melody note by note">
+</p>
+<p align="center">
+  <img src="docs/screenshots/progress.png" width="200" alt="Progress: accuracy, trend and weakest intervals">
+  <img src="docs/screenshots/mistakes.png" width="200" alt="Mistakes: what a major sixth was mistaken for, with a comparison drill">
+  <img src="docs/screenshots/log.png" width="200" alt="Practice log: streaks, a five-week calendar and this week's answers">
+  <img src="docs/screenshots/home-dark.png" width="200" alt="Home in dark mode">
+</p>
+
+Screenshots are from the iOS app. The Android app has the same screens.
+
 | Folder | What it is |
 | --- | --- |
 | `app/` | The Android app (Kotlin, Jetpack Compose) |
