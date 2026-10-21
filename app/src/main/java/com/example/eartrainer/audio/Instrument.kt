@@ -5,7 +5,8 @@ class SampleSet(val assetDir: String, val recordings: Map<String, Int>)
 
 /**
  * The sampled instruments prompts can be played with. Both come from the FreePats project under
- * CC0 (public domain); see the README and license next to each set of recordings in assets.
+ * CC0 (public domain); see the README and license next to each set of recordings
+ * in shared/assets.
  */
 enum class Instrument(val displayName: String, internal val samples: SampleSet) {
     /** "Upright Piano KW" (small), recorded roughly every minor third; roots from its SFZ map. */
