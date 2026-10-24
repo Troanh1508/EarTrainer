@@ -50,8 +50,21 @@
     <string name="home_card_progressions">Chords in a key</string>
     <string name="home_card_dictation">Write down a melody</string>
     <string name="home_card_rhythm">Pick the notation</string>
-    <string name="home_offline_note">Free and fully offline. More exercises are on the way.</string>
+    <string name="home_offline_note">Works fully offline. More exercises are on the way.</string>
     <string name="home_sound_credit">Sounds: Upright Piano KW and Spanish Classical Guitar from FreePats (CC0).</string>
+    <string name="home_open_licenses">Open source licenses</string>
+    <string name="licenses_title">Open source licenses</string>
+    <string name="licenses_intro">Ear Trainer is built with these sounds, icons and libraries. Thank you to the people who make and share them.</string>
+    <string name="licenses_section_sounds">Sounds</string>
+    <string name="licenses_section_icons">Icons</string>
+    <string name="licenses_section_libraries">Libraries</string>
+    <string name="licenses_section_texts">License texts</string>
+    <string name="licenses_notice_detail">%1$s · %2$s</string>
+    <string name="licenses_text_shown">Text shown</string>
+    <string name="licenses_text_hidden">Text hidden</string>
+    <string name="license_apache_2_0">Apache License 2.0</string>
+    <string name="license_mit">MIT License</string>
+    <string name="license_cc0">CC0 1.0 (public domain)</string>
 
     <!-- Interval training -->
     <string name="intervals_title">Interval Training</string>

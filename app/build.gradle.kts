@@ -13,7 +13,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.eartrainer"
+        applicationId = "com.troanhmolo.eartrainer"
         minSdk = 24
         targetSdk = 37
         versionCode = 1

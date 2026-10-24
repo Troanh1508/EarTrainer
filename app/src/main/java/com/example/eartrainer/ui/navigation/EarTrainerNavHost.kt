@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.eartrainer.ui.about.LicensesScreen
 import com.example.eartrainer.ui.backup.BackupRoute
 import com.example.eartrainer.ui.backup.BackupViewModel
 import com.example.eartrainer.ui.chords.ChordTrainingRoute
@@ -53,6 +54,7 @@ private object Routes {
     const val PROGRESS = "progress"
     const val PRACTICE_LOG = "practice-log"
     const val BACKUP = "backup"
+    const val LICENSES = "licenses"
 }
 
 @Composable
@@ -77,6 +79,7 @@ fun EarTrainerNavHost() {
                 },
                 onOpenProgress = { navController.navigate(Routes.PROGRESS) },
                 onOpenBackup = { navController.navigate(Routes.BACKUP) },
+                onOpenLicenses = { navController.navigate(Routes.LICENSES) },
             )
         }
         composable(Routes.INTERVAL_TRAINING) {
@@ -169,6 +172,9 @@ fun EarTrainerNavHost() {
         composable(Routes.BACKUP) {
             val viewModel: BackupViewModel = viewModel(factory = BackupViewModel.Factory)
             BackupRoute(viewModel = viewModel, onNavigateUp = { navController.navigateUp() })
+        }
+        composable(Routes.LICENSES) {
+            LicensesScreen(onNavigateUp = { navController.navigateUp() })
         }
     }
 }

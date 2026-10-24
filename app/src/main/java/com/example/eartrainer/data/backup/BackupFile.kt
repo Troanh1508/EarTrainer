@@ -29,6 +29,8 @@ data class BackupFile(
     val history: BackupHistory = BackupHistory(),
 ) {
     companion object {
+        // Marks a file as an Ear Trainer backup. It is part of the file format, not the app ID: it
+        // stays the same so backups exported before the ID changed still import.
         const val APP = "com.example.eartrainer"
         const val FORMAT_VERSION = 1
     }

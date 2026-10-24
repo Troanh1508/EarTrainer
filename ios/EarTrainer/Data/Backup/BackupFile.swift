@@ -9,6 +9,8 @@ import Foundation
  * `currentFormatVersion`.
  */
 struct BackupFile: Codable {
+    // Marks a file as an Ear Trainer backup. It is part of the file format, not the bundle ID: it
+    // stays the same so existing backups, including Android ones, still import.
     static let appId = "com.example.eartrainer"
     static let currentFormatVersion = 1
 

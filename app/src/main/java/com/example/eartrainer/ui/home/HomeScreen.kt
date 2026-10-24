@@ -78,9 +78,10 @@ fun HomeRoute(
     onOpenExercise: (ExerciseKind) -> Unit,
     onOpenProgress: () -> Unit,
     onOpenBackup: () -> Unit,
+    onOpenLicenses: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    HomeScreen(state, onOpenExercise, onOpenProgress, onOpenBackup, onDailyGoalSelected = viewModel::onDailyGoalSelected)
+    HomeScreen(state, onOpenExercise, onOpenProgress, onOpenBackup, onDailyGoalSelected = viewModel::onDailyGoalSelected, onOpenLicenses = onOpenLicenses)
 }
 
 @Composable
@@ -90,6 +91,7 @@ fun HomeScreen(
     onOpenProgress: () -> Unit,
     onOpenBackup: () -> Unit,
     onDailyGoalSelected: (Int) -> Unit,
+    onOpenLicenses: () -> Unit = {},
 ) {
     Surface(Modifier.fillMaxSize()) {
         Column(
@@ -130,6 +132,7 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
+                TextButton(onClick = onOpenLicenses) { Text(stringResource(R.string.home_open_licenses)) }
             }
         }
     }

@@ -36,7 +36,7 @@ enum Strings {
     static let exercises = "Exercises"
     static let seeProgress = "See progress"
     static let new = "New"
-    static let offlineNote = "Free and fully offline. More exercises are on the way."
+    static let offlineNote = "Works fully offline. More exercises are on the way."
     static let soundCredit = "Sounds: Upright Piano KW and Spanish Classical Guitar from FreePats (CC0)."
 
     static func cardDetail(_ exercise: ExerciseKind) -> String {
