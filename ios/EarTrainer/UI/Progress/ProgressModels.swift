@@ -100,13 +100,39 @@ struct AccuracyItem: Hashable {
     var needsWork: Bool { accuracy.map { $0 < Self.weakThreshold } ?? false }
 }
 
+/// How the accuracy list is ordered.
+enum ItemOrder: CaseIterable {
+    case weakestFirst
+    case strongestFirst
+
+    var label: String {
+        switch self {
+        case .weakestFirst: Strings.weakestFirst
+        case .strongestFirst: Strings.strongestFirst
+        }
+    }
+}
+
 extension Array where Element == AccuracyItem {
     /// Practiced items from least to most accurate (more answers first on a tie), then unpracticed ones.
-    var weakestFirst: [AccuracyItem] {
+    var weakestFirst: [AccuracyItem] { practicedFirst(byAccuracy: <) }
+
+    /// Practiced items from most to least accurate (more answers first on a tie), then unpracticed ones.
+    var strongestFirst: [AccuracyItem] { practicedFirst(byAccuracy: >) }
+
+    /// The items in [order].
+    func ordered(_ order: ItemOrder) -> [AccuracyItem] {
+        switch order {
+        case .weakestFirst: weakestFirst
+        case .strongestFirst: strongestFirst
+        }
+    }
+
+    private func practicedFirst(byAccuracy precedes: (Double, Double) -> Bool) -> [AccuracyItem] {
         let practiced = enumerated().filter { $0.element.attempts > 0 }.sorted { a, b in
             let accuracyA = a.element.accuracy!
             let accuracyB = b.element.accuracy!
-            if accuracyA != accuracyB { return accuracyA < accuracyB }
+            if accuracyA != accuracyB { return precedes(accuracyA, accuracyB) }
             if a.element.attempts != b.element.attempts { return a.element.attempts > b.element.attempts }
             return a.offset < b.offset
         }.map(\.element)
