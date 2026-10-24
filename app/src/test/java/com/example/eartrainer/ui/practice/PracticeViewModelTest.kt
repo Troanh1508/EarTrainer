@@ -48,6 +48,8 @@ class PracticeViewModelTest {
         val played = mutableListOf<ListeningPrompt>()
         var cancellations = 0
         var failNext = false
+        /** Fails instead of passing the cancellation on when stopped, as a buggy player might. */
+        var failWhenCanceled = false
         var released = false
         private var pending: CompletableDeferred<Unit>? = null
 
@@ -62,6 +64,7 @@ class PracticeViewModelTest {
                 done.await()
             } catch (e: CancellationException) {
                 cancellations++
+                if (failWhenCanceled) throw AudioPlaybackException("Stopped mid-prompt")
                 throw e
             }
         }
@@ -309,6 +312,19 @@ class PracticeViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, player.cancellations)
+        assertEquals(PlaybackStatus.Idle, state.playback)
+        assertTrue(state.canAnswer)
+    }
+
+    @Test
+    fun stoppingIsNeverReportedAsAFailure() = runTest {
+        advanceUntilIdle()
+        player.failWhenCanceled = true
+        viewModel.onPlayClick()
+        advanceUntilIdle()
+        viewModel.onStopClick()
+        advanceUntilIdle()
+
         assertEquals(PlaybackStatus.Idle, state.playback)
         assertTrue(state.canAnswer)
     }

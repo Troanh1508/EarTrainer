@@ -8,6 +8,7 @@ import android.media.AudioTrack
 import android.os.Handler
 import android.os.Looper
 import com.example.eartrainer.music.ListeningPrompt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -98,6 +99,10 @@ class AudioTrackPlayer(
             // The marker is the normal completion signal. The timeout only guards against
             // devices that fail to deliver it; it plays no part in note timing.
             withTimeoutOrNull(rendered.schedule.durationSeconds.seconds + COMPLETION_GRACE) { playback.finished.await() }
+        } catch (e: CancellationException) {
+            // Stopped by the caller. CancellationException is an IllegalStateException, so it must
+            // be passed on before the catch below turns it into a playback failure.
+            throw e
         } catch (e: IllegalStateException) {
             throw AudioPlaybackException("Audio output could not start", e)
         } finally {

@@ -14,6 +14,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -89,6 +90,8 @@ class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
             } catch (e: Exception) {
                 PlaybackStatus.Failed
             }
+            // A playback that was stopped reports nothing, even if the player failed while stopping.
+            ensureActive()
             // Ignore results that arrive after the session has moved on to another question.
             _uiState.update {
                 if (it != null && session == sessionId && it.exercise.questionNumber == questionNumber) {
@@ -154,6 +157,7 @@ class PracticeViewModel<A, Q : ExerciseQuestion<A>, S>(
             } catch (e: Exception) {
                 PlaybackStatus.Failed
             }
+            ensureActive()
             _uiState.update { if (it != null && session == sessionId) it.copy(playback = outcome) else it }
         }
     }
