@@ -32,6 +32,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlin.math.roundToInt
 
+/** How the accuracy list is ordered. */
+enum class ItemOrder { WEAKEST_FIRST, STRONGEST_FIRST }
+
 /** What the accuracy list shows; each exercise has its own kind of filter. */
 sealed interface ProgressFilter {
     val exercise: ExerciseKind
@@ -99,6 +102,7 @@ data class ProgressUiState(
      * chart; each counts only those answers, scored like [accuracy].
      */
     val trend: List<SessionSummary> = emptyList(),
+    val order: ItemOrder = ItemOrder.WEAKEST_FIRST,
 ) {
     val exercise: ExerciseKind get() = filter.exercise
     val filterOptions: List<ProgressFilter> get() = ProgressFilter.optionsFor(exercise)
@@ -114,6 +118,20 @@ data class ProgressUiState(
         get() {
             val (practiced, unpracticed) = accuracy.partition { it.attempts > 0 }
             return practiced.sortedWith(compareBy<AccuracyItem> { it.accuracy }.thenByDescending { it.attempts }) + unpracticed
+        }
+
+    /** Practiced items from most to least accurate (more answers first on a tie), then unpracticed ones. */
+    val strongestFirst: List<AccuracyItem>
+        get() {
+            val (practiced, unpracticed) = accuracy.partition { it.attempts > 0 }
+            return practiced.sortedWith(compareByDescending<AccuracyItem> { it.accuracy }.thenByDescending { it.attempts }) + unpracticed
+        }
+
+    /** The items in the chosen [order]. */
+    val orderedItems: List<AccuracyItem>
+        get() = when (order) {
+            ItemOrder.WEAKEST_FIRST -> weakestFirst
+            ItemOrder.STRONGEST_FIRST -> strongestFirst
         }
 
     /**
@@ -137,6 +155,9 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
 
     private val filter = MutableStateFlow<ProgressFilter>(ProgressFilter.IntervalStyleFilter(null))
 
+    /** Kept when the exercise or filter changes, so the list reads the same way throughout. */
+    private val order = MutableStateFlow(ItemOrder.WEAKEST_FIRST)
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<ProgressUiState?> = filter
         .flatMapLatest { selected ->
@@ -148,6 +169,7 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
                 ProgressUiState(selected, accuracy, sessions, trend = trend.asReversed())
             }
         }
+        .combine(order) { state, chosen -> state.copy(order = chosen) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), initialValue = null)
 
     private val selectedItem = MutableStateFlow<String?>(null)
@@ -186,6 +208,10 @@ class ProgressViewModel(private val history: PracticeHistory) : ViewModel() {
     fun onFilterSelected(selected: ProgressFilter) {
         filter.value = selected
         selectedItem.value = null
+    }
+
+    fun onOrderSelected(selected: ItemOrder) {
+        order.value = selected
     }
 
     // The same answers as [accuracyFor], so the chart and the bars measure the same thing.

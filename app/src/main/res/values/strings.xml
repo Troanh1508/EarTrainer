@@ -345,6 +345,8 @@
         <item quantity="other">Accuracy in your last %1$d sessions, oldest first: %2$s</item>
     </plurals>
     <string name="progress_weakest_first">Weakest first</string>
+    <string name="progress_strongest_first">Strongest first</string>
+    <string name="progress_sort_order">Sort order: %1$s</string>
     <string name="progress_legend_needs_work">Below %1$d%%: needs work</string>
     <string name="progress_legend_on_track">On track</string>
     <string name="progress_recent_sessions">Recent sessions</string>

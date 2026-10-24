@@ -313,7 +313,27 @@ class ProgressViewModelTest {
             recentSessions = emptyList(),
         )
         assertEquals(listOf("Weak, many", "Weak, few", "Strong", "Never", "Also never"), state.weakestFirst.map { it.label })
+        // Strongest first also puts more answers first on a tie, and unpracticed items still last.
+        assertEquals(listOf("Strong", "Weak, many", "Weak, few", "Never", "Also never"), state.strongestFirst.map { it.label })
+        assertEquals(state.weakestFirst, state.orderedItems)
+        assertEquals(state.strongestFirst, state.copy(order = ItemOrder.STRONGEST_FIRST).orderedItems)
         assertEquals(listOf(false, false, true, true, false), state.accuracy.map { it.needsWork })
+    }
+
+    @Test
+    fun theChosenOrderIsKeptAcrossExercisesAndFilters() = runTest {
+        history.record(interval("a", 1_000, Interval.MAJOR_THIRD, IntervalStyle.HARMONIC, correct = false))
+        history.record(interval("a", 2_000, Interval.OCTAVE, IntervalStyle.HARMONIC, correct = true))
+        val viewModel = ProgressViewModel(history).also { collected(it) }
+        assertEquals(ItemOrder.WEAKEST_FIRST, viewModel.state.order)
+        assertEquals("Major third", viewModel.state.orderedItems.first().label)
+
+        viewModel.onOrderSelected(ItemOrder.STRONGEST_FIRST)
+        assertEquals("Octave", viewModel.state.orderedItems.first().label)
+        viewModel.onFilterSelected(ProgressFilter.IntervalStyleFilter(IntervalStyle.HARMONIC))
+        assertEquals(ItemOrder.STRONGEST_FIRST, viewModel.state.order)
+        viewModel.onExerciseSelected(ExerciseKind.CHORDS)
+        assertEquals(ItemOrder.STRONGEST_FIRST, viewModel.state.order)
     }
 
     @Test

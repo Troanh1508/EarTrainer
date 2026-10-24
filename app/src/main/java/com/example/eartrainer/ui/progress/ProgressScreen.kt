@@ -23,6 +23,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Card
@@ -39,6 +41,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -50,6 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -93,6 +99,7 @@ fun ProgressRoute(
             onExerciseSelected = viewModel::onExerciseSelected,
             onFilterSelected = viewModel::onFilterSelected,
             onItemSelected = viewModel::onItemSelected,
+            onOrderSelected = viewModel::onOrderSelected,
             onOpenPracticeLog = onOpenPracticeLog,
             onNavigateUp = onNavigateUp,
         )
@@ -108,6 +115,7 @@ fun ProgressScreen(
     onItemSelected: (String) -> Unit,
     onOpenPracticeLog: () -> Unit,
     onNavigateUp: () -> Unit,
+    onOrderSelected: (ItemOrder) -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -129,7 +137,7 @@ fun ProgressScreen(
         when {
             state == null -> Surface(Modifier.padding(innerPadding).fillMaxSize()) {}
             !state.hasHistory -> EmptyProgress(Modifier.padding(innerPadding))
-            else -> ProgressContent(state, onExerciseSelected, onFilterSelected, onItemSelected, onOpenPracticeLog, innerPadding)
+            else -> ProgressContent(state, onExerciseSelected, onFilterSelected, onItemSelected, onOrderSelected, onOpenPracticeLog, innerPadding)
         }
     }
 }
@@ -152,6 +160,7 @@ private fun ProgressContent(
     onExerciseSelected: (ExerciseKind) -> Unit,
     onFilterSelected: (ProgressFilter) -> Unit,
     onItemSelected: (String) -> Unit,
+    onOrderSelected: (ItemOrder) -> Unit,
     onOpenPracticeLog: () -> Unit,
     innerPadding: PaddingValues,
 ) {
@@ -171,7 +180,7 @@ private fun ProgressContent(
             }
             item { OverviewCard(state, cardModifier) }
             item { TrendCard(state, cardModifier) }
-            item { AccuracyCard(state, onItemSelected, cardModifier) }
+            item { AccuracyCard(state, onItemSelected, onOrderSelected, cardModifier) }
             item {
                 Row(itemModifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     SectionTitle(stringResource(R.string.progress_recent_sessions), Modifier.weight(1f))
@@ -403,11 +412,57 @@ private fun TrendCard(state: ProgressUiState, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun AccuracyCard(state: ProgressUiState, onItemSelected: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun AccuracyCard(
+    state: ProgressUiState,
+    onItemSelected: (String) -> Unit,
+    onOrderSelected: (ItemOrder) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     ChartCard(modifier) {
-        CardHeader(accuracyTitle(state.filter), stringResource(R.string.progress_weakest_first))
-        state.weakestFirst.forEach { item -> AccuracyBarRow(item, onClick = { onItemSelected(item.label) }) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(accuracyTitle(state.filter), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            OrderPicker(state.order, onOrderSelected)
+        }
+        state.orderedItems.forEach { item -> AccuracyBarRow(item, onClick = { onItemSelected(item.label) }) }
         if (state.totalAttempts > 0) AccuracyLegend()
+    }
+}
+
+/** A button naming the current order that opens a menu to switch between weakest and strongest first. */
+@Composable
+private fun OrderPicker(order: ItemOrder, onOrderSelected: (ItemOrder) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val label = @Composable { option: ItemOrder ->
+        stringResource(
+            when (option) {
+                ItemOrder.WEAKEST_FIRST -> R.string.progress_weakest_first
+                ItemOrder.STRONGEST_FIRST -> R.string.progress_strongest_first
+            },
+        )
+    }
+    val description = stringResource(R.string.progress_sort_order, label(order))
+    Box {
+        TextButton(
+            onClick = { expanded = true },
+            contentPadding = PaddingValues(start = 12.dp, end = 4.dp),
+            modifier = Modifier.semantics { contentDescription = description },
+        ) {
+            // The button's description already names the order.
+            Text(label(order), style = MaterialTheme.typography.labelLarge, modifier = Modifier.clearAndSetSemantics {})
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ItemOrder.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(label(option)) },
+                    trailingIcon = { if (option == order) Icon(Icons.Filled.Check, contentDescription = null) },
+                    onClick = {
+                        expanded = false
+                        onOrderSelected(option)
+                    },
+                )
+            }
+        }
     }
 }
 
