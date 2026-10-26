@@ -10,6 +10,8 @@ final class ProgressViewController: ScrollingViewController {
 
     private let history = AppContainer.shared.history
     private var filter: ProgressFilter = .intervalStyle(nil)
+    /// Kept when the exercise or filter changes, so the list reads the same way throughout.
+    private var order: ItemOrder = .weakestFirst
     private var state: ProgressUiState?
     private var showScoring = false
     private var loadTask: Task<Void, Never>?
@@ -185,15 +187,43 @@ final class ProgressViewController: ScrollingViewController {
 
     private func accuracyCard(_ state: ProgressUiState) -> UIView {
         let card = CardView(spacing: 8)
-        card.stack.addArrangedSubview(cardHeader(state.filter.accuracyTitle, note: Strings.weakestFirst))
+        let title = UILabel(state.filter.accuracyTitle, style: .headline)
+        title.accessibilityTraits = .header
+        card.stack.addArrangedSubview(UIStackView.horizontal([title, orderMenu()], spacing: 12))
         let filter = state.filter
-        for item in state.accuracy.weakestFirst {
+        for item in state.accuracy.ordered(order) {
             card.stack.addArrangedSubview(AccuracyRowView(item: item) { [weak self] in
                 self?.navigationController?.pushViewController(MistakesViewController(filter: filter, itemLabel: item.label), animated: true)
             })
         }
         if state.totalAttempts > 0 { card.stack.addArrangedSubview(accuracyLegend()) }
         return card
+    }
+
+    /// A button naming the current order that opens a menu to switch between weakest and strongest first.
+    private func orderMenu() -> UIButton {
+        var configuration = UIButton.Configuration.plain()
+        configuration.buttonSize = .small
+        configuration.baseForegroundColor = Palette.primary
+        configuration.image = UIImage(systemName: "chevron.up.chevron.down")
+        configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(scale: .small)
+        configuration.imagePlacement = .trailing
+        configuration.imagePadding = 4
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 0)
+        let button = UIButton(configuration: configuration)
+        button.menu = UIMenu(options: .singleSelection, children: ItemOrder.allCases.map { option in
+            UIAction(title: option.label, state: option == order ? .on : .off) { [weak self] _ in
+                guard let self, self.order != option else { return }
+                self.order = option
+                self.render()
+            }
+        })
+        button.showsMenuAsPrimaryAction = true
+        button.changesSelectionAsPrimaryAction = true
+        button.accessibilityLabel = Strings.sortOrder(order.label)
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        button.setContentCompressionResistancePriority(.defaultHigh + 1, for: .horizontal)
+        return button
     }
 }
 

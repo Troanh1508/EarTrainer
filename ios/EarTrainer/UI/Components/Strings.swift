@@ -225,6 +225,8 @@ enum Strings {
         count == 1 ? "Accuracy in your last session: \(values)" : "Accuracy in your last \(count) sessions, oldest first: \(values)"
     }
     static let weakestFirst = "Weakest first"
+    static let strongestFirst = "Strongest first"
+    static func sortOrder(_ order: String) -> String { "Sort order: \(order)" }
     static func legendNeedsWork(_ percent: Int) -> String { "Below \(percent)%: needs work" }
     static let legendOnTrack = "On track"
     static let recentSessions = "Recent sessions"
