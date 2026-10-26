@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.eartrainer"
+    namespace = "com.troanhmolo.eartrainer"
     compileSdk {
         version = release(37)
     }
