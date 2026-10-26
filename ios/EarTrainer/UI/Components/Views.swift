@@ -131,6 +131,70 @@ final class PillLabel: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 }
 
+/// A button that opens a menu and stays visible while it is open. The menu belongs to a clear button
+/// laid over this one, so whatever the system does to the menu's source while presenting it never
+/// touches what is on screen. The title does not follow the choice: rebuild the button instead.
+/// Shows the pop-up indicator unless [configuration] sets its own.
+final class MenuButton: UIButton {
+    private let trigger = MenuTrigger()
+
+    init(configuration: UIButton.Configuration, menu: UIMenu) {
+        super.init(frame: .zero)
+        var configuration = configuration
+        if configuration.indicator == .automatic { configuration.indicator = .popup }
+        self.configuration = configuration
+        isAccessibilityElement = false
+        trigger.menu = menu
+        trigger.showsMenuAsPrimaryAction = true
+        trigger.accessibilityLabel = configuration.title
+        trigger.onHighlightChange = { [weak self] in self?.isHighlighted = $0 }
+        addSubview(trigger)
+        trigger.pinEdges(to: self)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    override var accessibilityLabel: String? {
+        get { trigger.accessibilityLabel }
+        set { trigger.accessibilityLabel = newValue }
+    }
+
+    override var accessibilityHint: String? {
+        get { trigger.accessibilityHint }
+        set { trigger.accessibilityHint = newValue }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // The configuration adds its views as it updates; keep the trigger above them to get the touches.
+        bringSubviewToFront(trigger)
+    }
+}
+
+/// The clear button behind a [MenuButton]'s menu. The menu fades out instead of shrinking back into
+/// the button, which would trail the content when scrolling closes the menu.
+private final class MenuTrigger: UIButton {
+    var onHighlightChange: ((Bool) -> Void)?
+
+    override var isHighlighted: Bool { didSet { onHighlightChange?(isHighlighted) } }
+
+    override func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        configuration: UIContextMenuConfiguration,
+        highlightPreviewForItemWithIdentifier identifier: any NSCopying
+    ) -> UITargetedPreview? {
+        nil
+    }
+
+    override func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        configuration: UIContextMenuConfiguration,
+        dismissalPreviewForItemWithIdentifier identifier: any NSCopying
+    ) -> UITargetedPreview? {
+        nil
+    }
+}
+
 // MARK: - Drawing
 
 /// A view drawn with Core Graphics that redraws when its size or the light/dark appearance changes.

@@ -120,10 +120,8 @@ final class ProgressViewController: ScrollingViewController {
         var configuration = UIButton.Configuration.bordered()
         configuration.cornerStyle = .capsule
         configuration.baseForegroundColor = Palette.primary
-        let button = UIButton(configuration: configuration)
-        button.menu = UIMenu(children: actions)
-        button.showsMenuAsPrimaryAction = true
-        button.changesSelectionAsPrimaryAction = true
+        configuration.title = state.filter.label
+        let button = MenuButton(configuration: configuration, menu: UIMenu(children: actions))
         return UIStackView.horizontal([button, .spacer()])
     }
 
@@ -205,21 +203,15 @@ final class ProgressViewController: ScrollingViewController {
         var configuration = UIButton.Configuration.plain()
         configuration.buttonSize = .small
         configuration.baseForegroundColor = Palette.primary
-        configuration.image = UIImage(systemName: "chevron.up.chevron.down")
-        configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(scale: .small)
-        configuration.imagePlacement = .trailing
-        configuration.imagePadding = 4
+        configuration.title = order.label
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 0)
-        let button = UIButton(configuration: configuration)
-        button.menu = UIMenu(options: .singleSelection, children: ItemOrder.allCases.map { option in
+        let button = MenuButton(configuration: configuration, menu: UIMenu(options: .singleSelection, children: ItemOrder.allCases.map { option in
             UIAction(title: option.label, state: option == order ? .on : .off) { [weak self] _ in
                 guard let self, self.order != option else { return }
                 self.order = option
                 self.render()
             }
-        })
-        button.showsMenuAsPrimaryAction = true
-        button.changesSelectionAsPrimaryAction = true
+        }))
         button.accessibilityLabel = Strings.sortOrder(order.label)
         button.setContentHuggingPriority(.required, for: .horizontal)
         button.setContentCompressionResistancePriority(.defaultHigh + 1, for: .horizontal)
