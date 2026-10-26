@@ -56,17 +56,16 @@ final class MistakesViewController: ScrollingViewController {
         let total = slices.reduce(0) { $0 + $1.count }
         let card = CardView(spacing: 16)
 
-        let picker = UIButton(configuration: .bordered())
-        picker.configuration?.cornerStyle = .capsule
-        picker.configuration?.baseForegroundColor = Palette.text
-        picker.menu = UIMenu(title: Strings.chooseItem, children: state.items.map { item in
+        var configuration = UIButton.Configuration.bordered()
+        configuration.cornerStyle = .capsule
+        configuration.baseForegroundColor = Palette.text
+        configuration.title = Strings.itemOption(state.selected.label, percent(state.selected.accuracy ?? 0))
+        let picker = MenuButton(configuration: configuration, menu: UIMenu(title: Strings.chooseItem, children: state.items.map { item in
             UIAction(title: Strings.itemOption(item.label, percent(item.accuracy ?? 0)), state: item.label == state.selected.label ? .on : .off) { [weak self] _ in
                 self?.itemLabel = item.label
                 self?.load()
             }
-        })
-        picker.showsMenuAsPrimaryAction = true
-        picker.changesSelectionAsPrimaryAction = true
+        }))
         picker.accessibilityHint = Strings.chooseItem
         card.stack.addArrangedSubview(UIStackView.vertical([
             UILabel(Strings.whenLabel(state.exercise), style: .subheadline, color: Palette.secondaryText),

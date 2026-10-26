@@ -103,17 +103,17 @@ final class HomeViewController: ScrollingViewController {
         ring.accessibilityLabel = Strings.goalRing(state.sessionsToday, state.dailyGoal)
 
         let title = UILabel(Strings.goalTitle, style: .headline, weight: .bold, color: Palette.onPrimary)
-        let edit = UIButton(type: .system)
-        edit.setImage(UIImage(systemName: "pencil", withConfiguration: UIImage.SymbolConfiguration(textStyle: .body)), for: .normal)
-        edit.tintColor = Palette.onPrimary
-        edit.accessibilityLabel = Strings.goalChange
-        edit.showsMenuAsPrimaryAction = true
+        var configuration = UIButton.Configuration.plain()
+        configuration.image = UIImage(systemName: "pencil", withConfiguration: UIImage.SymbolConfiguration(textStyle: .body))
+        configuration.baseForegroundColor = Palette.onPrimary
+        configuration.indicator = .none
         let goalSettings = container.goalSettings
-        edit.menu = UIMenu(title: Strings.goalDialogDescription(sessionLength), children: GoalSettings.dailySessionOptions.map { sessions in
+        let edit = MenuButton(configuration: configuration, menu: UIMenu(title: Strings.goalDialogDescription(sessionLength), children: GoalSettings.dailySessionOptions.map { sessions in
             UIAction(title: Strings.goalOption(sessions), state: sessions == state.dailyGoal ? .on : .off) { _ in
                 goalSettings.update { $0.dailySessions == sessions ? $0 : GoalSettings(dailySessions: sessions) }
             }
-        })
+        }))
+        edit.accessibilityLabel = Strings.goalChange
         edit.constrainSize(width: 40, height: 40)
 
         let message = state.sessionsToGoal == 0 ? Strings.goalDone
